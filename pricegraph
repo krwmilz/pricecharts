@@ -32,7 +32,7 @@ my $parser = Config::Grammar->new({
 		# vendor regular expression
 		_sections => ['/[A-Za-z ]+/'],
 		'/[A-Za-z ]+/' => {
-			_vars => ['search_uri', 'title', 'reg_price', 'sale_price', 'color'],
+			_vars => ['search_uri', 'reg_price', 'sale_price', 'color'],
 		},
 	},
 	paths => {
@@ -97,7 +97,6 @@ sub scrape_vendors
 	my $part_no = shift;
 	my $time_start = time;
 	my @prices;
-	my @titles;
 
 	print strftime '%b %e %Y %H:%M ', localtime;
 	printf '%-10s [', $part_no;
@@ -130,16 +129,6 @@ sub scrape_vendors
 		#	next;
 		#}
 
-		my @title = $dom->find($vendor->{title})->text_array;
-		if (@title) {
-			$title[0] =~ s/^\s+//;
-			$title[0] =~ s/\s+$//;
-
-			if ($part_no =~ m/(.*$title[0].*)/) {
-				print "part number in title\n";
-			}
-		}
-
 		my $price = $dom->find($vendor->{reg_price})->text;
 		if ($vendor->{sale_price}) {
 			my $sale = $dom->find($vendor->{sale_price})->text;
@@ -156,13 +145,11 @@ sub scrape_vendors
 
 		print substr($name, 0, 1);
 		push @prices, "$name=$price";
-		push @titles, "$name=$title[0]";
 	}
 
 	print '] (' . (time - $time_start) . " s)\n";
 	if ($args{v}) {
 		print "$_\n" for @prices;
-		print "$_\n" for @titles;
 	}
 
 	#for (keys %title_dict) {
