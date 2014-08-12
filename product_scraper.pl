@@ -33,6 +33,7 @@ $dbh->do("create table if not exists products(" .
 	"part_num text not null primary key, " .
 	"brand text, " .
 	"title text, " .
+	"type text, " .
 	"first_seen int, " . 
 	"last_seen int)") or die $DBI::errstr;
 
@@ -44,9 +45,9 @@ $ua->default_header("Accept" => "*/*");
 #
 # Memory Express
 #
-my %product_map = {televisions => "Televisions",
-	laptops => "LaptopsNotebooks",
-	hard_drives => "HardDrives"};
+my %product_map = ("televisions" => "Televisions",
+	"laptops" => "LaptopsNotebooks",
+	"hard_drives" => "HardDrives");
 for (keys %product_map) {
 
 	print "*** $_ ***\n";
@@ -109,9 +110,9 @@ for (keys %product_map) {
 		}
 		else {
 			$dbh->do("insert into products(" .
-				"part_num, brand, title, first_seen, last_seen)" .
-				" values (?, ?, ?, ?, ?)",
-				undef, $part_num, $brand, $title, time, time);
+				"part_num, brand, title, type, first_seen, last_seen)" .
+				" values (?, ?, ?, ?, ?, ?)",
+				undef, $part_num, $brand, $title, $_, time, time);
 			#$dbh->do("create table [$part_num]" .
 			#	"(unix_time int not null primary key)");
 			push @new_products, ([$brand, $title, $part_num]);
