@@ -44,11 +44,11 @@ my $cfg_file;
 if ($args{f}) {
 	$cfg_file = $args{f};
 }
-elsif (-e "/etc/pricegraph.cfg") {
-	$cfg_file = "/etc/pricegraph.cfg";
+elsif (-e "/etc/price_scraper.cfg") {
+	$cfg_file = "/etc/price_scraper.cfg";
 }
-elsif (-e "pricegraph.cfg") {
-	$cfg_file = "pricegraph.cfg";
+elsif (-e "price_scraper.cfg") {
+	$cfg_file = "price_scraper.cfg";
 }
 
 my $cfg = $parser->parse($cfg_file) or die "ERROR: $parser->{err}\n";
