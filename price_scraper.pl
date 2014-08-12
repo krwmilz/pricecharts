@@ -58,83 +58,79 @@ else {
 	select $logfile;
 }
 
+my $time_start = time;
+my @prices;
+
+my $part_no;
 if ($args{p}) {
-	scrape_vendors($args{p});
+	$part_no = $args{p};
 }
 else {
-	scrape_vendors();
-}
-
-sub scrape_vendors
-{
-	my $time_start = time;
-	my @prices;
-
 	my $results = $dbh->selectcol_arrayref("select part_num from products");
 	# sequentially pick one product every hour
 	my $index = (time / 3600) % scalar(@$results);
-	my $part_no = $results->[$index];
-
-	print strftime "%b %e %Y %H:%M ", localtime;
-	printf "%-15s [", $part_no;
-
-	my $ua = LWP::UserAgent->new(agent => 'Mozilla/5.0');
-	# some sites need this (amazon I think?)
-	$ua->default_header('Accept' => '*/*');
-
-	while (my ($name, $vendor) = each ($cfg->{vendors})) {
-
-		my $resp = $ua->get("$vendor->{search_uri}$part_no");
-		if (! $resp->is_success) {
-			print STDERR "$name: " . $resp->status_line . "\n";
-			print ' ';
-			next;
-		}
-
-		my $dom = HTML::Grabber->new(html => $resp->decoded_content);
-
-		#if (substr($vendor->{context}, 0, 1) eq '@') {
-		#	$vendor->{context} =~ s/@/#/;
-		#}
-
-		#my $context = $dom->find($vendor->{context})->html();
-		#if ($context) {
-		#	$dom = HTML::Grabber->new(html => $context);
-		#}
-		#else {
-		#	print ' ';
-		#	next;
-		#}
-
-		my $price = $dom->find($vendor->{reg_price})->text;
-		if ($vendor->{sale_price}) {
-			my $sale = $dom->find($vendor->{sale_price})->text;
-			$price = $sale if ($sale ne '');
-		}
-
-		if (! $price) {
-			print ' ';
-			next;
-		}
-
-		($price) = ($price =~ m/(\d[\d,]+)/);
-		$price =~ s/,//;
-
-		print substr($name, 0, 1);
-		push @prices, "$name=$price";
-	}
-
-	print '] (' . (time - $time_start) . " s)\n";
-	if ($args{v}) {
-		print "$_\n" for @prices;
-	}
-
-	return if ($args{n} || (scalar @prices) == 0);
-
-	mkdir $cfg->{paths}{data};
-	open FILE, ">>", "$cfg->{paths}{data}/$part_no.txt" or die $!;
-	print FILE time * 1000;
-	print FILE "\t$_" for @prices;
-	print FILE "\n";
-	close FILE;
+	$part_no = $results->[$index];
 }
+
+print strftime "%b %e %Y %H:%M ", localtime;
+printf "%-15s [", $part_no;
+
+my $ua = LWP::UserAgent->new(agent => 'Mozilla/5.0');
+# some sites need this (amazon I think?)
+$ua->default_header('Accept' => '*/*');
+
+while (my ($name, $vendor) = each ($cfg->{vendors})) {
+
+	my $resp = $ua->get("$vendor->{search_uri}$part_no");
+	if (! $resp->is_success) {
+		print STDERR "$name: " . $resp->status_line . "\n";
+		print ' ';
+		next;
+	}
+
+	my $dom = HTML::Grabber->new(html => $resp->decoded_content);
+
+	#if (substr($vendor->{context}, 0, 1) eq '@') {
+	#	$vendor->{context} =~ s/@/#/;
+	#}
+
+	#my $context = $dom->find($vendor->{context})->html();
+	#if ($context) {
+	#	$dom = HTML::Grabber->new(html => $context);
+	#}
+	#else {
+	#	print ' ';
+	#	next;
+	#}
+
+	my $price = $dom->find($vendor->{reg_price})->text;
+	if ($vendor->{sale_price}) {
+		my $sale = $dom->find($vendor->{sale_price})->text;
+		$price = $sale if ($sale ne '');
+	}
+
+	if (! $price) {
+		print ' ';
+		next;
+	}
+
+	($price) = ($price =~ m/(\d[\d,]+)/);
+	$price =~ s/,//;
+
+	print substr($name, 0, 1);
+	push @prices, "$name=$price";
+}
+
+print '] (' . (time - $time_start) . " s)\n";
+if ($args{v}) {
+	print "$_\n" for @prices;
+}
+
+exit if ($args{n} || (scalar @prices) == 0);
+
+mkdir $cfg->{paths}{data};
+open FILE, ">>", "$cfg->{paths}{data}/$part_no.txt" or die $!;
+print FILE time * 1000;
+print FILE "\t$_" for @prices;
+print FILE "\n";
+close FILE;
