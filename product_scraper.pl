@@ -3,7 +3,6 @@
 use strict;
 use warnings;
 
-use Config::Grammar;
 use Data::Dumper;
 use DBI;
 use File::Basename;
