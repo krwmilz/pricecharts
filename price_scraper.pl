@@ -8,27 +8,16 @@ use Data::Dumper;
 use DBI;
 use File::Basename;
 use Getopt::Std;
-use JSON;
 use HTML::Grabber;
 use LWP::Simple;
 use POSIX;
 
 
 my %args;
-getopts('adf:i:np:rv', \%args);
+getopts('df:i:np:v', \%args);
 
 my $parser = Config::Grammar->new({
-	_sections => ['products', 'vendors', 'paths'],
-	products => {
-		# manufacturer regular expression
-		_sections => ['/[A-Za-z]+/'],
-		'/[A-Za-z]+/' => {
-			# part number regular expression
-			_sections => ['/[A-Za-z0-9]+/'],
-			'/[A-Za-z0-9]+/' => {
-			},
-		},
-	},
+	_sections => ['vendors', 'paths'],
 	vendors	=> {
 		# vendor regular expression
 		_sections => ['/[A-Za-z ]+/'],
@@ -70,33 +59,14 @@ else {
 	select $logfile;
 }
 
-if ($args{a}) {
-	scrape_vendors($_) for (make_parts_list());
-	regenerate_json();
-}
-elsif ($args{d}) {
+if ($args{d}) {
 	print Dumper($cfg);
 }
 elsif ($args{p}) {
 	scrape_vendors($args{p});
 }
-elsif ($args{r}) {
-	regenerate_json();
-}
 else {
-	srand;
-	my @parts = make_parts_list();
-	scrape_vendors($parts[rand @parts]);
-	regenerate_json();
-}
-
-sub make_parts_list
-{
-	my @parts;
-	for (sort keys $cfg->{products}) {
-		push @parts, sort keys $cfg->{products}{$_};
-	}
-	return @parts;
+	scrape_vendors();
 }
 
 sub scrape_vendors
@@ -183,78 +153,4 @@ sub scrape_vendors
 	print FILE "\t$_" for @prices;
 	print FILE "\n";
 	close FILE;
-}
-
-sub regenerate_json
-{
-	my $pretty = 0;
-	$pretty = 1 if $args{v};
-
-	mkdir "$cfg->{paths}{http}/json";
-
-	my @manufacturers = sort keys $cfg->{products};
-	open my $fh, '>', "$cfg->{paths}{http}/json/manufacturers.json" or die $!;
-	print $fh to_json(\@manufacturers, {pretty => $pretty});
-	close $fh;
-
-	open $fh, '>', "$cfg->{paths}{http}/json/vendors.json" or die $!;
-	print $fh to_json($cfg->{vendors}, {pretty => $pretty});
-	close $fh;
-
-	print "Regenerating... " if $args{v};
-
-	my %parts;
-	opendir(DIR, $cfg->{paths}{data});
-	while (my $file = readdir(DIR)) {
-	        next if ($file =~ m/^\./);
-
-		my %part;
-		my $part_num = basename($file, '.txt');
-		print $part_num if ($args{v});
-
-		my %tmp;
-		open FILE, "<", "$cfg->{paths}{data}/$file" or die $!;
-		while (<FILE>) {
-			chomp;
-			my @fields = split("\t", $_);
-
-			my $date = $fields[0];
-			splice(@fields, 0, 1);
-			foreach (@fields) {
-				my ($l, $r) = split("=", $_);
-				if (! defined $tmp{$l}) {
-					$tmp{$l}{data} = [];
-					$tmp{$l}{name} = $l;
-					if ($cfg->{vendors}{$l}) {
-						$tmp{$l}{color} = "#$cfg->{vendors}{$l}{color}";
-					}
-				}
-				push @{$tmp{$l}{data}}, [int($date), int($r)];
-			}
-		}
-		close FILE;
-
-		@{$part{vendors}} = keys %tmp;
-		@{$part{series}}  = values %tmp;
-		$part{part_num}   = $part_num;
-
-		for my $manuf (keys $cfg->{products}) {
-			for (keys $cfg->{products}{$manuf}) {
-				$part{manuf} = $manuf if ($_ eq $part_num);
-			}
-		}
-
-		if ($args{v}) {
-			print chr(0x08) for split("", $part_num);
-		}
-
-		$parts{$part_num} = \%part;
-	}
-	closedir(DIR);
-
-	open $fh, ">$cfg->{paths}{http}/json/products.json" or die $!;
-	print $fh to_json(\%parts, {pretty => $pretty});
-	close $fh;
-
-	print "done.     \n" if $args{v};
 }
