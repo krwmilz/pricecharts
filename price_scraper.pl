@@ -104,15 +104,13 @@ sub scrape_vendors
 	my $time_start = time;
 	my @prices;
 
-	my $sth = $dbh->prepare("select part_num from products");
-	$sth->execute();
-	my @results = $sth->fetchrow_array();
+	my $results = $dbh->selectcol_arrayref("select part_num from products");
 	# sequentially pick one product every hour
-	my $index = (time / 3600) % scalar(@results);
-	my $part_no = $results[$index];
+	my $index = (time / 3600) % scalar(@$results);
+	my $part_no = $results->[$index];
 
-	print strftime '%b %e %Y %H:%M ', localtime;
-	printf '%-10s [', $part_no;
+	print strftime "%b %e %Y %H:%M ", localtime;
+	printf "%-15s [", $part_no;
 
 	my $ua = LWP::UserAgent->new(agent => 'Mozilla/5.0');
 	# some sites need this (amazon I think?)
