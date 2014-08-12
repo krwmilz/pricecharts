@@ -14,7 +14,7 @@ use POSIX;
 
 
 my %args;
-getopts('df:i:np:v', \%args);
+getopts('f:np:v', \%args);
 
 my $parser = Config::Grammar->new({
 	_sections => ['vendors', 'paths'],
@@ -59,9 +59,6 @@ else {
 	select $logfile;
 }
 
-if ($args{d}) {
-	print Dumper($cfg);
-}
 elsif ($args{p}) {
 	scrape_vendors($args{p});
 }
