@@ -6,7 +6,6 @@ use warnings;
 use Config::Grammar;
 use Data::Dumper;
 use DBI;
-use File::Basename;
 use Getopt::Std;
 use HTML::Grabber;
 use LWP::Simple;
@@ -59,7 +58,7 @@ else {
 	select $logfile;
 }
 
-elsif ($args{p}) {
+if ($args{p}) {
 	scrape_vendors($args{p});
 }
 else {
