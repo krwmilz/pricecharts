@@ -127,6 +127,18 @@ for (keys %product_map) {
 	print "\n";
 }
 
+#for (keys %title_dict) {
+#	print "$_ " if ($title_dict{$_} / $total_titles >= 0.5);
+#}
+#			for (split(" ", $title)) {
+#			if (! $title_dict{$_}) {
+#				$title_dict{$_} = 0;
+#			}
+#			$title_dict{$_}++;
+#		}
+#		$total_titles++;
+#print "\n";
+
 #
 # Best Buy
 #

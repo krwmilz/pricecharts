@@ -133,18 +133,6 @@ sub scrape_vendors
 		print "$_\n" for @prices;
 	}
 
-	#for (keys %title_dict) {
-	#	print "$_ " if ($title_dict{$_} / $total_titles >= 0.5);
-	#}
-	#			for (split(" ", $title)) {
-	#			if (! $title_dict{$_}) {
-	#				$title_dict{$_} = 0;
-	#			}
-	#			$title_dict{$_}++;
-	#		}
-	#		$total_titles++;
-	#print "\n";
-
 	return if ($args{n} || (scalar @prices) == 0);
 
 	mkdir $cfg->{paths}{data};
