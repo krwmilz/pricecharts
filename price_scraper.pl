@@ -5,6 +5,7 @@ use warnings;
 
 use Config::Grammar;
 use Data::Dumper;
+use DBI;
 use File::Basename;
 use Getopt::Std;
 use JSON;
@@ -53,6 +54,12 @@ elsif (-e "price_scraper.cfg") {
 
 my $cfg = $parser->parse($cfg_file) or die "ERROR: $parser->{err}\n";
 
+my $dbh = DBI->connect(
+	"dbi:SQLite:dbname=pricechart.db",
+	"",
+	"",
+	{ RaiseError => 1 },) or die $DBI::errstr;
+
 if ($args{v}) {
 	# Disable buffering on STDOUT
 	$| = 1;
@@ -94,9 +101,15 @@ sub make_parts_list
 
 sub scrape_vendors
 {
-	my $part_no = shift;
 	my $time_start = time;
 	my @prices;
+
+	my $sth = $dbh->prepare("select part_num from products");
+	$sth->execute();
+	my @results = $sth->fetchrow_array();
+	# sequentially pick one product every hour
+	my $index = (time / 3600) % scalar(@results);
+	my $part_no = $results[$index];
 
 	print strftime '%b %e %Y %H:%M ', localtime;
 	printf '%-10s [', $part_no;
