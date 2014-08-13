@@ -96,8 +96,8 @@ for (keys %product_map) {
 		my $product_dom = get_dom("$product_url$product_id", $ua);
 
 		# part number only found on product page
-		my $part_num = $product_dom->find("#ProductAdd")->text;
-		($part_num) = ($part_num =~ m/Part #: (.*)/);
+		my $part_num = $product_dom->find("#ProductAdd")->text();
+		($part_num) = ($part_num =~ m/Part #: (.*)\r/);
 		next if (not_defined($part_num, "part number", $product_dom));
 
 		my $query = "select * from products where part_num = ?";
