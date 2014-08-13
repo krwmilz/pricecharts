@@ -33,9 +33,6 @@ else {
 	select $logfile;
 }
 
-my $time_start = time;
-my %prices;
-
 my $part_no;
 if ($args{p}) {
 	$part_no = $args{p};
@@ -53,6 +50,8 @@ printf "%-15s [", $part_no;
 my $ua = LWP::UserAgent->new(agent => $cfg->{general}{user_agent});
 $ua->default_header('Accept' => '*/*');
 
+my $time_start = time;
+my %prices;
 for (sort keys $cfg->{vendors}) {
 	my $vendor = $cfg->{vendors}{$_};
 	my $dom = get_dom("$vendor->{search_uri}$part_no", $ua);
