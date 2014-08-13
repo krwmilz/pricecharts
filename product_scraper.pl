@@ -10,6 +10,7 @@ use Getopt::Std;
 use JSON;
 use HTML::Grabber;
 use LWP::Simple;
+use Shared;
 use POSIX;
 
 
@@ -53,7 +54,7 @@ for (keys %product_map) {
 
 	my $class_url = "http://www.memoryexpress.com/Category/" .
 		"$product_map{$_}?PageSize=120&Page=";
-	my $dom = get_dom($class_url . "1");
+	my $dom = get_dom($class_url . "1", $ua);
 	return if (! defined $dom);
 
 	$dom = $dom->find(".AJAX_List_Pager");
@@ -67,7 +68,7 @@ for (keys %product_map) {
 
 	my @results;
 	for (1..$pages) {
-		$dom = get_dom($class_url . "$_");
+		$dom = get_dom($class_url . "$_", $ua);
 		return if (! defined $dom);
 
 		# $dom->filter(".AJAX_List_Body");
@@ -93,7 +94,7 @@ for (keys %product_map) {
 		next if (not_defined($product_id, "product ID", $node));
 
 		my $product_url = "http://www.memoryexpress.com/Products/";
-		my $product_dom = get_dom("$product_url$product_id");
+		my $product_dom = get_dom("$product_url$product_id", $ua);
 
 		# part number only found on product page
 		my $part_num = $product_dom->find("#ProductAdd")->text;
@@ -163,16 +164,4 @@ sub not_defined
 		return 1;
 	}
 	return 0;
-}
-
-sub get_dom
-{
-	my $url = shift;
-
-	my $resp = $ua->get($url);
-	if (! $resp->is_success) {
-		print STDERR "getting $url failed: " . $resp->status_line . "\n";
-		return undef;
-	}
-	return HTML::Grabber->new(html => $resp->decoded_content);
 }
