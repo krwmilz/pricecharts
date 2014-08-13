@@ -113,7 +113,7 @@ while (my ($name, $vendor) = each ($cfg->{vendors})) {
 	$price =~ s/,//;
 
 	print substr($name, 0, 1);
-	$prices{$name} = $price;
+	$prices{"\"$name\""} = $price;
 }
 
 print '] (' . (time - $time_start) . " s)\n";
@@ -121,4 +121,23 @@ if ($args{v}) {
 	print "$_: $prices{$_}\n" for (keys %prices);
 }
 
-exit if ($args{n} || (scalar(keys %prices)) == 0);
+if ($args{n} || (scalar(keys %prices)) == 0) {
+	$dbh->disconnect();
+	exit;
+}
+
+$dbh->do("create table if not exists [$part_no]" .
+	"(date int not null primary key)");
+
+my $sth = $dbh->prepare("select * from [$part_no]");
+my @columns = @{$sth->{NAME}};
+for my $vendor (keys %prices) {
+	next if (grep {"\"$_\"" eq $vendor} @columns);
+	$dbh->do("alter table [$part_no] add column $vendor");
+}
+$dbh->do("insert into [$part_no](date, " .
+	join(", ", keys %prices) . ") " .
+	"values ($time_start, " .
+	join(", ", values %prices) . ")");
+
+$dbh->disconnect();
