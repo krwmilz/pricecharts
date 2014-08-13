@@ -80,8 +80,8 @@ my $ua = LWP::UserAgent->new(agent => 'Mozilla/5.0');
 # some sites need this (amazon I think?)
 $ua->default_header('Accept' => '*/*');
 
-while (my ($name, $vendor) = each ($cfg->{vendors})) {
-
+for (sort keys $cfg->{vendors}) {
+	my $vendor = $cfg->{vendors}{$_};
 	my $dom = get_dom("$vendor->{search_uri}$part_no", $ua);
 	next if (!defined $dom);
 
@@ -112,8 +112,8 @@ while (my ($name, $vendor) = each ($cfg->{vendors})) {
 	($price) = ($price =~ m/(\d[\d,]+)/);
 	$price =~ s/,//;
 
-	print substr($name, 0, 1);
-	$prices{"\"$name\""} = $price;
+	print substr($_, 0, 1);
+	$prices{"\"$_\""} = $price;
 }
 
 print '] (' . (time - $time_start) . " s)\n";
