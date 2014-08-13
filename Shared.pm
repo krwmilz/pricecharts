@@ -1,10 +1,11 @@
 #!/usr/bin/env perl
 
 package Shared;
+use Config::Grammar;
 use Exporter;
 
 @ISA = ("Exporter");
-@EXPORT = ("get_dom");
+@EXPORT = ("get_dom", "get_config");
 
 sub get_dom
 {
@@ -17,6 +18,26 @@ sub get_dom
 		return undef;
 	}
 	return HTML::Grabber->new(html => $resp->decoded_content);
+}
+
+sub get_config
+{
+	my $cfg_file = shift;
+	my $parser = Config::Grammar->new({
+		_sections => ['vendors', 'paths'],
+		vendors	=> {
+			# vendor regular expression
+			_sections => ['/[A-Za-z ]+/'],
+			'/[A-Za-z ]+/' => {
+				_vars => ['search_uri', 'reg_price', 'sale_price', 'color'],
+			},
+		},
+		paths => {
+			_vars => ['http', 'log'],
+		},
+	});
+
+	return $parser->parse($cfg_file) or die "ERROR: $parser->{err}\n";
 }
 
 1;

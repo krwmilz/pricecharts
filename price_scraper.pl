@@ -3,7 +3,6 @@
 use strict;
 use warnings;
 
-use Config::Grammar;
 use Data::Dumper;
 use DBI;
 use Getopt::Std;
@@ -16,32 +15,10 @@ use POSIX;
 my %args;
 getopts('f:np:v', \%args);
 
-my $parser = Config::Grammar->new({
-	_sections => ['vendors', 'paths'],
-	vendors	=> {
-		# vendor regular expression
-		_sections => ['/[A-Za-z ]+/'],
-		'/[A-Za-z ]+/' => {
-			_vars => ['search_uri', 'reg_price', 'sale_price', 'color'],
-		},
-	},
-	paths => {
-		_vars => ['http', 'log'],
-	},
-});
-
-my $cfg_file;
-if ($args{f}) {
-	$cfg_file = $args{f};
-}
-elsif (-e "/etc/price_scraper.cfg") {
-	$cfg_file = "/etc/price_scraper.cfg";
-}
-elsif (-e "price_scraper.cfg") {
-	$cfg_file = "price_scraper.cfg";
-}
-
-my $cfg = $parser->parse($cfg_file) or die "ERROR: $parser->{err}\n";
+my $cfg;
+$cfg = get_config("/etc/price_scraper.cfg") if (-e "/etc/price_scraper.cfg");
+$cfg = get_config("price_scraper.cfg") if (-e "price_scraper.cfg");
+$cfg = get_config($args{f}) if ($args{f});
 
 my $dbh = DBI->connect(
 	"dbi:SQLite:dbname=pricechart.db",
