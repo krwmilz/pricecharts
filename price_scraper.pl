@@ -15,10 +15,7 @@ use POSIX;
 my %args;
 getopts('f:np:v', \%args);
 
-my $cfg;
-$cfg = get_config("/etc/price_scraper.cfg") if (-e "/etc/price_scraper.cfg");
-$cfg = get_config("price_scraper.cfg") if (-e "price_scraper.cfg");
-$cfg = get_config($args{f}) if ($args{f});
+my $cfg = get_config($args{f});
 
 my $dbh = DBI->connect(
 	"dbi:SQLite:dbname=pricechart.db",

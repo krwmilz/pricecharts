@@ -23,6 +23,14 @@ sub get_dom
 sub get_config
 {
 	my $cfg_file = shift;
+	if (!defined $cfg_file) {
+		if (-e "price_scraper.cfg") {
+			$cfg_file = "price_scraper.cfg";
+		} else {
+			$cfg_file = "/etc/price_scraper.cfg";
+		}
+	}
+
 	my $parser = Config::Grammar->new({
 		_sections => ['vendors', 'paths'],
 		vendors	=> {
