@@ -60,7 +60,7 @@ else {
 }
 
 my $time_start = time;
-my @prices;
+my %prices;
 
 my $part_no;
 if ($args{p}) {
@@ -113,19 +113,12 @@ while (my ($name, $vendor) = each ($cfg->{vendors})) {
 	$price =~ s/,//;
 
 	print substr($name, 0, 1);
-	push @prices, "$name=$price";
+	$prices{$name} = $price;
 }
 
 print '] (' . (time - $time_start) . " s)\n";
 if ($args{v}) {
-	print "$_\n" for @prices;
+	print "$_: $prices{$_}\n" for (keys %prices);
 }
 
-exit if ($args{n} || (scalar @prices) == 0);
-
-mkdir $cfg->{paths}{data};
-open FILE, ">>", "$cfg->{paths}{data}/$part_no.txt" or die $!;
-print FILE time * 1000;
-print FILE "\t$_" for @prices;
-print FILE "\n";
-close FILE;
+exit if ($args{n} || (scalar(keys %prices)) == 0);
