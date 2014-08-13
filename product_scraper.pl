@@ -13,7 +13,9 @@ use POSIX;
 
 
 my %args;
-getopts("v", \%args);
+getopts("vf:", \%args);
+
+my $cfg = get_config($args{f});
 
 if ($args{v}) {
 	# Disable buffering on STDOUT
@@ -35,9 +37,7 @@ $dbh->do("create table if not exists products(" .
 	"first_seen int, " . 
 	"last_seen int)") or die $DBI::errstr;
 
-# Chrome 36 Win7 64bit
-my $user_agent = "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1985.125 Safari/537.36";
-my $ua = LWP::UserAgent->new(agent => $user_agent);
+my $ua = LWP::UserAgent->new(agent => $cfg->{general}{user_agent});
 $ua->default_header("Accept" => "*/*");
 
 #
