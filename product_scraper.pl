@@ -5,7 +5,6 @@ use warnings;
 
 use Data::Dumper;
 use DBI;
-use File::Basename;
 use Getopt::Std;
 use HTML::Grabber;
 use LWP::Simple;
