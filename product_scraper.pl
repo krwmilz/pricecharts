@@ -7,7 +7,6 @@ use Data::Dumper;
 use DBI;
 use File::Basename;
 use Getopt::Std;
-use JSON;
 use HTML::Grabber;
 use LWP::Simple;
 use Shared;
