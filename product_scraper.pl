@@ -126,6 +126,8 @@ for (keys %product_map) {
 	print "\n";
 }
 
+$dbh->disconnect();
+
 #for (keys %title_dict) {
 #	print "$_ " if ($title_dict{$_} / $total_titles >= 0.5);
 #}
