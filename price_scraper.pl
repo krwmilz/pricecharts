@@ -89,7 +89,8 @@ for (sort keys $cfg->{vendors}) {
 	$prices{"\"$_\""} = $price;
 }
 
-print '] (' . (time - $time_start) . " s)\n";
+my $duration = time - $time_start;
+print "] ($duration s)\n";
 if ($args{v}) {
 	print "$_: $prices{$_}\n" for (keys %prices);
 }
@@ -100,7 +101,7 @@ if ($args{n} || (scalar(keys %prices)) == 0) {
 }
 
 $dbh->do("create table if not exists [$part_no]" .
-	"(date int not null primary key)");
+	"(date int not null primary key, duration int)");
 
 my $sth = $dbh->prepare("select * from [$part_no]");
 my @columns = @{$sth->{NAME}};
@@ -108,9 +109,9 @@ for my $vendor (keys %prices) {
 	next if (grep {"\"$_\"" eq $vendor} @columns);
 	$dbh->do("alter table [$part_no] add column $vendor");
 }
-$dbh->do("insert into [$part_no](date, " .
+$dbh->do("insert into [$part_no](date, duration, " .
 	join(", ", keys %prices) . ") " .
-	"values ($time_start, " .
+	"values ($time_start, $duration, " .
 	join(", ", values %prices) . ")");
 
 $dbh->disconnect();
