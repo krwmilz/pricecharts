@@ -26,7 +26,7 @@ my $parser = Config::Grammar->new({
 		},
 	},
 	paths => {
-		_vars => ['http', 'data', 'log'],
+		_vars => ['http', 'log'],
 	},
 });
 
