@@ -32,7 +32,7 @@ sub get_config
 	}
 
 	my $parser = Config::Grammar->new({
-		_sections => ['vendors', 'paths'],
+		_sections => ['vendors', 'general'],
 		vendors	=> {
 			# vendor regular expression
 			_sections => ['/[A-Za-z ]+/'],
@@ -40,8 +40,8 @@ sub get_config
 				_vars => ['search_uri', 'reg_price', 'sale_price', 'color'],
 			},
 		},
-		paths => {
-			_vars => ['http', 'log'],
+		general => {
+			_vars => ['http_path', 'log_path', 'user_agent'],
 		},
 	});
 

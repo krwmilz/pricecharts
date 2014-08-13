@@ -29,7 +29,7 @@ if ($args{v}) {
 	select STDOUT;
 }
 else {
-	open my $logfile, ">>", "$cfg->{paths}{log}" or die $!;
+	open my $logfile, ">>", "$cfg->{general}{log_path}" or die $!;
 	select $logfile;
 }
 
@@ -50,8 +50,7 @@ else {
 print strftime "%b %e %Y %H:%M ", localtime;
 printf "%-15s [", $part_no;
 
-my $ua = LWP::UserAgent->new(agent => 'Mozilla/5.0');
-# some sites need this (amazon I think?)
+my $ua = LWP::UserAgent->new(agent => $cfg->{general}{user_agent});
 $ua->default_header('Accept' => '*/*');
 
 for (sort keys $cfg->{vendors}) {
