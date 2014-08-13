@@ -24,10 +24,10 @@ sub get_config
 {
 	my $cfg_file = shift;
 	if (!defined $cfg_file) {
-		if (-e "price_scraper.cfg") {
-			$cfg_file = "price_scraper.cfg";
+		if (-e "pricechart.cfg") {
+			$cfg_file = "pricechart.cfg";
 		} else {
-			$cfg_file = "/etc/price_scraper.cfg";
+			$cfg_file = "/etc/pricechart.cfg";
 		}
 	}
 
