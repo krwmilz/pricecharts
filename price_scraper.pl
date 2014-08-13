@@ -9,6 +9,7 @@ use DBI;
 use Getopt::Std;
 use HTML::Grabber;
 use LWP::Simple;
+use Shared;
 use POSIX;
 
 
@@ -81,14 +82,8 @@ $ua->default_header('Accept' => '*/*');
 
 while (my ($name, $vendor) = each ($cfg->{vendors})) {
 
-	my $resp = $ua->get("$vendor->{search_uri}$part_no");
-	if (! $resp->is_success) {
-		print STDERR "$name: " . $resp->status_line . "\n";
-		print ' ';
-		next;
-	}
-
-	my $dom = HTML::Grabber->new(html => $resp->decoded_content);
+	my $dom = get_dom("$vendor->{search_uri}$part_no", $ua);
+	next if (!defined $dom);
 
 	#if (substr($vendor->{context}, 0, 1) eq '@') {
 	#	$vendor->{context} =~ s/@/#/;
