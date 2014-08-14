@@ -5,6 +5,8 @@ use warnings;
 
 use Data::Dumper;
 use DBI;
+use Email::Simple;
+use Email::Send;
 use Getopt::Std;
 use HTML::Grabber;
 use LWP::Simple;
@@ -40,15 +42,27 @@ $dbh->do("create table if not exists products(" .
 my $ua = LWP::UserAgent->new(agent => $cfg->{general}{user_agent});
 $ua->default_header("Accept" => "*/*");
 
+my $email;
+
 #
 # Memory Express
 #
+
+$dbh->do("create table if not exists [Memory Express](" .
+	"date int not null primary key)");
+
 my %product_map = ("televisions" => "Televisions",
 	"laptops" => "LaptopsNotebooks",
 	"hard_drives" => "HardDrives");
+
+$email .= "*** Memory Express ***\n\n";
+$email .= "product type    scraped total new\n";
+$email .= "------------    ------- ----- ---\n";
+
+my @new = ();
 for (keys %product_map) {
 
-	print "*** $_ ***\n";
+	$email .= sprintf("%-15s ", "$_:");
 
 	my $class_url = "http://www.memoryexpress.com/Category/" .
 		"$product_map{$_}?PageSize=120&Page=";
@@ -74,7 +88,6 @@ for (keys %product_map) {
 	}
 
 	my $scraped = 0;
-	my @new_products = ();
 	for my $node (@results) {
 		my $product = HTML::Grabber->new(html => $node);
 
@@ -105,6 +118,7 @@ for (keys %product_map) {
 		if ($sth->fetchrow_array()) {
 			$dbh->do("update products set last_seen = ? where part_num = ?",
 				undef, time, $part_num);
+			# also update title, brand here?
 		}
 		else {
 			$dbh->do("insert into products(" .
@@ -113,20 +127,48 @@ for (keys %product_map) {
 				undef, $part_num, $brand, $title, $_, time, time);
 			#$dbh->do("create table [$part_num]" .
 			#	"(unix_time int not null primary key)");
-			push @new_products, ([$brand, $title, $part_num]);
+			push @new, ([$_, $brand, $title, $part_num]);
 		}
 
 		$scraped++;
 		last;
 	}
 
-	print "scraped/total: $scraped/" . @results . "\n";
-	print "new: " . scalar @new_products . "\n";
-	print " - $_->[0] $_->[1] $_->[2]\n" for (@new_products);
-	print "\n";
+	$email .= sprintf("%7s %5s %3s\n", $scraped, scalar @results,
+			scalar @new);
+	# $email .= "scraped/total: $scraped/" . @results . "\n";
+	# $email .= "new: " . scalar @new_products . "\n";
+
+	next;
+
+	my $sth = $dbh->prepare("select * from [Memory Express]");
+	my @columns = @{$sth->{NAME}};
+	for my $column (@columns) {
+		next if ($column ne $_);
+	}
+	$dbh->do("alter table [Memory Express] add column $_");
 }
 
+$email .= "\nNew products:\n" if (@new);
+$email .= "- ($_->[0]) $_->[1] $_->[2] $_->[3]\n" for (@new);
+$email .= "\n";
+
 $dbh->disconnect();
+
+my $date = strftime "%d/%m/%Y", localtime;
+my $e_mail = Email::Simple->create(
+	header => [
+		From	=> "Santa Claus <sc\@np.com>",
+		To	=> "kyle\@getaddrinfo.net",
+		Subject	=> "PriceChart product scrape $date",
+	],
+	body => $email);
+
+print $e_mail->as_string();
+
+my $sender = Email::Send->new({mailer => 'SMTP'});
+$sender->mailer_args([Host => 'smtp.getaddrinfo.net']);
+$sender->send($e_mail->as_string());
 
 #for (keys %title_dict) {
 #	print "$_ " if ($title_dict{$_} / $total_titles >= 0.5);
