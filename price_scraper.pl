@@ -18,7 +18,7 @@ getopts('f:np:v', \%args);
 my $cfg = get_config($args{f});
 
 my $dbh = DBI->connect(
-	"dbi:SQLite:dbname=pricechart.db",
+	"dbi:SQLite:dbname=$cfg->{general}{db_file}",
 	"",
 	"",
 	{ RaiseError => 1 },) or die $DBI::errstr;
