@@ -132,9 +132,6 @@ for (keys %product_map) {
 
 	$email .= sprintf("%7s %5s %3s\n", $scraped, scalar @results,
 			scalar @new);
-	# $email .= "scraped/total: $scraped/" . @results . "\n";
-	# $email .= "new: " . scalar @new_products . "\n";
-
 	next;
 
 	my $sth = $dbh->prepare("select * from [Memory Express]");
@@ -147,7 +144,6 @@ for (keys %product_map) {
 
 $email .= "\nNew products:\n" if (@new);
 $email .= "- ($_->[0]) $_->[1] $_->[2] $_->[3]\n" for (@new);
-$email .= "\n";
 
 $dbh->disconnect();
 
