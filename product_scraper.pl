@@ -155,7 +155,7 @@ my $date = strftime "%d/%m/%Y", localtime;
 my $e_mail = Email::Simple->create(
 	header => [
 		From	=> "Santa Claus <sc\@np.com>",
-		To	=> "kyle\@getaddrinfo.net",
+		To	=> $cfg->{general}{email},
 		Subject	=> "PriceChart product scrape $date",
 	],
 	body => $email);
@@ -163,7 +163,7 @@ my $e_mail = Email::Simple->create(
 print $e_mail->as_string();
 
 my $sender = Email::Send->new({mailer => 'SMTP'});
-$sender->mailer_args([Host => 'smtp.getaddrinfo.net']);
+$sender->mailer_args([Host => $cfg->{general}{smtp}]);
 $sender->send($e_mail->as_string());
 
 #for (keys %title_dict) {
