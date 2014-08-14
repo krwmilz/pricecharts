@@ -19,11 +19,7 @@ getopts("vf:", \%args);
 
 my $cfg = get_config($args{f});
 
-if ($args{v}) {
-	# Disable buffering on STDOUT
-	$| = 1;
-	select STDOUT;
-}
+$| = 1 if ($args{v});
 
 my $dbh = DBI->connect(
 	"dbi:SQLite:dbname=pricechart.db",
