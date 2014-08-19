@@ -63,7 +63,7 @@ for (keys %product_map) {
 	my $class_url = "http://www.memoryexpress.com/Category/" .
 		"$product_map{$_}?PageSize=120&Page=";
 	my $dom = get_dom($class_url . "1", $ua);
-	return if (! defined $dom);
+	next if (! defined $dom);
 
 	$dom = $dom->find(".AJAX_List_Pager");
 	my @elements = $dom->find("li")->html_array();
