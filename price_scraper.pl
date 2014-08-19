@@ -23,15 +23,9 @@ my $dbh = DBI->connect(
 	"",
 	{ RaiseError => 1 },) or die $DBI::errstr;
 
-if ($args{v}) {
-	# Disable buffering on STDOUT
-	$| = 1;
-	select STDOUT;
-}
-else {
-	open my $logfile, ">>", "$cfg->{general}{log_path}" or die $!;
-	select $logfile;
-}
+$| = 1 if ($args{v});
+
+open my $log, ">>", "$cfg->{general}{log_file}" or die $!;
 
 my $part_no;
 if ($args{p}) {
@@ -47,13 +41,18 @@ else {
 my $ua = LWP::UserAgent->new(agent => $cfg->{general}{user_agent});
 $ua->default_header('Accept' => '*/*');
 
-print strftime "%b %e %Y %H:%M ", localtime;
-printf "%-15s [", $part_no;
+print $log strftime "%b %e %Y %H:%M ", localtime;
+printf $log "%-15s [", $part_no;
+
+print "$part_no:\n" if ($args{v});
 
 my $time_start = time;
 my %prices;
 for (sort keys $cfg->{vendors}) {
 	my $vendor = $cfg->{vendors}{$_};
+
+	printf "%-15s: ", $_ if ($args{v});
+
 	my $dom = get_dom("$vendor->{search_uri}$part_no", $ua);
 	next if (!defined $dom);
 
@@ -77,22 +76,22 @@ for (sort keys $cfg->{vendors}) {
 	}
 
 	if (! $price) {
-		print ' ';
+		print $log " ";
+		print "\n" if ($args{v});
 		next;
 	}
 
 	($price) = ($price =~ m/(\d[\d,]+)/);
 	$price =~ s/,//;
 
-	print substr($_, 0, 1);
+	print $log substr($_, 0, 1);
 	$prices{"\"$_\""} = $price;
+
+	printf "\$%i\n", $price if ($args{v});
 }
 
 my $duration = time - $time_start;
-print "] ($duration s)\n";
-if ($args{v}) {
-	print "$_: $prices{$_}\n" for (keys %prices);
-}
+print $log "] ($duration s)\n";
 
 if ($args{n} || (scalar(keys %prices)) == 0) {
 	$dbh->disconnect();

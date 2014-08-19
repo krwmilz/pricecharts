@@ -43,7 +43,7 @@ sub get_config
 		general => {
 			_vars => [
 				'http_path',
-				'log_path',
+				'log_file',
 				'user_agent',
 				'email',
 				'smtp',
