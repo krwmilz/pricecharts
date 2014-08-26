@@ -93,6 +93,8 @@ for (sort keys $cfg->{vendors}) {
 my $duration = time - $time_start;
 print $log "] ($duration s)\n";
 
+close $log;
+
 if ($args{n} || (scalar(keys %prices)) == 0) {
 	$dbh->disconnect();
 	exit;
