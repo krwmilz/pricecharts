@@ -39,9 +39,6 @@ my $email;
 # Memory Express
 #
 
-$dbh->do("create table if not exists [Memory Express](" .
-	"date int not null primary key)");
-
 my %product_map = ("televisions" => "Televisions",
 	"laptops" => "LaptopsNotebooks",
 	"hard_drives" => "HardDrives");
@@ -132,13 +129,6 @@ for (keys %product_map) {
 	$email .= sprintf("%7s %5s %3s\n", $scraped, scalar @results,
 			scalar @new);
 	next;
-
-	my $sth = $dbh->prepare("select * from [Memory Express]");
-	my @columns = @{$sth->{NAME}};
-	for my $column (@columns) {
-		next if ($column ne $_);
-	}
-	$dbh->do("alter table [Memory Express] add column $_");
 }
 
 $email .= "\nNew products:\n" if (@new);
