@@ -20,6 +20,7 @@ getopts("vf:", \%args);
 
 my $cfg = get_config($args{f});
 my $dbh = get_dbh($cfg);
+my $ua  = get_ua($cfg);
 
 $| = 1 if ($args{v});
 
@@ -31,9 +32,6 @@ $dbh->do("create table if not exists products(" .
 	"first_seen int, " . 
 	"last_seen int, " .
 	"last_scraped int)") or die $DBI::errstr;
-
-my $ua = LWP::UserAgent->new(agent => $cfg->{general}{user_agent});
-$ua->default_header("Accept" => "*/*");
 
 my $email;
 

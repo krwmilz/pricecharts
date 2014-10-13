@@ -18,6 +18,7 @@ getopts('f:np:v', \%args);
 
 my $cfg = get_config($args{f});
 my $dbh = get_dbh($cfg);
+my $ua  = get_ua($cfg);
 
 $| = 1 if ($args{v});
 
@@ -46,9 +47,6 @@ $dbh->do("create table if not exists prices(" .
 	"price int not null, " .
 	"duration int, " .
 	"primary key(date, part_num, vendor, price))");
-
-my $ua = LWP::UserAgent->new(agent => $cfg->{general}{user_agent});
-$ua->default_header('Accept' => '*/*');
 
 print $log strftime "%b %e %Y %H:%M ", localtime;
 printf $log "%-15s [", $part_num;

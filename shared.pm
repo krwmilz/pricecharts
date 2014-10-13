@@ -5,7 +5,7 @@ use Config::Grammar;
 use Exporter;
 
 @ISA = ("Exporter");
-@EXPORT = ("get_dom", "get_config", "get_dbh");
+@EXPORT = ("get_dom", "get_config", "get_dbh", "get_ua");
 
 sub get_dom
 {
@@ -65,6 +65,15 @@ sub get_dbh
 		"",
 		{ RaiseError => 1 },) or die $DBI::errstr;
 	return $dbh;
+}
+
+sub get_ua
+{
+	my $cfg = shift;
+
+	my $ua = LWP::UserAgent->new(agent => $cfg->{general}{user_agent});
+	$ua->default_header("Accept" => "*/*");
+	return $ua;
 }
 
 1;
