@@ -33,8 +33,6 @@ $dbh->do("create table if not exists products(" .
 	"last_seen int, " .
 	"last_scraped int)") or die $DBI::errstr;
 
-my $email;
-
 #
 # Memory Express
 #
@@ -43,6 +41,7 @@ my %product_map = ("televisions" => "Televisions",
 	"laptops" => "LaptopsNotebooks",
 	"hard_drives" => "HardDrives");
 
+my $email;
 $email .= "*** Memory Express ***\n\n";
 $email .= "product type    scraped total new\n";
 $email .= "------------    ------- ----- ---\n";
