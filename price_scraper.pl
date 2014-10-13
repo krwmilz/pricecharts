@@ -58,7 +58,7 @@ for (sort keys $cfg->{vendors}) {
 	my $start = time;
 	my $vendor = $cfg->{vendors}{$_};
 
-	printf "%-15s: ", $_ if ($args{v});
+	printf "%-15s ", "$_:" if ($args{v});
 
 	my $dom = get_dom("$vendor->{search_uri}$part_num", $ua);
 	next if (!defined $dom);
