@@ -23,6 +23,7 @@ sub get_dom
 sub get_config
 {
 	my $cfg_file = shift;
+
 	if (!defined $cfg_file) {
 		if (-e "pricechart.cfg") {
 			$cfg_file = "pricechart.cfg";
@@ -51,7 +52,6 @@ sub get_config
 			],
 		},
 	});
-
 	return $parser->parse($cfg_file) or die "ERROR: $parser->{err}\n";
 }
 
