@@ -32,10 +32,15 @@ if ($args{p}) {
 	$part_no = $args{p};
 }
 else {
-	my $results = $dbh->selectcol_arrayref("select part_num from products");
-	# sequentially pick one product every hour
-	my $index = (time / 3600) % scalar(@$results);
-	$part_no = $results->[$index];
+	my $results = $dbh->selectcol_arrayref("select part_num from products " .
+	"order by last_scraped asc");
+	if (scalar $results == 0) {
+		print "Product table empty, run product_scraper.pl\n";
+		exit;
+	}
+	$part_no = $results->[0];
+	$dbh->do("update products set last_scraped = ? where part_num = ?",
+		undef, time, $part_no);
 }
 
 $dbh->do("create table if not exists prices(" .

@@ -33,7 +33,8 @@ $dbh->do("create table if not exists products(" .
 	"title text, " .
 	"type text, " .
 	"first_seen int, " . 
-	"last_seen int)") or die $DBI::errstr;
+	"last_seen int, " .
+	"last_scraped int)") or die $DBI::errstr;
 
 my $ua = LWP::UserAgent->new(agent => $cfg->{general}{user_agent});
 $ua->default_header("Accept" => "*/*");
@@ -117,10 +118,10 @@ for (keys %product_map) {
 			# also update title, brand here?
 		}
 		else {
-			$dbh->do("insert into products(" .
-				"part_num, brand, title, type, first_seen, last_seen)" .
-				" values (?, ?, ?, ?, ?, ?)",
-				undef, $part_num, $brand, $title, $_, time, time);
+			$dbh->do("insert into products(part_num, brand, title," .
+				"type, first_seen, last_seen, last_scraped) " .
+				"values (?, ?, ?, ?, ?, ?, ?)", undef,
+				$part_num, $brand, $title, $_, time, time, 0);
 			#$dbh->do("create table [$part_num]" .
 			#	"(unix_time int not null primary key)");
 			push @new, ([$_, $brand, $title, $part_num]);
