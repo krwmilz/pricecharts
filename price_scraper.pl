@@ -29,8 +29,9 @@ if ($args{p}) {
 	$part_num = $args{p};
 }
 else {
+	my $cutoff = time - (30 * 24 * 60 * 60);
 	my $results = $dbh->selectcol_arrayref("select part_num from products " .
-	"order by last_scraped asc");
+	"where last_seen > $cutoff order by last_scraped asc");
 	if (scalar $results == 0) {
 		print "Product table empty, run product_scraper.pl\n";
 		exit;
@@ -99,6 +100,8 @@ for (sort keys $cfg->{vendors}) {
 	$dbh->do("insert into prices(date, part_num, vendor, price, duration)" .
 	       "values (?, ?, ?, ?, ?)",
 		undef, $date, $part_num, $_, $price, time - $start);
+	$dbh->do("update products set last_seen = ? where part_num = ?",
+		undef, $date, $part_num);
 }
 
 my $duration = time - $date;
