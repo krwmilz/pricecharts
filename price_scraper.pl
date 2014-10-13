@@ -27,9 +27,9 @@ $| = 1 if ($args{v});
 
 open my $log, ">>", "$cfg->{general}{log_file}" or die $!;
 
-my $part_no;
+my $part_num;
 if ($args{p}) {
-	$part_no = $args{p};
+	$part_num = $args{p};
 }
 else {
 	my $results = $dbh->selectcol_arrayref("select part_num from products " .
@@ -38,26 +38,26 @@ else {
 		print "Product table empty, run product_scraper.pl\n";
 		exit;
 	}
-	$part_no = $results->[0];
+	$part_num = $results->[0];
 	$dbh->do("update products set last_scraped = ? where part_num = ?",
-		undef, time, $part_no);
+		undef, time, $part_num);
 }
 
 $dbh->do("create table if not exists prices(" .
 	"date int not null, " .
-	"part_no text not null, " .
+	"part_num text not null, " .
 	"vendor text not null, " .
 	"price int not null, " .
 	"duration int, " .
-	"primary key(date, part_no, vendor, price))");
+	"primary key(date, part_num, vendor, price))");
 
 my $ua = LWP::UserAgent->new(agent => $cfg->{general}{user_agent});
 $ua->default_header('Accept' => '*/*');
 
 print $log strftime "%b %e %Y %H:%M ", localtime;
-printf $log "%-15s [", $part_no;
+printf $log "%-15s [", $part_num;
 
-print "$part_no:\n" if ($args{v});
+print "$part_num\n" if ($args{v});
 
 my $date = time;
 for (sort keys $cfg->{vendors}) {
@@ -66,7 +66,7 @@ for (sort keys $cfg->{vendors}) {
 
 	printf "%-15s: ", $_ if ($args{v});
 
-	my $dom = get_dom("$vendor->{search_uri}$part_no", $ua);
+	my $dom = get_dom("$vendor->{search_uri}$part_num", $ua);
 	next if (!defined $dom);
 
 	#if (substr($vendor->{context}, 0, 1) eq '@') {
@@ -102,9 +102,9 @@ for (sort keys $cfg->{vendors}) {
 
 	next if ($args{n});
 
-	$dbh->do("insert into prices(date, part_no, vendor, price, duration)" .
+	$dbh->do("insert into prices(date, part_num, vendor, price, duration)" .
 	       "values (?, ?, ?, ?, ?)",
-		undef, $date, $part_no, $_, $price, time - $start);
+		undef, $date, $part_num, $_, $price, time - $start);
 }
 
 my $duration = time - $date;
