@@ -8,8 +8,9 @@ use DBI;
 use Getopt::Std;
 use HTML::Grabber;
 use LWP::Simple;
-use Shared;
 use POSIX;
+
+use shared;
 
 
 my %args;

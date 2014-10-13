@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 
-package Shared;
+package shared;
 use Config::Grammar;
 use Exporter;
 
