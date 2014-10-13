@@ -5,7 +5,7 @@ use Config::Grammar;
 use Exporter;
 
 @ISA = ("Exporter");
-@EXPORT = ("get_dom", "get_config");
+@EXPORT = ("get_dom", "get_config", "get_dbh");
 
 sub get_dom
 {
@@ -53,6 +53,18 @@ sub get_config
 	});
 
 	return $parser->parse($cfg_file) or die "ERROR: $parser->{err}\n";
+}
+
+sub get_dbh
+{
+	my $cfg = shift;
+
+	my $dbh = DBI->connect(
+		"dbi:SQLite:dbname=$cfg->{general}{db_file}",
+		"",
+		"",
+		{ RaiseError => 1 },) or die $DBI::errstr;
+	return $dbh;
 }
 
 1;

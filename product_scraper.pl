@@ -18,14 +18,9 @@ my %args;
 getopts("vf:", \%args);
 
 my $cfg = get_config($args{f});
+my $dbh = get_dbh($cfg);
 
 $| = 1 if ($args{v});
-
-my $dbh = DBI->connect(
-	"dbi:SQLite:dbname=$cfg->{general}{db_file}",
-	"",
-	"",
-	{ RaiseError => 1 },) or die $DBI::errstr;
 
 $dbh->do("create table if not exists products(" .
 	"part_num text not null primary key, " .

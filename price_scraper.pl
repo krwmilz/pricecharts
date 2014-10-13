@@ -16,12 +16,7 @@ my %args;
 getopts('f:np:v', \%args);
 
 my $cfg = get_config($args{f});
-
-my $dbh = DBI->connect(
-	"dbi:SQLite:dbname=$cfg->{general}{db_file}",
-	"",
-	"",
-	{ RaiseError => 1 },) or die $DBI::errstr;
+my $dbh = get_dbh($cfg);
 
 $| = 1 if ($args{v});
 
