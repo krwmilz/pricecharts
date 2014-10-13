@@ -43,13 +43,13 @@ my %product_map = ("televisions" => "Televisions",
 
 my $email;
 $email .= "*** Memory Express ***\n\n";
-$email .= "product type    scraped total new\n";
+$email .= "type            scraped total new\n";
 $email .= "------------    ------- ----- ---\n";
 
 my @new = ();
 for (keys %product_map) {
 
-	$email .= sprintf("%-15s ", "$_:");
+	$email .= sprintf("%-15s ", $_);
 
 	my $class_url = "http://www.memoryexpress.com/Category/" .
 		"$product_map{$_}?PageSize=120&Page=";
@@ -74,7 +74,8 @@ for (keys %product_map) {
 		push @results, $dom->find(".PIV_Regular")->html_array();
 	}
 
-	my $scraped = 0;
+	my $new = 0;
+	my $old = 0;
 	for my $node (@results) {
 		my $product = HTML::Grabber->new(html => $node);
 
@@ -110,6 +111,7 @@ for (keys %product_map) {
 			$dbh->do("update products set last_seen = ? where part_num = ?",
 				undef, time, $part_num);
 			# also update title, brand here?
+			$old++;
 		}
 		else {
 			$dbh->do("insert into products(part_num, brand, title," .
@@ -119,14 +121,13 @@ for (keys %product_map) {
 			#$dbh->do("create table [$part_num]" .
 			#	"(unix_time int not null primary key)");
 			push @new, ([$_, $brand, $title, $part_num]);
+			$new++;
 		}
 
-		$scraped++;
 		last;
 	}
 
-	$email .= sprintf("%7s %5s %3s\n", $scraped, scalar @results,
-			scalar @new);
+	$email .= sprintf("%7s %5s %3s\n", $new + $old, scalar @results, $new);
 	next;
 }
 
