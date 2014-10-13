@@ -149,7 +149,7 @@ print $e_mail->as_string();
 
 my $sender = Email::Send->new({mailer => 'SMTP'});
 $sender->mailer_args([Host => $cfg->{general}{smtp}]);
-$sender->send($e_mail->as_string());
+$sender->send($e_mail->as_string()) || die "Couldn't send email\n";
 
 #for (keys %title_dict) {
 #	print "$_ " if ($title_dict{$_} / $total_titles >= 0.5);
