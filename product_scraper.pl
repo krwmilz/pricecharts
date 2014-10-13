@@ -117,8 +117,6 @@ for (keys %product_map) {
 				"type, first_seen, last_seen, last_scraped) " .
 				"values (?, ?, ?, ?, ?, ?, ?)", undef,
 				$part_num, $brand, $title, $_, time, time, 0);
-			#$dbh->do("create table [$part_num]" .
-			#	"(unix_time int not null primary key)");
 			push @new, ([$_, $brand, $title, $part_num]);
 			$new++;
 		}
