@@ -7,7 +7,6 @@ use Data::Dumper;
 use DBI;
 use Getopt::Std;
 use HTML::Grabber;
-use LWP::Simple;
 use POSIX;
 
 use shared;

@@ -9,7 +9,6 @@ use Email::Simple;
 use Email::Send;
 use Getopt::Std;
 use HTML::Grabber;
-use LWP::Simple;
 use POSIX;
 
 use shared;

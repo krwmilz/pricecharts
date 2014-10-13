@@ -3,6 +3,7 @@
 package shared;
 use Config::Grammar;
 use Exporter;
+use LWP::Simple;
 
 @ISA = ("Exporter");
 @EXPORT = ("get_dom", "get_config", "get_dbh", "get_ua");
