@@ -88,9 +88,13 @@ for (keys %product_map) {
 		my $title = $product->find(".ProductTitle")->text();
 		next if (not_defined($title, "title", $node));
 
-		# brand is easier to parse from general results page
-		my $brand = $product->find(".ProductBrand")->html();
-		($brand) = ($brand =~ m/Brand: ([A-Za-z]+)/);
+		# brand is easier to parse from general results page, sometimes
+		# shows up as text
+		my $brand = $product->find(".ProductBrand")->text();
+		if ($brand eq "") {
+			my $brand = $product->find(".ProductBrand")->html();
+			($brand) = ($brand =~ m/Brand: ([A-Za-z]+)/);
+		}
 		next if (not_defined($brand, "brand", $node));
 
 		# used to visit the actual product page
