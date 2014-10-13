@@ -38,6 +38,14 @@ else {
 	$part_no = $results->[$index];
 }
 
+$dbh->do("create table if not exists prices(" .
+	"date int not null, " .
+	"part_no text not null, " .
+	"vendor text not null, " .
+	"price int not null, " .
+	"duration int, " .
+	"primary key(date, part_no, vendor, price))");
+
 my $ua = LWP::UserAgent->new(agent => $cfg->{general}{user_agent});
 $ua->default_header('Accept' => '*/*');
 
@@ -46,9 +54,9 @@ printf $log "%-15s [", $part_no;
 
 print "$part_no:\n" if ($args{v});
 
-my $time_start = time;
-my %prices;
+my $date = time;
 for (sort keys $cfg->{vendors}) {
+	my $start = time;
 	my $vendor = $cfg->{vendors}{$_};
 
 	printf "%-15s: ", $_ if ($args{v});
@@ -85,33 +93,17 @@ for (sort keys $cfg->{vendors}) {
 	$price =~ s/,//;
 
 	print $log substr($_, 0, 1);
-	$prices{"\"$_\""} = $price;
-
 	printf "\$%i\n", $price if ($args{v});
+
+	next if ($args{n});
+
+	$dbh->do("insert into prices(date, part_no, vendor, price, duration)" .
+	       "values (?, ?, ?, ?, ?)",
+		undef, $date, $part_no, $_, $price, time - $start);
 }
 
-my $duration = time - $time_start;
+my $duration = time - $date;
 print $log "] ($duration s)\n";
 
 close $log;
-
-if ($args{n} || (scalar(keys %prices)) == 0) {
-	$dbh->disconnect();
-	exit;
-}
-
-$dbh->do("create table if not exists [$part_no]" .
-	"(date int not null primary key, duration int)");
-
-my $sth = $dbh->prepare("select * from [$part_no]");
-my @columns = @{$sth->{NAME}};
-for my $vendor (keys %prices) {
-	next if (grep {"\"$_\"" eq $vendor} @columns);
-	$dbh->do("alter table [$part_no] add column $vendor");
-}
-$dbh->do("insert into [$part_no](date, duration, " .
-	join(", ", keys %prices) . ") " .
-	"values ($time_start, $duration, " .
-	join(", ", values %prices) . ")");
-
 $dbh->disconnect();
