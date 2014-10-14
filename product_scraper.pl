@@ -36,12 +36,15 @@ $dbh->do("create table if not exists products(" .
 # Memory Express
 #
 
+my $vendor = "Memory Express";
 my %product_map = ("televisions" => "Televisions",
 	"laptops" => "LaptopsNotebooks",
 	"hard_drives" => "HardDrives");
 
+print "$vendor:\n" if ($args{v});
+
 my $email;
-$email .= "*** Memory Express ***\n\n";
+$email .= "*** $vendor ***\n\n";
 $email .= "type            scraped total new\n";
 $email .= "------------    ------- ----- ---\n";
 
@@ -110,6 +113,7 @@ for (keys %product_map) {
 			$dbh->do("update products set last_seen = ? where part_num = ?",
 				undef, time, $part_num);
 			# also update title, brand here?
+			print "  " if ($args{v});
 			$old++;
 		}
 		else {
@@ -118,9 +122,11 @@ for (keys %product_map) {
 				"values (?, ?, ?, ?, ?, ?, ?)", undef,
 				$part_num, $brand, $title, $_, time, time, 0);
 			push @new, ([$_, $brand, $title, $part_num]);
+			print "+ " if ($args{v});
 			$new++;
 		}
 
+		print "($part_num) $brand $title\n" if ($args{v});
 		last;
 	}
 
