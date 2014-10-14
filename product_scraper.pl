@@ -106,7 +106,7 @@ for (keys %product_map) {
 		my $query = "select * from products where part_num = ?";
 		my $sth = $dbh->prepare($query);
 		$sth->execute($part_num);
-		if ($sth->fetchrow_array()) {
+		if ($sth->fetchrow_arrayref()) {
 			$dbh->do("update products set last_seen = ? where part_num = ?",
 				undef, time, $part_num);
 			# also update title, brand here?
