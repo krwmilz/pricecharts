@@ -127,11 +127,9 @@ for (keys %product_map) {
 		}
 
 		print "($part_num) $brand $title\n" if ($args{v});
-		last;
 	}
 
 	$email .= sprintf("%7s %5s %3s\n", $new + $old, scalar @results, $new);
-	next;
 }
 
 $email .= "\nNew products:\n" if (@new);
