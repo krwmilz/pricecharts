@@ -86,7 +86,7 @@ for (keys %product_map) {
 		# shows up as text
 		my $brand = $product->find(".ProductBrand")->text();
 		if ($brand eq "") {
-			my $brand = $product->find(".ProductBrand")->html();
+			$brand = $product->find(".ProductBrand")->html();
 			($brand) = ($brand =~ m/Brand: ([A-Za-z]+)/);
 		}
 		next if (not_defined($brand, "brand", $node));
