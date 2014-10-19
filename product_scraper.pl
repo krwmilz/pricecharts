@@ -78,7 +78,7 @@ for (keys %product_map) {
 	my $old = 0;
 	my $start = time;
 	for my $node (@results) {
-		sleep rand % 10;
+		sleep int(rand(10));
 		my $product = HTML::Grabber->new(html => $node);
 
 		# title is easier to parse from general results page
