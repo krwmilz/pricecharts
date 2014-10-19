@@ -3,10 +3,17 @@
 package shared;
 use Config::Grammar;
 use Exporter;
+use Getopt::Std;
 use LWP::Simple;
 
 @ISA = ("Exporter");
-@EXPORT = ("get_dom", "get_config", "get_dbh", "get_ua");
+@EXPORT = qw(get_dom get_config get_dbh get_ua vprint vprintf %args);
+
+
+our %args;
+getopts('f:np:v', \%args);
+
+$| = 1 if ($args{v});
 
 sub get_dom
 {
@@ -23,9 +30,7 @@ sub get_dom
 
 sub get_config
 {
-	my $cfg_file = shift;
-
-	if (!defined $cfg_file) {
+	if (!$args{f}) {
 		if (-e "pricechart.cfg") {
 			$cfg_file = "pricechart.cfg";
 		} else {
@@ -75,6 +80,16 @@ sub get_ua
 	my $ua = LWP::UserAgent->new(agent => $cfg->{general}{user_agent});
 	$ua->default_header("Accept" => "*/*");
 	return $ua;
+}
+
+sub vprint
+{
+	print $_[0] if ($args{v});
+}
+
+sub vprintf
+{
+	printf(@_) if ($args{v});
 }
 
 1;

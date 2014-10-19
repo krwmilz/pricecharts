@@ -5,21 +5,15 @@ use warnings;
 
 use Data::Dumper;
 use DBI;
-use Getopt::Std;
 use HTML::Grabber;
 use POSIX;
 
 use shared;
 
 
-my %args;
-getopts('f:np:v', \%args);
-
-my $cfg = get_config($args{f});
+my $cfg = get_config();
 my $dbh = get_dbh($cfg);
 my $ua  = get_ua($cfg);
-
-$| = 1 if ($args{v});
 
 open my $log, ">>", "$cfg->{general}{log_file}" or die $!;
 
@@ -51,17 +45,20 @@ $dbh->do("create table if not exists prices(" .
 print $log strftime "%b %e %Y %H:%M ", localtime;
 printf $log "%-15s [", $part_num;
 
-print "$part_num\n" if ($args{v});
+vprint("$part_num\n");
 
 my $date = time;
 for (sort keys $cfg->{vendors}) {
 	my $start = time;
 	my $vendor = $cfg->{vendors}{$_};
 
-	printf "%-15s ", "$_:" if ($args{v});
+	vprint("$_:\n");
 
 	my $dom = get_dom("$vendor->{search_uri}$part_num", $ua);
-	next if (!defined $dom);
+	if (!defined $dom) {
+		msg("e", "error: dom");
+		next;
+	}
 
 	#if (substr($vendor->{context}, 0, 1) eq '@') {
 	#	$vendor->{context} =~ s/@/#/;
@@ -76,23 +73,30 @@ for (sort keys $cfg->{vendors}) {
 	#	next;
 	#}
 
-	my $price = $dom->find($vendor->{reg_price})->text;
+	my $price = get_price($vendor->{"reg_price"}, $dom);
 	if ($vendor->{sale_price}) {
-		my $sale = $dom->find($vendor->{sale_price})->text;
-		$price = $sale if ($sale ne '');
+		my $sale_price = get_price($vendor->{"sale_price"}, $dom);
+		$price = $sale_price if ($sale_price ne '');
 	}
-
 	if (! $price) {
-		print $log " ";
-		print "\n" if ($args{v});
+		msg(" ", "error: price not found");
 		next;
 	}
 
-	($price) = ($price =~ m/(\d[\d,]+)/);
-	$price =~ s/,//;
+	my @prices = ($price =~ m/(\d[\d,]+)/);
+	if (@prices != 1) {
+		msg("r", "error: too many regex matches: " . scalar @prices);
+		next;
+	}
 
-	print $log substr($_, 0, 1);
-	printf "\$%i\n", $price if ($args{v});
+	$price = $prices[0];
+	$price =~ s/,//;
+	if ($price <= 0 || $price > 10000) {
+		msg("o", "error: price \$$price out of range");
+		next;
+	}
+
+	msg(substr($_, 0, 1), "price = \$$price");
 
 	next if ($args{n});
 
@@ -101,6 +105,8 @@ for (sort keys $cfg->{vendors}) {
 		undef, $date, $part_num, $_, $price, time - $start);
 	$dbh->do("update products set last_seen = ? where part_num = ?",
 		undef, $date, $part_num);
+
+	vprint("\tdb updated\n");
 }
 
 my $duration = time - $date;
@@ -108,3 +114,23 @@ print $log "] ($duration s)\n";
 
 close $log;
 $dbh->disconnect();
+
+sub get_price
+{
+	my $dom_element = shift;
+	my $dom = shift;
+
+	my @prices = $dom->find($dom_element)->text_array();
+	vprintf("\t%s = %i\n", $dom_element, scalar @prices);
+
+	return $prices[0];
+}
+
+sub msg
+{
+	my $log_char = shift;
+	my $verbose_msg = shift;
+
+	print $log $log_char;
+	vprint("\t$verbose_msg\n");
+}
