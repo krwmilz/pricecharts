@@ -7,21 +7,16 @@ use Data::Dumper;
 use DBI;
 use Email::Simple;
 use Email::Send;
-use Getopt::Std;
 use HTML::Grabber;
 use POSIX;
 
 use shared;
 
 
-my %args;
-getopts("vf:", \%args);
-
-my $cfg = get_config($args{f});
+my $cfg = get_config();
 my $dbh = get_dbh($cfg);
 my $ua  = get_ua($cfg);
 
-$| = 1 if ($args{v});
 srand;
 
 $dbh->do("create table if not exists products(" .
@@ -42,7 +37,7 @@ my %product_map = ("televisions" => "Televisions",
 	"laptops" => "LaptopsNotebooks",
 	"hard_drives" => "HardDrives");
 
-print "$vendor:\n" if ($args{v});
+vprint("$vendor:\n");
 
 my $email;
 $email .= "*** $vendor ***\n\n";
@@ -76,6 +71,8 @@ for (keys %product_map) {
 		# $dom->filter(".AJAX_List_Body");
 		push @results, $dom->find(".PIV_Regular")->html_array();
 	}
+
+	vprint("$_: found " . scalar @results . " products\n");
 
 	my $new = 0;
 	my $old = 0;
@@ -116,7 +113,7 @@ for (keys %product_map) {
 			$dbh->do("update products set last_seen = ? where part_num = ?",
 				undef, time, $part_num);
 			# also update title, brand here?
-			print "  " if ($args{v});
+			vprint("  ");
 			$old++;
 		}
 		else {
@@ -125,11 +122,11 @@ for (keys %product_map) {
 				"values (?, ?, ?, ?, ?, ?, ?)", undef,
 				$part_num, $brand, $title, $_, time, time, 0);
 			push @new, ([$_, $brand, $title, $part_num]);
-			print "+ " if ($args{v});
+			vprint("+ ");
 			$new++;
 		}
 
-		print "($part_num) $brand $title\n" if ($args{v});
+		vprint("($part_num) $brand $title\n");
 	}
 
 	$email .= sprintf("%7s %5s %3s %4s\n",
@@ -150,11 +147,11 @@ my $e_mail = Email::Simple->create(
 	],
 	body => $email);
 
-print $e_mail->as_string();
+vprint($e_mail->as_string());
 
 my $sender = Email::Send->new({mailer => 'SMTP'});
 $sender->mailer_args([Host => $cfg->{general}{smtp}]);
-$sender->send($e_mail->as_string()) || die "Couldn't send email\n";
+$sender->send($e_mail->as_string()) || print "Couldn't send email\n";
 
 #for (keys %title_dict) {
 #	print "$_ " if ($title_dict{$_} / $total_titles >= 0.5);
@@ -187,8 +184,8 @@ sub not_defined
 	my $dom = shift;
 
 	if (!defined $var) {
-		print "could not find $var_name, DOM was:\n";
-		print "$dom\n";
+		vprint("could not find $var_name, DOM was:\n");
+		vprint("$dom\n");
 		return 1;
 	}
 	return 0;
