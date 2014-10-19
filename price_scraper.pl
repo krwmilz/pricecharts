@@ -60,19 +60,6 @@ for (sort keys $cfg->{vendors}) {
 		next;
 	}
 
-	#if (substr($vendor->{context}, 0, 1) eq '@') {
-	#	$vendor->{context} =~ s/@/#/;
-	#}
-
-	#my $context = $dom->find($vendor->{context})->html();
-	#if ($context) {
-	#	$dom = HTML::Grabber->new(html => $context);
-	#}
-	#else {
-	#	print ' ';
-	#	next;
-	#}
-
 	my $price = get_price($vendor->{"reg_price"}, $dom);
 	if ($vendor->{sale_price}) {
 		my $sale_price = get_price($vendor->{"sale_price"}, $dom);
