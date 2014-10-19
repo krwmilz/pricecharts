@@ -22,6 +22,7 @@ my $dbh = get_dbh($cfg);
 my $ua  = get_ua($cfg);
 
 $| = 1 if ($args{v});
+srand;
 
 $dbh->do("create table if not exists products(" .
 	"part_num text not null primary key, " .
@@ -45,8 +46,8 @@ print "$vendor:\n" if ($args{v});
 
 my $email;
 $email .= "*** $vendor ***\n\n";
-$email .= "type            scraped total new\n";
-$email .= "------------    ------- ----- ---\n";
+$email .= "type            scraped total new time\n";
+$email .= "------------    ------- ----- --- ----\n";
 
 my @new = ();
 for (keys %product_map) {
@@ -78,7 +79,9 @@ for (keys %product_map) {
 
 	my $new = 0;
 	my $old = 0;
+	my $start = time;
 	for my $node (@results) {
+		sleep rand % 10;
 		my $product = HTML::Grabber->new(html => $node);
 
 		# title is easier to parse from general results page
@@ -129,7 +132,8 @@ for (keys %product_map) {
 		print "($part_num) $brand $title\n" if ($args{v});
 	}
 
-	$email .= sprintf("%7s %5s %3s\n", $new + $old, scalar @results, $new);
+	$email .= sprintf("%7s %5s %3s %4s\n",
+		$new + $old, scalar @results, $new, time - $start);
 }
 
 $email .= "\nNew products:\n" if (@new);
