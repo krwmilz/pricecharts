@@ -63,7 +63,7 @@ for (sort keys $cfg->{vendors}) {
 	my $price = get_price($vendor->{"reg_price"}, $dom);
 	if ($vendor->{sale_price}) {
 		my $sale_price = get_price($vendor->{"sale_price"}, $dom);
-		$price = $sale_price if ($sale_price ne '');
+		$price = $sale_price if (defined $sale_price);
 	}
 	if (! $price) {
 		msg(" ", "error: price not found");
