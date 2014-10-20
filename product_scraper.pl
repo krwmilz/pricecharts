@@ -3,8 +3,6 @@
 use strict;
 use warnings;
 
-use Data::Dumper;
-use DBI;
 use Email::Simple;
 use Email::Send;
 use HTML::Grabber;

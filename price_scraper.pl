@@ -3,9 +3,6 @@
 use strict;
 use warnings;
 
-use Data::Dumper;
-use DBI;
-use HTML::Grabber;
 use POSIX;
 
 use shared;

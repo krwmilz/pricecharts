@@ -2,8 +2,10 @@
 
 package shared;
 use Config::Grammar;
+use DBI;
 use Exporter;
 use Getopt::Std;
+use HTML::Grabber;
 use LWP::Simple;
 
 @ISA = ("Exporter");
