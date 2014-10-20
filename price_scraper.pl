@@ -14,8 +14,8 @@ use shared;
 my $cfg = get_config();
 my $dbh = get_dbh($cfg);
 my $ua  = get_ua($cfg);
+my $log = get_log($cfg, "pricechart_scrapes");
 
-open my $log, ">>", "$cfg->{general}{log_file}" or die $!;
 
 my $part_num;
 if ($args{p}) {

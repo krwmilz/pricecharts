@@ -7,7 +7,7 @@ use Getopt::Std;
 use LWP::Simple;
 
 @ISA = ("Exporter");
-@EXPORT = qw(get_dom get_config get_dbh get_ua vprint vprintf %args);
+@EXPORT = qw(get_dom get_config get_dbh get_ua get_log vprint vprintf %args);
 
 
 our %args;
@@ -31,8 +31,8 @@ sub get_dom
 sub get_config
 {
 	if (!$args{f}) {
-		if (-e "pricechart.cfg") {
-			$cfg_file = "pricechart.cfg";
+		if (-e "etc/pricechart.cfg") {
+			$cfg_file = "etc/pricechart.cfg";
 		} else {
 			$cfg_file = "/etc/pricechart.cfg";
 		}
@@ -49,24 +49,28 @@ sub get_config
 		},
 		general => {
 			_vars => [
-				'http_path',
-				'log_file',
+				'var',
 				'user_agent',
 				'email',
 				'smtp',
-				'db_file'
 			],
 		},
 	});
-	return $parser->parse($cfg_file) or die "ERROR: $parser->{err}\n";
+
+	my $cfg =$parser->parse($cfg_file) or die "error: $parser->{err}\n";
+	make_dir($cfg->{general}{var});
+
+	return $cfg;
 }
 
 sub get_dbh
 {
 	my $cfg = shift;
+	my $db_dir = "$cfg->{general}{var}/db";
 
+	make_dir($db_dir);
 	my $dbh = DBI->connect(
-		"dbi:SQLite:dbname=$cfg->{general}{db_file}",
+		"dbi:SQLite:dbname=$db_dir/pricechart.db",
 		"",
 		"",
 		{ RaiseError => 1 },) or die $DBI::errstr;
@@ -80,6 +84,26 @@ sub get_ua
 	my $ua = LWP::UserAgent->new(agent => $cfg->{general}{user_agent});
 	$ua->default_header("Accept" => "*/*");
 	return $ua;
+}
+
+sub get_log
+{
+	my $cfg = shift;
+	my $file = shift;
+	my $log_dir = "$cfg->{general}{var}/log";
+
+	make_dir($log_dir);
+	open my $log, ">>", "$log_dir/$file.txt";
+	return $log;
+}
+
+sub make_dir
+{
+	my $dir = shift;
+
+	unless (-e $dir or mkdir $dir) {
+		die "Could not create directory $dir: $!\n"
+	}
 }
 
 sub vprint
