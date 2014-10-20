@@ -1,0 +1,39 @@
+.clear_both {
+	clear: both;
+}
+
+.column {
+	width: 47%;
+	padding-left: 1.5%;
+	padding-right 1.5%;
+}
+
+fieldset {
+	border: 0px;
+}
+
+input {
+	font-size: 1em;
+}
+
+.float_left {
+	float: left;
+}
+
+.float_right {
+	float: right;
+}
+
+.footer {
+	text-align: center;
+}
+
+.logo {
+	padding-right: 10px;
+}
+
+.title a {
+	font-size: 2em;
+	color: black;
+	text-decoration: none;
+}

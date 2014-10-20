@@ -1,0 +1,74 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<title>PriceCharts</title>
+	<link rel="stylesheet" type="text/css" href="/pricechart.css" />
+</head>
+<body>
+	<div class="float_left title">
+		<a href='/'><em>Price</em><b>Charts</b></a>
+	</div>
+	<div class="float_right">
+		<form method="post" action="/search.html">
+			<fieldset>
+				<input type="text" name="q" />
+				<input type="submit" value="Search">
+			</fieldset>
+		</form>
+	</div>
+
+	<hr class="clear_both">
+	<div class="float_left column">
+		<h1>What</h1>
+
+		<p> Welcome to <b>PriceCharts</b>, a place to do inter-retailer
+		price comparisons to ensure that products are bought at their
+		lowest possible price.  </p>
+
+		<p> <b>PriceCharts</b> periodically looks up and saves product
+		price information and then displays it as a chart.  From the
+		chart it is easily determined which retailer has the current
+		lowest price and also how the price trends over time. Currently
+		<b>[% num_products %]</b> products from <b>[% manufacturers %]
+		</b> manufacturers are being tracked.  </p>
+
+		<p> The following retailers are included:
+		<ul>
+			[% FOREACH variable IN vendors %]
+				<li>[% variable %]
+			[% END %]
+
+		</ul>
+		</p>
+	</div>
+
+	<div class="float_left column">
+		<h1>Why</h1>
+
+		<p> <b>PriceCharts</b> is meant to be a consumers purchasing
+		tool. It is intended to give the consumer insight into retail
+		pricing of products which they would not normally have.  </p>
+
+		<p> A well known practice when looking to purchase something new
+		is <em>price comparison</em>. A purchaser decides on a certain
+		make and model that they want and then look at the different
+		retailers in their area to find the one with the lowest price.
+		That is what this website does. It automates <em>price
+			comparisons</em>.  </p>
+
+		<p> This is important because the price difference between
+		different retailers for the same product is often hundreds of
+		dollars if not more. One glance at the price chart for the
+		product will tell you not only the current best retailer to buy
+		the product from but also historically who has had the best
+		price.  </p>
+
+	</div>
+	<hr class="clear_both">
+
+	<div class="footer">
+		<a href="mailto:kyle@getaddrinfo.net">Feedback/Donate</a>
+	</div>
+</body>
+</html>
