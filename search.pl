@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use FCGI;
+use Template;
 
 use shared;
 
@@ -24,25 +25,33 @@ sub sigint
 }
 $SIG{INT} = \&sigint;
 
+my $config = {
+	INCLUDE_PATH => "html"
+};
+my $template = Template->new($config);
+
 while ($request->Accept() >= 0) {
 	print "Content-Type: text/html\r\n\r\n";
-	print "Hello, World!<br>\n";
 
-	for (sort keys %ENV) {
-		print "$_: $ENV{$_} <br>\n";
-	}
+	# for (sort keys %ENV) {
+	# 	print "$_: $ENV{$_} <br>\n";
+	# }
 
 	read(STDIN, my $input, $ENV{CONTENT_LENGTH});
 	(undef, $input) = split("=", $input);
-	print "querying for: $input <br>\n";
 
-	my $query = "select * from products where title like ?";
-	my $products = $dbh->selectall_arrayref($query, undef, "%$input%");
+	my $query = "select part_num from products where title like ?";
+	my $products = $dbh->selectcol_arrayref($query, undef, "%$input%");
 
-	print "found " . scalar @$products . " products <br>\n";
+	my $vars = {
+		query => "\"$input\"",
+		num_results => scalar @$products,
+		results => $products
+	};
 
-	for (@$products) {
-		print "$_->[2] <br>\n";
+	my $r = $template->process("search.html", $vars);
+	if ($r) {
+		print $template->error();
 	}
 }
 

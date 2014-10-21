@@ -3,6 +3,7 @@
 use strict;
 use warnings;
 
+use File::Copy;
 use GD::SVG;
 use GD::Polyline;
 use Template;
@@ -17,7 +18,9 @@ my $log = get_log($cfg, "pricecharts_webgen");
 my $config = {
 	INTERPOLATE => 1,
 	POST_CHOMP => 1,
-	EVAL_PERL => 1
+	EVAL_PERL => 1,
+	INCLUDE_PATH => "html",
+	OUTPUT_PATH => "www/htdocs"
 };
 
 my $template = Template->new($config);
@@ -28,16 +31,16 @@ my $manuf = $dbh->selectcol_arrayref($query);
 $query = "select part_num from products";
 my $products = $dbh->selectcol_arrayref($query);
 
-my @vendors = sort keys $cfg->{vendors};
+my $vendors = keys $cfg->{vendors};
 
 my $vars = {
-	vendors => \@vendors,
-	manufacturers => scalar @$manuf,
+	num_vendors => $vendors,
+	num_manufacturers => scalar @$manuf,
 	num_products => scalar @$products
 };
 
-my $input = "html/index.tt2";
-$template->process($input, $vars, "www/htdocs/index.html") || die $template->error();
+$template->process("index.html", $vars, "index.html") || die $template->error();
+copy("html/pricechart.css", "www/htdocs/pricechart.css");
 
 # $query = "select part_num from products";
 # my $products = $dbh->selectcol_arrayref($query);

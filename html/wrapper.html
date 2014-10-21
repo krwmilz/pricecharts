@@ -1,0 +1,26 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<meta name="viewport" content="width=device-width" />
+	<title>PriceChart</title>
+	<link rel="stylesheet" type="text/css" href="/pricechart.css" />
+</head>
+<body>
+	<a id="title" href='/'><em>Price</em><b>Chart</b></a>
+	<form method="post" action="/search.html">
+		<fieldset>
+			<input type="text" name="q" />
+			<input type="submit" value="Search">
+		</fieldset>
+	</form>
+	<hr class="clear_both">
+
+	[% content %]
+
+	<hr class="clear_both">
+	<div id="footer">
+		<a href="mailto:kyle@getaddrinfo.net">Feedback/Donate</a>
+	</div>
+</body>
+</html>

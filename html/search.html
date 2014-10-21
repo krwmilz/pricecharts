@@ -1,0 +1,8 @@
+[% WRAPPER wrapper.html %]
+	<p>Found <b>[% num_results %]</b> search results for <b>[% query
+	%]</b>:</p>
+	
+	[% FOREACH variable IN results %]
+		[% variable %]<br>
+	[% END %]
+[% END %]
