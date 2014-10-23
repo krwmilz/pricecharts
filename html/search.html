@@ -2,7 +2,8 @@
 	<p>Found <b>[% num_results %]</b> search results for <b>[% query
 	%]</b>:</p>
 	
-	[% FOREACH variable IN results %]
-		[% variable %]<br>
+	[% FOREACH part_num IN results %]
+		<object data="/svg/[% part_num %].svg" type="image/svg+xml">
+		</object>
 	[% END %]
 [% END %]
