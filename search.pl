@@ -40,8 +40,9 @@ while ($request->Accept() >= 0) {
 	read(STDIN, my $input, $ENV{CONTENT_LENGTH});
 	(undef, $input) = split("=", $input);
 
-	my $query = "select part_num from products where title like ?";
-	my $products = $dbh->selectcol_arrayref($query, undef, "%$input%");
+	my $query = "select part_num from products where title like ? or part_num like ?";
+	my $products = $dbh->selectcol_arrayref($query, undef,
+		"%$input%", "%$input%");
 
 	my $vars = {
 		query => "\"$input\"",
