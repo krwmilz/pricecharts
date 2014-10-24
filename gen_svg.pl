@@ -10,7 +10,7 @@ use shared;
 
 my $cfg = get_config();
 my $dbh = get_dbh($cfg);
-my $log = get_log($cfg, "pricecharts_gen_svg");
+my $log = get_log($cfg, "pricechart_gen_svg");
 
 print $log strftime "%b %e %Y %H:%M ", localtime;
 
