@@ -72,7 +72,7 @@ for (keys %product_map) {
 		push @results, $dom->find(".PIV_Regular")->html_array();
 	}
 
-	vprint("$_: found " . scalar @results . " products\n");
+	vprint("$_: found " . @results . " products\n");
 
 	my $new = 0;
 	my $old = 0;
@@ -130,7 +130,7 @@ for (keys %product_map) {
 	}
 
 	$email .= sprintf("%7s %5s %3s %4s\n",
-		$new + $old, scalar @results, $new, time - $start);
+		$new + $old, @results, $new, time - $start);
 }
 
 $email .= "\nNew products:\n" if (@new);

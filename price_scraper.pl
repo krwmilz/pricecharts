@@ -22,7 +22,7 @@ else {
 	my $cutoff = time - (30 * 24 * 60 * 60);
 	my $results = $dbh->selectcol_arrayref("select part_num from products " .
 	"where last_seen > $cutoff order by last_scraped asc");
-	if (scalar $results == 0) {
+	if (! @$results) {
 		print "Product table empty, run product_scraper.pl\n";
 		exit;
 	}
@@ -69,7 +69,7 @@ for (sort keys $cfg->{vendors}) {
 
 	my @prices = ($price =~ m/(\d[\d,]+)/);
 	if (@prices != 1) {
-		msg("r", "error: too many regex matches: " . scalar @prices);
+		msg("r", "error: too many regex matches: " . @prices);
 		next;
 	}
 
@@ -105,7 +105,7 @@ sub get_price
 	my $dom = shift;
 
 	my @prices = $dom->find($dom_element)->text_array();
-	vprintf("\t%s = %i\n", $dom_element, scalar @prices);
+	vprintf("\t%s = %i\n", $dom_element, @prices);
 
 	return $prices[0];
 }

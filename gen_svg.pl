@@ -27,7 +27,7 @@ if ($args{p}) {
 }
 else {
 	gen_chart($_) for (@$products);
-	print $log scalar(@$products) . " products generated\n";
+	print $log @$products . " products generated\n";
 }
 
 sub gen_chart
@@ -54,19 +54,21 @@ sub gen_chart
 
 	$query = "select distinct vendor from prices where part_num = ?";
 	my $vendors = $dbh->selectcol_arrayref($query, undef, $part_num);
-	vprintf("\tvendors: " . scalar @$vendors . "\n");
+	vprintf("\tvendors: " . @$vendors . "\n");
 
 	for (@$vendors) {
+		vprintf("\t$_:\n");
+
 		$query = "select date from prices where " .
 			"part_num = ? and vendor = ? order by date";
 		my $dates = $dbh->selectcol_arrayref($query, undef,
 			$part_num, $_);
-		vprintf("\tdates found: " . scalar @$dates . "\n");
+		vprintf("\t\tdates found: " . @$dates . "\n");
 		$query = "select price from prices where " .
 			"part_num = ? and vendor = ? order by date";
 		my $prices = $dbh->selectcol_arrayref($query, undef,
 			$part_num, $_);
-		vprintf("\tprices found: " . scalar @$prices . "\n");
+		vprintf("\t\tprices found: " . @$prices . "\n");
 
 		my @xs = map { ($_ - $x_min) / ($x_max - $x_min) * 900 + 30 } @$dates;
 		my @ys = map { ($_ - $y_min) / ($y_max - $y_min) * 210 + 20 } @$prices;
