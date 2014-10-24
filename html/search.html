@@ -3,7 +3,8 @@
 	%]</b>:</p>
 	
 	[% FOREACH part_num IN results %]
-		<object data="/svg/[% part_num %].svg" type="image/svg+xml">
-		</object>
+	[% part_num %]<br>
+	<object data="/svg/[% part_num %].svg" type="image/svg+xml">
+	</object>
 	[% END %]
 [% END %]
