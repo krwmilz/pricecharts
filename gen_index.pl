@@ -11,7 +11,6 @@ use shared;
 
 my $cfg = get_config();
 my $dbh = get_dbh($cfg);
-my $log = get_log($cfg, "pricecharts_webgen");
 
 my $config = {
 	INTERPOLATE => 1,
@@ -40,5 +39,4 @@ my $vars = {
 $template->process("index.html", $vars, "index.html") || die $template->error();
 copy("html/pricechart.css", "www/htdocs/pricechart.css");
 
-close $log;
 $dbh->disconnect();
