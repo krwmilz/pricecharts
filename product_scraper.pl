@@ -19,7 +19,9 @@ srand;
 
 $dbh->do("create table if not exists products(" .
 	"part_num text not null primary key, " .
+	# this should be manufacturer
 	"brand text, " .
+	# this should be description
 	"title text, " .
 	"type text, " .
 	"first_seen int, " . 
