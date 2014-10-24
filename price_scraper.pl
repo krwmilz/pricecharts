@@ -105,7 +105,7 @@ sub get_price
 	my $dom = shift;
 
 	my @prices = $dom->find($dom_element)->text_array();
-	vprintf("\t%s = %i\n", $dom_element, @prices);
+	vprintf("\t%s = %i\n", $dom_element, scalar @prices);
 
 	return $prices[0];
 }
