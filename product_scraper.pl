@@ -11,9 +11,7 @@ use POSIX;
 use shared;
 
 
-my $cfg = get_config();
-my $dbh = get_dbh($cfg);
-my $ua  = get_ua($cfg);
+my $ua  = get_ua();
 
 srand;
 

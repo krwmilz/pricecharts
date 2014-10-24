@@ -9,13 +9,53 @@ use HTML::Grabber;
 use LWP::Simple;
 
 @ISA = ("Exporter");
-@EXPORT = qw(get_dom get_config get_dbh get_ua get_log vprint vprintf %args);
+@EXPORT = qw(get_dom get_ua get_log vprint vprintf %args $cfg $dbh);
 
 
 our %args;
 getopts('f:np:v', \%args);
 
 $| = 1 if ($args{v});
+
+if (!$args{f}) {
+	if (-e "etc/pricechart.cfg") {
+		$cfg_file = "etc/pricechart.cfg";
+	} else {
+		$cfg_file = "/etc/pricechart.cfg";
+	}
+}
+
+my $parser = Config::Grammar->new({
+	_sections => ['vendors', 'general'],
+	vendors	=> {
+		# vendor regular expression
+		_sections => ['/[A-Za-z ]+/'],
+		'/[A-Za-z ]+/' => {
+			_vars => ['search_uri', 'reg_price', 'sale_price', 'color'],
+		},
+	},
+	general => {
+		_vars => [
+			'var',
+			'user_agent',
+			'email',
+			'smtp',
+		],
+	},
+});
+
+our $cfg =$parser->parse($cfg_file) or die "error: $parser->{err}\n";
+make_dir($cfg->{general}{var});
+
+my $db_dir = "$cfg->{general}{var}/db";
+make_dir($db_dir);
+our $dbh = DBI->connect(
+	"dbi:SQLite:dbname=$db_dir/pricechart.db",
+	"",
+	"",
+	{ RaiseError => 1 }
+) or die $DBI::errstr;
+
 
 sub get_dom
 {
@@ -30,59 +70,8 @@ sub get_dom
 	return HTML::Grabber->new(html => $resp->decoded_content);
 }
 
-sub get_config
-{
-	if (!$args{f}) {
-		if (-e "etc/pricechart.cfg") {
-			$cfg_file = "etc/pricechart.cfg";
-		} else {
-			$cfg_file = "/etc/pricechart.cfg";
-		}
-	}
-
-	my $parser = Config::Grammar->new({
-		_sections => ['vendors', 'general'],
-		vendors	=> {
-			# vendor regular expression
-			_sections => ['/[A-Za-z ]+/'],
-			'/[A-Za-z ]+/' => {
-				_vars => ['search_uri', 'reg_price', 'sale_price', 'color'],
-			},
-		},
-		general => {
-			_vars => [
-				'var',
-				'user_agent',
-				'email',
-				'smtp',
-			],
-		},
-	});
-
-	my $cfg =$parser->parse($cfg_file) or die "error: $parser->{err}\n";
-	make_dir($cfg->{general}{var});
-
-	return $cfg;
-}
-
-sub get_dbh
-{
-	my $cfg = shift;
-	my $db_dir = "$cfg->{general}{var}/db";
-
-	make_dir($db_dir);
-	my $dbh = DBI->connect(
-		"dbi:SQLite:dbname=$db_dir/pricechart.db",
-		"",
-		"",
-		{ RaiseError => 1 },) or die $DBI::errstr;
-	return $dbh;
-}
-
 sub get_ua
 {
-	my $cfg = shift;
-
 	my $ua = LWP::UserAgent->new(agent => $cfg->{general}{user_agent});
 	$ua->default_header("Accept" => "*/*");
 	return $ua;
@@ -90,7 +79,6 @@ sub get_ua
 
 sub get_log
 {
-	my $cfg = shift;
 	my $file = shift;
 	my $log_dir = "$cfg->{general}{var}/log";
 

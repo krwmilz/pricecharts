@@ -8,11 +8,8 @@ use POSIX;
 use shared;
 
 
-my $cfg = get_config();
-my $dbh = get_dbh($cfg);
-my $ua  = get_ua($cfg);
-my $log = get_log($cfg, "pricechart_scrapes");
-
+my $ua  = get_ua();
+my $log = get_log("pricechart_scrapes");
 
 my $part_num;
 if ($args{p}) {

@@ -8,8 +8,6 @@ use Template;
 
 use shared;
 
-my $cfg = get_config();
-my $dbh = get_dbh($cfg);
 
 mkdir "$cfg->{general}{var}/www/run";
 my $socket_path = "$cfg->{general}{var}/www/run/search.sock";
