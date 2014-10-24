@@ -9,7 +9,6 @@ use shared;
 
 
 my $ua  = get_ua();
-my $log = get_log("pricechart_scrapes");
 
 my $part_num;
 if ($args{p}) {
@@ -36,7 +35,7 @@ $dbh->do("create table if not exists prices(" .
 	"duration int, " .
 	"primary key(date, part_num, vendor, price))");
 
-print $log strftime "%b %e %Y %H:%M ", localtime;
+my $log = get_log("pricechart_scrapes");
 printf $log "%-15s [", $part_num;
 
 vprint("$part_num\n");

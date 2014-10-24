@@ -11,8 +11,6 @@ use shared;
 
 my $log = get_log("pricechart_gen_svg");
 
-print $log strftime "%b %e %Y %H:%M ", localtime;
-
 my $svg_dir = "$cfg->{general}{var}/www/htdocs/svg";
 mkdir $svg_dir;
 

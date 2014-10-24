@@ -84,6 +84,8 @@ sub get_log
 
 	make_dir($log_dir);
 	open my $log, ">>", "$log_dir/$file.txt";
+
+	print $log strftime "%b %e %Y %H:%M ", localtime;
 	return $log;
 }
 
