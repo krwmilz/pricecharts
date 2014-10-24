@@ -78,11 +78,11 @@ sub gen_chart
 	vprintf("\tdomain: $x_min - $x_max\n");
 	vprintf("\trange:  $y_min - $y_max\n");
 
-	my $svg = SVG->new(width => 800, height => 200);
+	my $svg = SVG->new(viewBox => "0 0 1000 250");
 
 	$query = "select distinct vendor from prices where part_num = ?";
 	my $vendors = $dbh->selectcol_arrayref($query, undef, $part_num);
-	vprintf("\tvendors: ");
+	vprintf("\tvendors: " . scalar @$vendors . "\n");
 
 	for (@$vendors) {
 		$query = "select date from prices where " .
@@ -96,21 +96,59 @@ sub gen_chart
 			$part_num, $_);
 		vprintf("\tprices found: " . scalar @$prices . "\n");
 
-		my $points = $svg->get_path(x => $dates, y => $prices,
-			-closed => "false");
+		my @xs = map { ($_ - $x_min) / ($x_max - $x_min) * 900 + 30 } @$dates;
+		my @ys = map { ($_ - $y_min) / ($y_max - $y_min) * 210 + 20 } @$prices;
 
+		my $vendor_color = "#$cfg->{vendors}{$_}{color}";
+
+		my $i = 0;
+		for (@xs) {
+			$svg->circle(cx => $xs[$i], cy => $ys[$i], r => 2,
+			style => {
+				'fill-opacity' => 1,
+				'fill' => $vendor_color,
+				'stroke' => $vendor_color
+			}
+			);
+			$i++;
+		}
+
+		my $points = $svg->get_path(x => \@xs, y => \@ys,
+			-closed => "false");
 		$svg->path(
 			%$points,
 			id => $_,
 			style => {
 				'fill-opacity' => 0,
-				'fill' => 'green',
-				'stroke' => 'rgb(250, 123, 123)'
+				'fill' => $vendor_color,
+				'stroke' => $vendor_color,
+				'stroke-width' => 2,
 			}
 		);
 	}
 
-	$svg->text(id => 'l1', x => 10, y => 30)->cdata($part_num);
+	for my $i (0..5) {
+		my $price = $y_max - $i * ($y_max - $y_min) / 5;
+		my $y = 20 + $i * (210 / 5);
+		$svg->text(id => $i, x => 950, y => $y,
+			style => "font-size: 12px; fill: #666",
+			"text-anchor" => "start")->cdata("\$$price");
+		$svg->line(id => "line_$i", x1 => 30, y1 => $y,
+			x2 => 930, y2 => $y,
+				"fill" => "#CCC",
+				"stroke" => "#CCC",
+				"stroke-width" => 1,
+			);
+	}
+
+	for my $i (0..5) {
+		my $time = $x_min + $i * ($x_max - $x_min) / 5;
+		my $date = strftime "%b %e %Y", localtime($time);
+		my $x = 30 + $i * 900 / 5;
+		$svg->text(id => $time, x => $x, y => 250,
+			style => "font-size: 12px; fill: #666",
+			"text-anchor" => "middle")->cdata($date);
+	}
 
 	open my $svg_fh, ">", "$svg_dir/$part_num.svg" or die $!;
 	print $svg_fh $svg->xmlify;
