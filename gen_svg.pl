@@ -11,22 +11,22 @@ use shared;
 
 my $log = get_log("pricechart_gen_svg");
 
-my @part_nums;
+my $part_nums;
 if ($args{p}) {
-	$part_nums[0] = $args{p};
+	$part_nums->[0] = $args{p};
 	print $log "$args{p} generated\n";
 }
 else {
 	my $query = "select part_num from products";
-	@part_nums = $dbh->selectcol_array($query);
+	$part_nums = $dbh->selectcol_arrayref($query);
 
-	print $log @part_nums . " products generated\n";
+	print $log @$part_nums . " products generated\n";
 }
 
 my $svg_dir = "$cfg->{general}{var}/www/htdocs/svg";
 mkdir $svg_dir;
 
-for my $part_num (@part_nums) {
+for my $part_num (@$part_nums) {
 	vprint("$part_num:\n");
 
 	my $query = "select min(date) from prices where part_num = ?";
