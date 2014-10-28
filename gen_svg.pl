@@ -3,6 +3,7 @@
 use strict;
 use warnings;
 
+use List::Util qw(min max);
 use SVG;
 use POSIX;
 
@@ -29,17 +30,22 @@ mkdir $svg_dir;
 for my $part_num (@$part_nums) {
 	vprint("$part_num:\n");
 
-	my $query = "select min(date) from prices where part_num = ?";
-	my $x_min = $dbh->selectrow_array($query, undef, $part_num);
+	my $query = "select distinct date from prices where part_num = ?";
+	my $dates = $dbh->selectcol_arrayref($query, undef, $part_num);
+	$query = "select distinct price from prices where part_num = ?";
+	my $prices = $dbh->selectcol_arrayref($query, undef, $part_num);
 
-	$query = "select max(date) from prices where part_num = ?";
-	my $x_max = $dbh->selectrow_array($query, undef, $part_num);
+	if (@$dates == 0) {
+		vprintf("\tno price information, skipping\n");
+		next;
+	}
+	elsif (@$dates == 1) {
+		vprintf("\tsingle price point, graphing will explode, skipping\n");
+		next;
+	}
 
-	$query = "select min(price) from prices where part_num = ?";
-	my $y_min = $dbh->selectrow_array($query, undef, $part_num);
-
-	$query = "select max(price) from prices where part_num = ?";
-	my $y_max = $dbh->selectrow_array($query, undef, $part_num);
+	my ($x_min, $x_max) = (min(@$dates), max(@$dates));
+	my ($y_min, $y_max) = (min(@$prices), max(@$prices));
 
 	vprintf("\tdomain: $x_min - $x_max\n");
 	vprintf("\trange:  $y_min - $y_max\n");
