@@ -37,6 +37,9 @@ my $query = "select date, price from prices where " .
 	"part_num = ? and vendor = ? order by date";
 my $point_sth = $dbh->prepare($query);
 
+$query = "select distinct vendor from prices where part_num = ?";
+my $vendor_sth = $dbh->prepare($query);
+
 for my $part_num (@$part_nums) {
 	vprint("$part_num:\n");
 
@@ -66,16 +69,13 @@ for my $part_num (@$part_nums) {
 
 	my $svg = SVG->new(viewBox => "0 0 $total_width $total_height");
 
-	$query = "select distinct vendor from prices where part_num = ?";
-	my $vendors = $dbh->selectcol_arrayref($query, undef, $part_num);
-	vprintf("\tvendors: " . @$vendors . "\n");
-
-	for (@$vendors) {
-		vprintf("\t$_:\n");
-		my $vendor_color = "#$cfg->{vendors}{$_}{color}";
+	$vendor_sth->execute($part_num);
+	while (my ($vendor) = $vendor_sth->fetchrow_array()) {
+		vprintf("\t$vendor: ");
+		my $vendor_color = "#$cfg->{vendors}{$vendor}{color}";
 
 		my (@xs, @ys);
-		$point_sth->execute($part_num, $_);
+		$point_sth->execute($part_num, $vendor);
 		while (my ($date, $price) = $point_sth->fetchrow_array) {
 			push @xs, (($date - $x_min) * $x_scale + $margin_left);
 			push @ys, (($price - $y_min) * $y_scale + $margin_top);
@@ -88,14 +88,13 @@ for my $part_num (@$part_nums) {
 				}
 			);
 		}
-
-		vprintf("\t\tdata points found: " . @xs . "\n");
+		vprintf(@xs . " data points\n");
 
 		my $points = $svg->get_path(x => \@xs, y => \@ys,
 			-closed => "false");
 		$svg->path(
 			%$points,
-			id => $_,
+			id => $vendor,
 			style => {
 				'fill-opacity' => 0,
 				'fill' => $vendor_color,
