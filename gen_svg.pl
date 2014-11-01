@@ -41,21 +41,16 @@ $query = "select distinct vendor from prices where part_num = ?";
 my $vendor_sth = $dbh->prepare($query);
 
 for my $part_num (@$part_nums) {
-	vprint("$part_num:\n");
-
 	$query = "select distinct date from prices where part_num = ?";
 	my $dates = $dbh->selectcol_arrayref($query, undef, $part_num);
 	$query = "select distinct price from prices where part_num = ?";
 	my $prices = $dbh->selectcol_arrayref($query, undef, $part_num);
 
-	if (@$dates == 0) {
-		vprintf("\tno price information, skipping\n");
+	if (@$dates == 0 || @$dates == 1) {
 		next;
 	}
-	elsif (@$dates == 1) {
-		vprintf("\tsingle price point, graphing will explode, skipping\n");
-		next;
-	}
+
+	vprint("$part_num:\n");
 
 	my ($x_min, $x_max) = (min(@$dates), max(@$dates));
 	my ($y_min, $y_max) = (min(@$prices), max(@$prices));
