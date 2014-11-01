@@ -100,28 +100,43 @@ for my $part_num (@$part_nums) {
 		);
 	}
 
-	for my $i (0..5) {
-		my $price = $y_max - $range * $i / 5;
-		my $y = $margin_top + $height * $i / 5;
-		$svg->text(id => $i, x => 950, y => $y,
+	my $num_labels = 5;
+	for (0..$num_labels) {
+		my $price = $y_max - $range * $_ / $num_labels;
+		my $y = $margin_top + $height * $_ / $num_labels;
+
+		$svg->text(
+			id => $_,
+			x => $margin_left + $width + 20,
+			y => $y,
 			style => "font-size: 12px; fill: #666",
-			"text-anchor" => "start")->cdata("\$$price");
-		$svg->line(id => "line_$i", x1 => 30, y1 => $y,
-			x2 => 930, y2 => $y,
-				"fill" => "#CCC",
-				"stroke" => "#CCC",
-				"stroke-width" => 1,
-			);
+			"text-anchor" => "start"
+		)->cdata("\$$price");
+
+		$svg->line(
+			id => "line_$_",
+			x1 => $margin_left, y1 => $y,
+			x2 => $total_width - $margin_right, y2 => $y,
+			"fill" => "#CCC",
+			"stroke" => "#CCC",
+			"stroke-width" => 1,
+		);
 	}
 
-	for my $i (0..5) {
-		my $time = $x_min + $i * $domain / 5;
+	for (0..$num_labels) {
+		my $time = $x_min + $_ * $domain / $num_labels;
 		my $date = strftime "%b %e %Y", localtime($time);
-		my $x = 30 + $i * 900 / 5;
-		$svg->text(id => $time, x => $x, y => 250,
+		my $x = $margin_left + $_ / $num_labels * $width;
+
+		$svg->text(
+			id => $time,
+			x => $x, y => $total_height,
 			style => "font-size: 12px; fill: #666",
-			"text-anchor" => "middle")->cdata($date);
-		$svg->line(id => "date_marker_$i",
+			"text-anchor" => "middle"
+		)->cdata($date);
+
+		$svg->line(
+			id => "date_marker_$_",
 			x1 => $x, y1 => $margin_top + $height,
 			x2 => $x, y2 => $margin_top + $height + 5,
 			"fill" => "#CCC",
