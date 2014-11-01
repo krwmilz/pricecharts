@@ -27,6 +27,12 @@ else {
 my $svg_dir = "$cfg->{general}{var}/www/htdocs/svg";
 mkdir $svg_dir;
 
+my ($width, $height) = (900, 210);
+my ($margin_left, $margin_right) = (30, 70);
+my ($margin_top, $margin_bottom) = (20, 20);
+my $total_width = $width + $margin_right + $margin_left;
+my $total_height = $height + $margin_top + $margin_bottom;
+
 for my $part_num (@$part_nums) {
 	vprint("$part_num:\n");
 
@@ -49,8 +55,10 @@ for my $part_num (@$part_nums) {
 
 	vprintf("\tdomain: $x_min - $x_max\n");
 	vprintf("\trange:  $y_min - $y_max\n");
+	my $domain = $x_max - $x_min;
+	my $range = $y_max - $y_min;
 
-	my $svg = SVG->new(viewBox => "0 0 1000 250");
+	my $svg = SVG->new(viewBox => "0 0 $total_width $total_height");
 
 	$query = "select distinct vendor from prices where part_num = ?";
 	my $vendors = $dbh->selectcol_arrayref($query, undef, $part_num);
@@ -70,8 +78,10 @@ for my $part_num (@$part_nums) {
 			$part_num, $_);
 		vprintf("\t\tprices found: " . @$prices . "\n");
 
-		my @xs = map { ($_ - $x_min) / ($x_max - $x_min) * 900 + 30 } @$dates;
-		my @ys = map { ($_ - $y_min) / ($y_max - $y_min) * 210 + 20 } @$prices;
+		my $x_scale = $domain * $width;
+		my $y_scale = $range  * $height;
+		my @xs = map { ($_ - $x_min) / $x_scale + $margin_left } @$dates;
+		my @ys = map { ($_ - $y_min) / $y_scale + $margin_top } @$prices;
 
 		my $vendor_color = "#$cfg->{vendors}{$_}{color}";
 
@@ -102,8 +112,8 @@ for my $part_num (@$part_nums) {
 	}
 
 	for my $i (0..5) {
-		my $price = $y_max - $i * ($y_max - $y_min) / 5;
-		my $y = 20 + $i * (210 / 5);
+		my $price = $y_max - $range * $i / 5;
+		my $y = $margin_top + $height * $i / 5;
 		$svg->text(id => $i, x => 950, y => $y,
 			style => "font-size: 12px; fill: #666",
 			"text-anchor" => "start")->cdata("\$$price");
@@ -116,7 +126,7 @@ for my $part_num (@$part_nums) {
 	}
 
 	for my $i (0..5) {
-		my $time = $x_min + $i * ($x_max - $x_min) / 5;
+		my $time = $x_min + $i * $domain / 5;
 		my $date = strftime "%b %e %Y", localtime($time);
 		my $x = 30 + $i * 900 / 5;
 		$svg->text(id => $time, x => $x, y => 250,
