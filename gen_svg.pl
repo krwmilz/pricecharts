@@ -121,6 +121,13 @@ for my $part_num (@$part_nums) {
 		$svg->text(id => $time, x => $x, y => 250,
 			style => "font-size: 12px; fill: #666",
 			"text-anchor" => "middle")->cdata($date);
+		$svg->line(id => "date_marker_$i",
+			x1 => $x, y1 => $margin_top + $height,
+			x2 => $x, y2 => $margin_top + $height + 5,
+			"fill" => "#CCC",
+			"stroke" => "#CCC",
+			"stroke-width" => 1,
+		);
 	}
 
 	open my $svg_fh, ">", "$svg_dir/$part_num.svg" or die $!;
