@@ -33,10 +33,14 @@ my ($margin_top, $margin_bottom) = (20, 20);
 my $total_width = $width + $margin_right + $margin_left;
 my $total_height = $height + $margin_top + $margin_bottom;
 
+my $query = "select date, price from prices where " .
+	"part_num = ? and vendor = ? order by date";
+my $point_sth = $dbh->prepare($query);
+
 for my $part_num (@$part_nums) {
 	vprint("$part_num:\n");
 
-	my $query = "select distinct date from prices where part_num = ?";
+	$query = "select distinct date from prices where part_num = ?";
 	my $dates = $dbh->selectcol_arrayref($query, undef, $part_num);
 	$query = "select distinct price from prices where part_num = ?";
 	my $prices = $dbh->selectcol_arrayref($query, undef, $part_num);
@@ -57,6 +61,8 @@ for my $part_num (@$part_nums) {
 	vprintf("\trange:  $y_min - $y_max\n");
 	my $domain = $x_max - $x_min;
 	my $range = $y_max - $y_min;
+	my $x_scale = $width / $domain;
+	my $y_scale = $height / $range;
 
 	my $svg = SVG->new(viewBox => "0 0 $total_width $total_height");
 
@@ -66,36 +72,24 @@ for my $part_num (@$part_nums) {
 
 	for (@$vendors) {
 		vprintf("\t$_:\n");
-
-		$query = "select date from prices where " .
-			"part_num = ? and vendor = ? order by date";
-		my $dates = $dbh->selectcol_arrayref($query, undef,
-			$part_num, $_);
-		vprintf("\t\tdates found: " . @$dates . "\n");
-		$query = "select price from prices where " .
-			"part_num = ? and vendor = ? order by date";
-		my $prices = $dbh->selectcol_arrayref($query, undef,
-			$part_num, $_);
-		vprintf("\t\tprices found: " . @$prices . "\n");
-
-		my $x_scale = $domain * $width;
-		my $y_scale = $range  * $height;
-		my @xs = map { ($_ - $x_min) / $x_scale + $margin_left } @$dates;
-		my @ys = map { ($_ - $y_min) / $y_scale + $margin_top } @$prices;
-
 		my $vendor_color = "#$cfg->{vendors}{$_}{color}";
 
-		my $i = 0;
-		for (@xs) {
-			$svg->circle(cx => $xs[$i], cy => $ys[$i], r => 2,
-			style => {
-				'fill-opacity' => 1,
-				'fill' => $vendor_color,
-				'stroke' => $vendor_color
-			}
+		my (@xs, @ys);
+		$point_sth->execute($part_num, $_);
+		while (my ($date, $price) = $point_sth->fetchrow_array) {
+			push @xs, (($date - $x_min) * $x_scale + $margin_left);
+			push @ys, (($price - $y_min) * $y_scale + $margin_top);
+
+			$svg->circle(cx => $xs[-1], cy => $ys[-1], r => 2,
+				style => {
+					'fill-opacity' => 1,
+					'fill' => $vendor_color,
+					'stroke' => $vendor_color
+				}
 			);
-			$i++;
 		}
+
+		vprintf("\t\tdata points found: " . @xs . "\n");
 
 		my $points = $svg->get_path(x => \@xs, y => \@ys,
 			-closed => "false");
