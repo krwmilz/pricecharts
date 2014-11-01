@@ -7,6 +7,7 @@ use Exporter;
 use Getopt::Std;
 use HTML::Grabber;
 use LWP::Simple;
+use POSIX;
 
 @ISA = ("Exporter");
 @EXPORT = qw(get_dom get_ua get_log vprint vprintf %args $cfg $dbh);
