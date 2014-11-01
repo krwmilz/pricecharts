@@ -12,18 +12,6 @@ use shared;
 
 my $log = get_log("pricechart_gen_svg");
 
-my $part_nums;
-if ($args{p}) {
-	$part_nums->[0] = $args{p};
-	print $log "$args{p} generated\n";
-}
-else {
-	my $query = "select part_num from products";
-	$part_nums = $dbh->selectcol_arrayref($query);
-
-	print $log @$part_nums . " products generated\n";
-}
-
 my $svg_dir = "$cfg->{general}{var}/www/htdocs/svg";
 mkdir $svg_dir;
 
@@ -40,7 +28,9 @@ my $point_sth = $dbh->prepare($query);
 $query = "select distinct vendor from prices where part_num = ?";
 my $vendor_sth = $dbh->prepare($query);
 
-for my $part_num (@$part_nums) {
+my $parts_sth = $dbh->prepare("select part_num, title from products");
+$parts_sth->execute();
+while (my ($part_num, $title) = $parts_sth->fetchrow_array()) {
 	$query = "select distinct date from prices where part_num = ?";
 	my $dates = $dbh->selectcol_arrayref($query, undef, $part_num);
 	$query = "select distinct price from prices where part_num = ?";
@@ -149,6 +139,8 @@ for my $part_num (@$part_nums) {
 	print $svg_fh $svg->xmlify;
 	close $svg_fh;
 }
+
+# print $log @$part_nums . " products generated\n";
 
 close $log;
 $dbh->disconnect();
