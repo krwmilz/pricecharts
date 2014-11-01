@@ -67,6 +67,7 @@ for my $part_num (@$part_nums) {
 	$vendor_sth->execute($part_num);
 	while (my ($vendor) = $vendor_sth->fetchrow_array()) {
 		vprintf("\t$vendor: ");
+		# XXX: This should be read from DB
 		my $vendor_color = "#$cfg->{vendors}{$vendor}{color}";
 
 		my (@xs, @ys);
