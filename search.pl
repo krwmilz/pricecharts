@@ -38,8 +38,7 @@ while ($request->Accept() >= 0) {
 	# 	print "$_: $ENV{$_} <br>\n";
 	# }
 
-	read(STDIN, my $input, $ENV{CONTENT_LENGTH});
-	(undef, $input) = split("=", $input);
+	my (undef, $input) = split("=", $ENV{QUERY_STRING});
 
 	$search_sth->execute("%$input%", "%$input%");
 	my $products = $search_sth->fetchall_arrayref();
