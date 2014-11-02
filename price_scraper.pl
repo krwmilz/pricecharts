@@ -38,6 +38,13 @@ printf $log "%-15s [", $part_num;
 
 vprint("$part_num\n");
 
+my $qry = "insert into prices(date, part_num, vendor, price, duration) " .
+	"values (?, ?, ?, ?, ?)";
+my $prices_sth = $dbh->prepare($qry);
+
+$qry = "update products set last_seen = ? where part_num = ?";
+my $products_sth = $dbh->prepare($qry);
+
 my $date = time;
 for (sort keys $cfg->{vendors}) {
 	my $start = time;
@@ -78,11 +85,8 @@ for (sort keys $cfg->{vendors}) {
 
 	next if ($args{n});
 
-	$dbh->do("insert into prices(date, part_num, vendor, price, duration)" .
-	       "values (?, ?, ?, ?, ?)",
-		undef, $date, $part_num, $_, $price, time - $start);
-	$dbh->do("update products set last_seen = ? where part_num = ?",
-		undef, $date, $part_num);
+	$prices_sth->execute($date, $part_num, $_, $price, time - $start);
+	$products_sth->execute($date, $part_num);
 
 	vprint("\tdb updated\n");
 }
