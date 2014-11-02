@@ -23,17 +23,17 @@ input {
 }
 
 .column {
-	width: 47%;
-	padding-left: 1.5%;
-	padding-right 1.5%;
+	width: 40%;
+	padding-left: 5%;
+	padding-right: 5%;
 
 	float: left;
 }
 
 @media (max-width: 640px) {
 	.column {
-		width: 94%;
-		padding-left: 3%;
-		padding-right: 3%;
+		width: 90%;
+		padding-left: 5%;
+		padding-right: 5%;
 	}
 }
