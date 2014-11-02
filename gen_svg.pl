@@ -3,7 +3,6 @@
 use strict;
 use warnings;
 
-use List::Util qw(min max);
 use SVG;
 use POSIX;
 
@@ -28,27 +27,28 @@ my $point_sth = $dbh->prepare($query);
 $query = "select distinct vendor from prices where part_num = ?";
 my $vendor_sth = $dbh->prepare($query);
 
+$query = "select min(date), max(date), min(price), max(price) " .
+	"from prices where part_num = ?";
+my $limits_sth = $dbh->prepare($query);
+
 my $parts_sth = $dbh->prepare("select part_num, title from products");
 $parts_sth->execute();
 while (my ($part_num, $title) = $parts_sth->fetchrow_array()) {
-	$query = "select distinct date from prices where part_num = ?";
-	my $dates = $dbh->selectcol_arrayref($query, undef, $part_num);
-	$query = "select distinct price from prices where part_num = ?";
-	my $prices = $dbh->selectcol_arrayref($query, undef, $part_num);
-
-	if (@$dates == 0 || @$dates == 1) {
+	$limits_sth->execute($part_num);
+	my ($x_min, $x_max, $y_min, $y_max) = $limits_sth->fetchrow_array();
+	if (!defined $x_min) {
+		$limits_sth->finish();
 		next;
 	}
 
-	vprint("$part_num:\n");
-
-	my ($x_min, $x_max) = (min(@$dates), max(@$dates));
-	my ($y_min, $y_max) = (min(@$prices), max(@$prices));
-
-	vprintf("\tdomain: $x_min - $x_max\n");
-	vprintf("\trange:  $y_min - $y_max\n");
 	my $domain = $x_max - $x_min;
 	my $range = $y_max - $y_min;
+	next if ($domain == 0);
+	next if ($range == 0);
+
+	vprint("$part_num:\n");
+	vprint("\tdomain: $x_min - $x_max\n");
+	vprint("\trange:  $y_min - $y_max\n");
 	my $x_scale = $width / $domain;
 	my $y_scale = $height / $range;
 
