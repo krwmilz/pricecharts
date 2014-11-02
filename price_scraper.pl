@@ -3,8 +3,6 @@
 use strict;
 use warnings;
 
-use POSIX;
-
 use shared;
 
 
