@@ -63,8 +63,8 @@ while (my ($part_num, $title) = $parts_sth->fetchrow_array()) {
 		my (@xs, @ys);
 		$point_sth->execute($part_num, $vendor);
 		while (my ($date, $price) = $point_sth->fetchrow_array) {
-			push @xs, (($date - $x_min) * $x_scale + $margin_left);
-			push @ys, (($price - $y_min) * $y_scale + $margin_top);
+			push @xs, ($date - $x_min) * $x_scale + $margin_left;
+			push @ys, ($price - $y_min) * $y_scale + $margin_top;
 
 			$svg->circle(cx => $xs[-1], cy => $ys[-1], r => 2,
 				style => {
