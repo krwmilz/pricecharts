@@ -180,13 +180,13 @@ $sender->send($e_mail->as_string()) || print "Couldn't send email\n";
 
 sub not_defined
 {
-	my $var = shift;
-	my $var_name = shift;
-	my $dom = shift;
+	my $field = shift;
+	my $field_name = shift;
+	my $html = shift;
 
-	if (!defined $var || $var eq "" ) {
-		vprint("could not find $var_name, DOM was:\n");
-		vprint("$dom\n");
+	if (!defined $field || $field eq "" ) {
+		vprint("could not find $field_name, html was:\n");
+		vprint("$html\n");
 		return 1;
 	}
 	return 0;
