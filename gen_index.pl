@@ -25,10 +25,11 @@ my $manuf = $dbh->selectcol_arrayref($query);
 $query = "select part_num from products";
 my $products = $dbh->selectcol_arrayref($query);
 
-my $vendors = keys $cfg->{vendors};
+$query = "select count(name) from vendors";
+my @vendors = $dbh->selectrow_array($query);
 
 my $vars = {
-	num_vendors => $vendors,
+	num_vendors => $vendors[0],
 	num_manufacturers => scalar @$manuf,
 	num_products => scalar @$products
 };
