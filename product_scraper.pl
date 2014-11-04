@@ -111,7 +111,11 @@ for (keys %product_map) {
 			$brand = $thumbnail_dom->find(".ProductBrand")->html();
 			($brand) = ($brand =~ m/Brand: ([A-Za-z]+)/);
 		}
-		next if (not_defined($brand, ".ProductBrand", $thumbnail_html));
+		if (!defined $brand || $brand eq "") {
+			vprint("could not find .ProductBrand, html was:\n");
+			vprint("$thumbnail_html\n\n");
+			next;
+		}
 
 		$product_sth->execute($part_num);
 		if ($product_sth->fetchrow_arrayref()) {
@@ -178,20 +182,6 @@ $sender->send($e_mail->as_string()) || print "Couldn't send email\n";
 # televisions = http://www.visions.ca/Catalogue/Category/ProductResults.aspx?categoryId=5&menu=9&pz=30
 # televisions_page = &px=<PAGE>
 # product_list = .centerPanel
-
-sub not_defined
-{
-	my $field = shift;
-	my $field_name = shift;
-	my $html = shift;
-
-	if (!defined $field || $field eq "" ) {
-		vprint("could not find $field_name, html was:\n");
-		vprint("$html\n");
-		return 1;
-	}
-	return 0;
-}
 
 sub get_tag_text
 {
