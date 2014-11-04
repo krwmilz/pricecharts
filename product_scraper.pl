@@ -184,7 +184,7 @@ sub not_defined
 	my $var_name = shift;
 	my $dom = shift;
 
-	if (!defined $var) {
+	if (!defined $var || $var eq "" ) {
 		vprint("could not find $var_name, DOM was:\n");
 		vprint("$dom\n");
 		return 1;
