@@ -31,9 +31,9 @@ $query = "select min(date), max(date), min(price), max(price) " .
 	"from prices where part_num = ?";
 my $limits_sth = $dbh->prepare($query);
 
-my $parts_sth = $dbh->prepare("select part_num, title from products");
+my $parts_sth = $dbh->prepare("select part_num, description from products");
 $parts_sth->execute();
-while (my ($part_num, $title) = $parts_sth->fetchrow_array()) {
+while (my ($part_num, $description) = $parts_sth->fetchrow_array()) {
 	$limits_sth->execute($part_num);
 	my ($x_min, $x_max, $y_min, $y_max) = $limits_sth->fetchrow_array();
 	if (!defined $x_min) {

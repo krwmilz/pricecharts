@@ -19,7 +19,7 @@ my $config = {
 
 my $template = Template->new($config);
 
-my $query = "select distinct brand from products";
+my $query = "select distinct manufacturer from products";
 my $manuf = $dbh->selectcol_arrayref($query);
 
 $query = "select part_num from products";

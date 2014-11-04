@@ -28,7 +28,7 @@ my $config = {
 };
 my $template = Template->new($config);
 
-my $query = "select part_num from products where title like ? or part_num like ?";
+my $query = "select part_num from products where description like ? or part_num like ?";
 my $search_sth = $dbh->prepare($query);
 
 while ($request->Accept() >= 0) {

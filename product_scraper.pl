@@ -17,10 +17,8 @@ srand;
 
 $dbh->do("create table if not exists products(" .
 	"part_num text not null primary key, " .
-	# this should be manufacturer
-	"brand text, " .
-	# this should be description
-	"title text, " .
+	"manufacturer text, " .
+	"description text, " .
 	"type text, " .
 	"first_seen int, " . 
 	"last_seen int, " .
@@ -110,12 +108,12 @@ for (keys %product_map) {
 		if ($sth->fetchrow_arrayref()) {
 			$dbh->do("update products set last_seen = ? where part_num = ?",
 				undef, time, $part_num);
-			# also update title, brand here?
+			# also update description, manufacturer here?
 			vprint("  ");
 			$old++;
 		}
 		else {
-			$dbh->do("insert into products(part_num, brand, title," .
+			$dbh->do("insert into products(part_num, manufacturer, description," .
 				"type, first_seen, last_seen, last_scraped) " .
 				"values (?, ?, ?, ?, ?, ?, ?)", undef,
 				$part_num, $brand, $title, $_, time, time, 0);
