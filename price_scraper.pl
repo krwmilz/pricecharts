@@ -70,7 +70,7 @@ for (sort keys $cfg->{vendors}) {
 
 	my @prices = ($price =~ m/(\d[\d,]+)/);
 	if (@prices != 1) {
-		msg("r", "error: too many regex matches: " . @prices);
+		msg("r", "error: not exactly one regex match: " . @prices);
 		next;
 	}
 
