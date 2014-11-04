@@ -87,9 +87,12 @@ for (keys %product_map) {
 		sleep int(rand(10));
 		my $product = HTML::Grabber->new(html => $node);
 
-		# title is easier to parse from general results page
-		my $title = $product->find(".ProductTitle")->text();
-		next if (not_defined($title, "title", $node));
+		# used to visit the actual product page
+		my $product_id = get_tag_text($product, ".ProductId");
+		next unless (defined $product_id);
+
+		my $title = get_tag_text($product, ".ProductTitle");
+		next unless (defined $title);
 
 		# brand is easier to parse from general results page, sometimes
 		# shows up as text
@@ -99,10 +102,6 @@ for (keys %product_map) {
 			($brand) = ($brand =~ m/Brand: ([A-Za-z]+)/);
 		}
 		next if (not_defined($brand, "brand", $node));
-
-		# used to visit the actual product page
-		my $product_id = $product->find(".ProductId")->text();
-		next if (not_defined($product_id, "product ID", $node));
 
 		my $product_url = "http://www.memoryexpress.com/Products/";
 		my $product_dom = get_dom("$product_url$product_id", $ua);
@@ -190,4 +189,19 @@ sub not_defined
 		return 1;
 	}
 	return 0;
+}
+
+sub get_tag_text
+{
+	my $dom = shift;
+	my $tag = shift;
+
+	my $field = $dom->find($tag)->text();
+	if (!defined $field || $field eq "" ) {
+		vprint("could not find $tag, html was:\n");
+		vprint($dom->html());
+		vprint("\n");
+		return undef;
+	}
+	return $field;
 }
