@@ -85,20 +85,21 @@ for (keys %product_map) {
 	my $start = time;
 	for my $node (@results) {
 		sleep int(rand(10));
-		my $product = HTML::Grabber->new(html => $node);
+
+		my $thumbnail_dom = HTML::Grabber->new(html => $node);
 
 		# used to visit the actual product page
-		my $product_id = get_tag_text($product, ".ProductId");
+		my $product_id = get_tag_text($thumbnail_dom, ".ProductId");
 		next unless (defined $product_id);
 
-		my $description = get_tag_text($product, ".ProductTitle");
+		my $description = get_tag_text($thumbnail_dom, ".ProductTitle");
 		next unless (defined $description);
 
 		# brand is easier to parse from general results page, sometimes
 		# shows up as text
-		my $brand = $product->find(".ProductBrand")->text();
+		my $brand = $thumbnail_dom->find(".ProductBrand")->text();
 		if ($brand eq "") {
-			$brand = $product->find(".ProductBrand")->html();
+			$brand = $thumbnail_dom->find(".ProductBrand")->html();
 			($brand) = ($brand =~ m/Brand: ([A-Za-z]+)/);
 		}
 		next if (not_defined($brand, "brand", $node));
