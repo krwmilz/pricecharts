@@ -40,6 +40,8 @@ $email .= "*** $vendor ***\n\n";
 $email .= "type            scraped total new time\n";
 $email .= "------------    ------- ----- --- ----\n";
 
+my $product_sth = $dbh->prepare("select * from products where part_num = ?");
+
 my @new = ();
 for (keys %product_map) {
 
@@ -102,10 +104,8 @@ for (keys %product_map) {
 		($part_num) = ($part_num =~ m/Part #: (.*)\r/);
 		next if (not_defined($part_num, "part number", $product_dom));
 
-		my $query = "select * from products where part_num = ?";
-		my $sth = $dbh->prepare($query);
-		$sth->execute($part_num);
-		if ($sth->fetchrow_arrayref()) {
+		$product_sth->execute($part_num);
+		if ($product_sth->fetchrow_arrayref()) {
 			$dbh->do("update products set last_seen = ? where part_num = ?",
 				undef, time, $part_num);
 			# also update description, manufacturer here?
@@ -132,6 +132,7 @@ for (keys %product_map) {
 $email .= "\nNew products:\n" if (@new);
 $email .= "- ($_->[0]) $_->[1] $_->[2] $_->[3]\n" for (@new);
 
+$product_sth->finish();
 $dbh->disconnect();
 
 my $date = strftime "%d/%m/%Y", localtime;
