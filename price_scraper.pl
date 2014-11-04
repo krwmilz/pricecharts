@@ -14,7 +14,7 @@ if ($args{p}) {
 }
 else {
 	my $cutoff = time - (30 * 24 * 60 * 60);
-	my $results = $dbh->selectcol_arrayref("select part_num from products " .
+	my $results = $dbh->selectrow_arrayref("select part_num from products " .
 	"where last_seen > $cutoff order by last_scraped asc");
 	if (! @$results) {
 		print "Product table empty, run product_scraper.pl\n";
