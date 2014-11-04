@@ -29,6 +29,8 @@ $dbh->do("create table if not exists products(" .
 #
 
 my $vendor = "Memory Express";
+# use this to look up individual products
+my $product_url = "http://www.memoryexpress.com/Products/";
 my %product_map = ("televisions" => "Televisions",
 	"laptops" => "LaptopsNotebooks",
 	"hard_drives" => "HardDrives");
@@ -92,6 +94,14 @@ for (keys %product_map) {
 		my $product_id = get_tag_text($thumbnail_dom, ".ProductId");
 		next unless (defined $product_id);
 
+		# get the part number from the product page as early as possible
+		my $product_dom = get_dom("$product_url$product_id", $ua);
+		my $part_num = get_tag_text($product_dom, "#ProductAdd");
+		next unless (defined $part_num);
+
+		($part_num) = ($part_num =~ m/Part #:\s*(.*)\r/);
+		next unless (defined $part_num && $part_num ne "");
+
 		my $description = get_tag_text($thumbnail_dom, ".ProductTitle");
 		next unless (defined $description);
 
@@ -103,14 +113,6 @@ for (keys %product_map) {
 			($brand) = ($brand =~ m/Brand: ([A-Za-z]+)/);
 		}
 		next if (not_defined($brand, "brand", $thumbnail_html));
-
-		my $product_url = "http://www.memoryexpress.com/Products/";
-		my $product_dom = get_dom("$product_url$product_id", $ua);
-
-		# part number only found on product page
-		my $part_num = $product_dom->find("#ProductAdd")->text();
-		($part_num) = ($part_num =~ m/Part #: (.*)\r/);
-		next if (not_defined($part_num, "part number", $product_dom));
 
 		$product_sth->execute($part_num);
 		if ($product_sth->fetchrow_arrayref()) {
