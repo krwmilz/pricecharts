@@ -6,7 +6,6 @@ use warnings;
 use Email::Simple;
 use Email::Send;
 use HTML::Grabber;
-use POSIX;
 
 use shared;
 
@@ -144,12 +143,11 @@ $email .= "- ($_->[0]) $_->[1] $_->[2] $_->[3]\n" for (@new);
 $product_sth->finish();
 $dbh->disconnect();
 
-my $date = strftime "%d/%m/%Y", localtime;
 my $e_mail = Email::Simple->create(
 	header => [
 		From	=> "Santa Claus <sc\@np.com>",
 		To	=> $cfg->{general}{email},
-		Subject	=> "PriceChart product scrape $date",
+		Subject	=> "PriceChart product scrape, (" . @new . " new)",
 	],
 	body => $email);
 
