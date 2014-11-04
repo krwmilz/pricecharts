@@ -42,6 +42,14 @@ $email .= "------------    ------- ----- --- ----\n";
 
 my $product_sth = $dbh->prepare("select * from products where part_num = ?");
 
+my $qry = "insert into products(part_num, manufacturer, description, type, " .
+	"first_seen, last_seen, last_scraped) values (?, ?, ?, ?, ?, ?, ?)";
+my $insert_sth = $dbh->prepare($qry);
+
+# also update description, manufacturer?
+$qry = "update products set last_seen = ? where part_num = ?";
+my $update_sth = $dbh->prepare($qry);
+
 my @new = ();
 for (keys %product_map) {
 
@@ -106,17 +114,13 @@ for (keys %product_map) {
 
 		$product_sth->execute($part_num);
 		if ($product_sth->fetchrow_arrayref()) {
-			$dbh->do("update products set last_seen = ? where part_num = ?",
-				undef, time, $part_num);
-			# also update description, manufacturer here?
+			$update_sth->execute(time, $part_num);
 			vprint("  ");
 			$old++;
 		}
 		else {
-			$dbh->do("insert into products(part_num, manufacturer, description," .
-				"type, first_seen, last_seen, last_scraped) " .
-				"values (?, ?, ?, ?, ?, ?, ?)", undef,
-				$part_num, $brand, $title, $_, time, time, 0);
+			$insert_sth->execute($part_num, $brand, $title, $_,
+				time, time, 0);
 			push @new, ([$_, $brand, $title, $part_num]);
 			vprint("+ ");
 			$new++;
