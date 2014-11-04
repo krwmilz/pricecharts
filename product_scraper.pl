@@ -83,10 +83,10 @@ for (keys %product_map) {
 	my $new = 0;
 	my $old = 0;
 	my $start = time;
-	for my $node (@thumbnails) {
+	for my $thumbnail_html (@thumbnails) {
 		sleep int(rand(10));
 
-		my $thumbnail_dom = HTML::Grabber->new(html => $node);
+		my $thumbnail_dom = HTML::Grabber->new(html => $thumbnail_html);
 
 		# used to visit the actual product page
 		my $product_id = get_tag_text($thumbnail_dom, ".ProductId");
@@ -102,7 +102,7 @@ for (keys %product_map) {
 			$brand = $thumbnail_dom->find(".ProductBrand")->html();
 			($brand) = ($brand =~ m/Brand: ([A-Za-z]+)/);
 		}
-		next if (not_defined($brand, "brand", $node));
+		next if (not_defined($brand, "brand", $thumbnail_html));
 
 		my $product_url = "http://www.memoryexpress.com/Products/";
 		my $product_dom = get_dom("$product_url$product_id", $ua);
