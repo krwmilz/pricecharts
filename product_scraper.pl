@@ -105,14 +105,13 @@ for (keys %product_map) {
 		my $description = get_tag_text($thumbnail_dom, ".ProductTitle");
 		next unless (defined $description);
 
-		# brand is easier to parse from general results page, sometimes
-		# shows up as text
+		# brand sometimes shows up as text
 		my $brand = $thumbnail_dom->find(".ProductBrand")->text();
 		if ($brand eq "") {
 			$brand = $thumbnail_dom->find(".ProductBrand")->html();
 			($brand) = ($brand =~ m/Brand: ([A-Za-z]+)/);
 		}
-		next if (not_defined($brand, "brand", $thumbnail_html));
+		next if (not_defined($brand, ".ProductBrand", $thumbnail_html));
 
 		$product_sth->execute($part_num);
 		if ($product_sth->fetchrow_arrayref()) {
