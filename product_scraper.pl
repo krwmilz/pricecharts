@@ -159,30 +159,6 @@ my $sender = Email::Send->new({mailer => 'SMTP'});
 $sender->mailer_args([Host => $cfg->{general}{smtp}]);
 $sender->send($e_mail->as_string()) || print "Couldn't send email\n";
 
-#for (keys %title_dict) {
-#	print "$_ " if ($title_dict{$_} / $total_titles >= 0.5);
-#}
-#			for (split(" ", $title)) {
-#			if (! $title_dict{$_}) {
-#				$title_dict{$_} = 0;
-#			}
-#			$title_dict{$_}++;
-#		}
-#		$total_titles++;
-#print "\n";
-
-#
-# Best Buy
-#
-# my %product_map = {televisions => "led-tvs/25993.aspx"};
-
-#
-# Visions
-#
-# televisions = http://www.visions.ca/Catalogue/Category/ProductResults.aspx?categoryId=5&menu=9&pz=30
-# televisions_page = &px=<PAGE>
-# product_list = .centerPanel
-
 sub get_tag_text
 {
 	my $dom = shift;
