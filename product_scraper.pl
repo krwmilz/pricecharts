@@ -132,7 +132,7 @@ for (keys %product_map) {
 	}
 
 	$email .= sprintf("%7s %5s %3s %4s\n",
-		$new + $old, scalar @results, $new, time - $start);
+		$new + $old, scalar @thumbnails, $new, time - $start);
 }
 
 $email .= "\nNew products:\n" if (@new);
