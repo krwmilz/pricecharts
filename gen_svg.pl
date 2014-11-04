@@ -8,6 +8,10 @@ use POSIX;
 
 use shared;
 
+#
+# Spline code here:
+# http://www.particleincell.com/wp-content/uploads/2012/06/bezier-spline.js
+#
 
 my $log = get_log("pricechart_gen_svg");
 
