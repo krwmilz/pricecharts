@@ -34,12 +34,10 @@ my %product_map = ("televisions" => "Televisions",
 	"laptops" => "LaptopsNotebooks",
 	"hard_drives" => "HardDrives");
 
-vprint("$vendor:\n");
-
 my $email;
-$email .= "*** $vendor ***\n\n";
-$email .= "type            scraped total new time\n";
-$email .= "------------    ------- ----- --- ----\n";
+tee("$vendor\n");
+tee("=") for (1..length $vendor);
+tee("\n\n");
 
 my $product_sth = $dbh->prepare("select * from products where part_num = ?");
 
@@ -51,11 +49,7 @@ my $insert_sth = $dbh->prepare($qry);
 $qry = "update products set last_seen = ? where part_num = ?";
 my $update_sth = $dbh->prepare($qry);
 
-my @new = ();
 for (keys %product_map) {
-
-	$email .= sprintf("%-15s ", $_);
-
 	my $class_url = "http://www.memoryexpress.com/Category/" .
 		"$product_map{$_}?PageSize=120&Page=";
 	my $dom = get_dom($class_url . "1", $ua);
@@ -79,7 +73,7 @@ for (keys %product_map) {
 		push @thumbnails, $dom->find(".PIV_Regular")->html_array();
 	}
 
-	vprint("$_: found " . @thumbnails . " products\n");
+	tee("*** $_ (" . @thumbnails . ") ***\n");
 
 	my $new = 0;
 	my $old = 0;
@@ -119,26 +113,23 @@ for (keys %product_map) {
 		$product_sth->execute($part_num);
 		if ($product_sth->fetchrow_arrayref()) {
 			$update_sth->execute(time, $part_num);
-			vprint("  ");
+			vprint("  ($part_num) $brand $description\n");
 			$old++;
 		}
 		else {
 			$insert_sth->execute($part_num, $brand, $description,
 				$_, time, time, 0);
-			push @new, ([$_, $brand, $description, $part_num]);
-			vprint("+ ");
+			tee("+ ($part_num) $brand $description\n");
 			$new++;
 		}
-
-		vprint("($part_num) $brand $description\n");
 	}
 
-	$email .= sprintf("%7s %5s %3s %4s\n",
-		$new + $old, scalar @thumbnails, $new, time - $start);
+	tee("\n");
+	tee("scraped total new   time\n");
+	tee("------- ----- ---   ----\n");
+	tee(sprintf("%7s %5s %3s %4s s\n",
+		$new + $old, scalar @thumbnails, $new, time - $start));
 }
-
-$email .= "\nNew products:\n" if (@new);
-$email .= "- ($_->[0]) $_->[1] $_->[2] $_->[3]\n" for (@new);
 
 $product_sth->finish();
 $dbh->disconnect();
@@ -147,11 +138,9 @@ my $e_mail = Email::Simple->create(
 	header => [
 		From	=> "Santa Claus <sc\@np.com>",
 		To	=> $cfg->{general}{email},
-		Subject	=> "PriceChart product scrape, (" . @new . " new)",
+		Subject	=> "PriceChart product scrape",
 	],
 	body => $email);
-
-vprint($e_mail->as_string());
 
 my $sender = Email::Send->new({mailer => 'SMTP'});
 $sender->mailer_args([Host => $cfg->{general}{smtp}]);
@@ -166,8 +155,16 @@ sub get_tag_text
 	if (!defined $field || $field eq "" ) {
 		vprint("could not find $tag, html was:\n");
 		vprint($dom->html());
-		vprint("\n");
+		vprint("\n\n");
 		return undef;
 	}
 	return $field;
+}
+
+sub tee
+{
+	my $line = shift;
+
+	vprint($line);
+	$email .= $line;
 }
