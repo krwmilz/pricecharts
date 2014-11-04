@@ -69,21 +69,21 @@ for (keys %product_map) {
 		$pages = (@elements / 2) - 1;
 	}
 
-	my @results;
+	my @thumbnails;
 	for (1..$pages) {
 		$dom = get_dom($class_url . "$_", $ua);
 		return if (! defined $dom);
 
 		# $dom->filter(".AJAX_List_Body");
-		push @results, $dom->find(".PIV_Regular")->html_array();
+		push @thumbnails, $dom->find(".PIV_Regular")->html_array();
 	}
 
-	vprint("$_: found " . @results . " products\n");
+	vprint("$_: found " . @thumbnails . " products\n");
 
 	my $new = 0;
 	my $old = 0;
 	my $start = time;
-	for my $node (@results) {
+	for my $node (@thumbnails) {
 		sleep int(rand(10));
 
 		my $thumbnail_dom = HTML::Grabber->new(html => $node);
