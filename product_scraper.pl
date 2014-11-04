@@ -91,8 +91,8 @@ for (keys %product_map) {
 		my $product_id = get_tag_text($product, ".ProductId");
 		next unless (defined $product_id);
 
-		my $title = get_tag_text($product, ".ProductTitle");
-		next unless (defined $title);
+		my $description = get_tag_text($product, ".ProductTitle");
+		next unless (defined $description);
 
 		# brand is easier to parse from general results page, sometimes
 		# shows up as text
@@ -118,14 +118,14 @@ for (keys %product_map) {
 			$old++;
 		}
 		else {
-			$insert_sth->execute($part_num, $brand, $title, $_,
-				time, time, 0);
-			push @new, ([$_, $brand, $title, $part_num]);
+			$insert_sth->execute($part_num, $brand, $description,
+				$_, time, time, 0);
+			push @new, ([$_, $brand, $description, $part_num]);
 			vprint("+ ");
 			$new++;
 		}
 
-		vprint("($part_num) $brand $title\n");
+		vprint("($part_num) $brand $description\n");
 	}
 
 	$email .= sprintf("%7s %5s %3s %4s\n",
