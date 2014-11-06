@@ -24,16 +24,16 @@ my ($margin_top, $margin_bottom) = (20, 20);
 my $total_width = $width + $margin_right + $margin_left;
 my $total_height = $height + $margin_top + $margin_bottom;
 
-my $query = "select date, price from prices where " .
+my $sql = "select date, price from prices where " .
 	"part_num = ? and vendor = ? order by date";
-my $point_sth = $dbh->prepare($query);
+my $point_sth = $dbh->prepare($sql);
 
-$query = "select distinct vendor from prices where part_num = ?";
-my $vendor_sth = $dbh->prepare($query);
+$sql = "select distinct vendor from prices where part_num = ?";
+my $vendor_sth = $dbh->prepare($sql);
 
-$query = "select min(date), max(date), min(price), max(price) " .
+$sql = "select min(date), max(date), min(price), max(price) " .
 	"from prices where part_num = ?";
-my $limits_sth = $dbh->prepare($query);
+my $limits_sth = $dbh->prepare($sql);
 
 my $parts_sth = $dbh->prepare("select part_num, description from products");
 $parts_sth->execute();
@@ -62,8 +62,8 @@ while (my ($part_num, $description) = $parts_sth->fetchrow_array()) {
 	while (my ($vendor) = $vendor_sth->fetchrow_array()) {
 		vprintf("\t$vendor: ");
 
-		$query = "select color from vendors where name = ?";
-		my ($vendor_color) = $dbh->selectrow_array($query, undef, $vendor);
+		$sql = "select color from vendors where name = ?";
+		my ($vendor_color) = $dbh->selectrow_array($sql, undef, $vendor);
 
 		my (@xs, @ys);
 		$point_sth->execute($part_num, $vendor);
