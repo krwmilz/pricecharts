@@ -53,6 +53,7 @@ while (my ($part_num, $description) = $parts_sth->fetchrow_array()) {
 	vprint("$part_num:\n");
 	vprint("\tdomain: $x_min - $x_max\n");
 	vprint("\trange:  $y_min - $y_max\n");
+
 	my $x_scale = $width / $domain;
 	my $y_scale = $height / $range;
 
