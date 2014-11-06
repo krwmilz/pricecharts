@@ -92,6 +92,21 @@ while (my ($part_num, $description) = $parts_sth->fetchrow_array()) {
 		);
 	}
 
+	my $mask = $svg->rectangle(
+		x => 0, y => 0,
+		width => 1000, height => 250,
+		rx => 0, ry => 0,
+		id => "mask",
+		fill => "#FFF",
+	);
+
+	$mask->animate(
+		attributeName => "x",
+		values => "0;1000",
+		dur => "1s",
+		fill => "freeze",
+	);
+
 	my $num_labels = 5;
 	for (0..$num_labels) {
 		my $price = $y_max - $range * $_ / $num_labels;
