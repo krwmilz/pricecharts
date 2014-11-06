@@ -123,7 +123,7 @@ while (my ($part_num, $description) = $parts_sth->fetchrow_array()) {
 		my $x = $margin_left + $_ / $num_labels * $width;
 
 		$svg->text(
-			id => $time,
+			id => "time_$time",
 			x => $x, y => $total_height,
 			style => "font-size: 12px; fill: #666",
 			"text-anchor" => "middle"
