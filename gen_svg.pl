@@ -61,8 +61,9 @@ while (my ($part_num, $description) = $parts_sth->fetchrow_array()) {
 	$vendor_sth->execute($part_num);
 	while (my ($vendor) = $vendor_sth->fetchrow_array()) {
 		vprintf("\t$vendor: ");
-		# XXX: This should be read from DB
-		my $vendor_color = "#$cfg->{vendors}{$vendor}{color}";
+
+		$query = "select color from vendors where name = ?";
+		my ($vendor_color) = $dbh->selectrow_array($query, undef, $vendor);
 
 		my (@xs, @ys);
 		$point_sth->execute($part_num, $vendor);
