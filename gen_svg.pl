@@ -31,19 +31,15 @@ my $point_sth = $dbh->prepare($sql);
 $sql = "select distinct vendor from prices where part_num = ?";
 my $vendor_sth = $dbh->prepare($sql);
 
-$sql = "select min(date), max(date), min(price), max(price) " .
-	"from prices where part_num = ?";
-my $limits_sth = $dbh->prepare($sql);
-
 my $parts_sth = $dbh->prepare("select part_num, description from products");
 $parts_sth->execute();
 while (my ($part_num, $description) = $parts_sth->fetchrow_array()) {
-	$limits_sth->execute($part_num);
-	my ($x_min, $x_max, $y_min, $y_max) = $limits_sth->fetchrow_array();
-	if (!defined $x_min) {
-		$limits_sth->finish();
-		next;
-	}
+
+	$sql = "select min(date), max(date), min(price), max(price) " .
+		"from prices where part_num = ?";
+	my ($x_min, $x_max, $y_min, $y_max) =
+		$dbh->selectrow_array($sql, undef, $part_num);
+	next unless (defined $x_min);
 
 	my $domain = $x_max - $x_min;
 	my $range = $y_max - $y_min;
