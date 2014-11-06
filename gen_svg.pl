@@ -78,8 +78,7 @@ while (my ($part_num, $description) = $parts_sth->fetchrow_array()) {
 		}
 		vprintf(@xs . " data points\n");
 
-		my $points = $svg->get_path(x => \@xs, y => \@ys,
-			-closed => "false");
+		my $points = $svg->get_path(x => \@xs, y => \@ys);
 		$svg->path(
 			%$points,
 			id => $vendor,
