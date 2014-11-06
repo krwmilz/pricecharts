@@ -68,11 +68,12 @@ while (my ($part_num, $description) = $parts_sth->fetchrow_array()) {
 			push @xs, ($date - $x_min) * $x_scale + $margin_left;
 			push @ys, ($price - $y_min) * $y_scale + $margin_top;
 
-			$svg->circle(cx => $xs[-1], cy => $ys[-1], r => 2,
+			$svg->circle(
+				cx => $xs[-1], cy => $ys[-1],
+				r => 2,
 				style => {
-					'fill-opacity' => 1,
-					'fill' => $vendor_color,
-					'stroke' => $vendor_color
+					"fill" => $vendor_color,
+					"stroke" => $vendor_color
 				}
 			);
 		}
@@ -83,10 +84,10 @@ while (my ($part_num, $description) = $parts_sth->fetchrow_array()) {
 			%$points,
 			id => $vendor,
 			style => {
-				'fill-opacity' => 0,
-				'fill' => $vendor_color,
-				'stroke' => $vendor_color,
-				'stroke-width' => 2,
+				"fill-opacity" => 0,
+				fill => $vendor_color,
+				stroke => $vendor_color,
+				"stroke-width" => 2,
 			}
 		);
 	}
@@ -108,8 +109,8 @@ while (my ($part_num, $description) = $parts_sth->fetchrow_array()) {
 			id => "line_$_",
 			x1 => $margin_left, y1 => $y,
 			x2 => $total_width - $margin_right, y2 => $y,
-			"fill" => "#CCC",
-			"stroke" => "#CCC",
+			fill => "#CCC",
+			stroke => "#CCC",
 			"stroke-width" => 1,
 		);
 	}
@@ -130,8 +131,8 @@ while (my ($part_num, $description) = $parts_sth->fetchrow_array()) {
 			id => "date_marker_$_",
 			x1 => $x, y1 => $margin_top + $height,
 			x2 => $x, y2 => $margin_top + $height + 5,
-			"fill" => "#CCC",
-			"stroke" => "#CCC",
+			fill => "#CCC",
+			stroke => "#CCC",
 			"stroke-width" => 1,
 		);
 	}
