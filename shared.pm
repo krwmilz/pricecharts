@@ -32,7 +32,12 @@ my $parser = Config::Grammar->new({
 		# vendor regular expression
 		_sections => ['/[A-Za-z ]+/'],
 		'/[A-Za-z ]+/' => {
-			_vars => ['search_uri', 'reg_price', 'sale_price', 'color'],
+			_vars => [
+				'search_uri',
+				'reg_price',
+				'sale_price',
+				'color'
+			],
 		},
 	},
 	general => {
