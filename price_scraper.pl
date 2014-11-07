@@ -31,12 +31,12 @@ printf $log "%-15s [", $part_num;
 
 vprint("$part_num\n");
 
-my $qry = "insert into prices(date, part_num, vendor, price, duration) " .
+$sql = "insert into prices(date, part_num, vendor, price, duration) " .
 	"values (?, ?, ?, ?, ?)";
-my $prices_sth = $dbh->prepare($qry);
+my $prices_sth = $dbh->prepare($sql);
 
-$qry = "update products set last_seen = ? where part_num = ?";
-my $products_sth = $dbh->prepare($qry);
+$sql = "update products set last_seen = ? where part_num = ?";
+my $products_sth = $dbh->prepare($sql);
 
 my $date = time;
 for (sort keys $cfg->{vendors}) {
