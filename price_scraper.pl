@@ -8,22 +8,15 @@ use shared;
 
 my $ua  = get_ua();
 
-my $part_num;
-if ($args{p}) {
-	$part_num = $args{p};
-}
-else {
-	my $cutoff = time - (30 * 24 * 60 * 60);
-	my $results = $dbh->selectrow_arrayref("select part_num from products " .
-	"where last_seen > $cutoff order by last_scraped asc");
-	if (! @$results) {
-		print "Product table empty, run product_scraper.pl\n";
-		exit;
-	}
-	$part_num = $results->[0];
-	$dbh->do("update products set last_scraped = ? where part_num = ?",
-		undef, time, $part_num);
-}
+# pick the oldest product
+my $cutoff = time - (30 * 24 * 60 * 60);
+my $sql = "select part_num from products where last_seen > $cutoff " .
+	"order by last_scraped asc";
+my ($part_num) = $dbh->selectrow_array($sql);
+exit unless (defined $part_num);
+
+$dbh->do("update products set last_scraped = ? where part_num = ?",
+	undef, time, $part_num);
 
 $dbh->do("create table if not exists prices(" .
 	"date int not null, " .
