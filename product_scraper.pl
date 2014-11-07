@@ -39,8 +39,6 @@ tee("$vendor\n");
 tee("=") for (1..length $vendor);
 tee("\n\n");
 
-my $exists_sth = $dbh->prepare("select * from products where part_num = ?");
-
 my $qry = "insert into products(part_num, manufacturer, description, type, " .
 	"first_seen, last_seen, last_scraped) values (?, ?, ?, ?, ?, ?, ?)";
 my $insert_sth = $dbh->prepare($qry);
@@ -110,8 +108,8 @@ for (keys %product_map) {
 			next;
 		}
 
-		$exists_sth->execute($part_num);
-		if ($exists_sth->fetchrow_arrayref()) {
+		my $sql = "select * from products where part_num = ?";
+		if ($dbh->selectrow_arrayref($sql, undef, $part_num)) {
 			$update_sth->execute(time, $part_num);
 			vprint("  ($part_num) $brand $description\n");
 			$old++;
@@ -131,7 +129,6 @@ for (keys %product_map) {
 		$new + $old, scalar @thumbnails, $new, time - $start));
 }
 
-$exists_sth->finish();
 $dbh->disconnect();
 
 my $e_mail = Email::Simple->create(
