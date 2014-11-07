@@ -11,7 +11,6 @@ use shared;
 
 
 my $ua  = get_ua();
-
 srand;
 
 $dbh->do("create table if not exists products(" .
@@ -149,7 +148,7 @@ sub get_tag_text
 	my $tag = shift;
 
 	my $field = $dom->find($tag)->text();
-	if (!defined $field || $field eq "" ) {
+	if (!defined $field || $field eq "") {
 		vprint("could not find $tag, html was:\n");
 		vprint($dom->html());
 		vprint("\n\n");
