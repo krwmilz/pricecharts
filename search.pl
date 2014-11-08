@@ -45,7 +45,7 @@ while ($request->Accept() >= 0) {
 	my $products = $search_sth->fetchall_arrayref();
 
 	my $vars = {
-		query => "\"$input\"",
+		query => "$input",
 		num_results => scalar @$products,
 		results => $products
 	};
