@@ -28,8 +28,9 @@ my $config = {
 };
 my $template = Template->new($config);
 
-my $query = "select part_num from products where description like ? or part_num like ?";
-my $search_sth = $dbh->prepare($query);
+my $sql = "select part_num, manufacturer, description from products " .
+	"where description like ? or part_num like ? or manufacturer like ?";
+my $search_sth = $dbh->prepare($sql);
 
 while ($request->Accept() >= 0) {
 	print "Content-Type: text/html\r\n\r\n";
@@ -40,7 +41,7 @@ while ($request->Accept() >= 0) {
 
 	my (undef, $input) = split("=", $ENV{QUERY_STRING});
 
-	$search_sth->execute("%$input%", "%$input%");
+	$search_sth->execute("%$input%", "%$input%", "%$input%");
 	my $products = $search_sth->fetchall_arrayref();
 
 	my $vars = {
