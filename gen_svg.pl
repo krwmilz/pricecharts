@@ -160,5 +160,5 @@ while (my ($part_num, $description) = $parts_sth->fetchrow_array()) {
 
 # print $log @$part_nums . " products generated\n";
 
-close $log;
+# close $log;
 $dbh->disconnect();
