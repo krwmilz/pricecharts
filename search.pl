@@ -1,5 +1,3 @@
-#!/usr/bin/env perl
-
 use strict;
 use warnings;
 
@@ -12,9 +10,8 @@ use shared;
 
 my $pid_file = "/var/www/run/search.pid";
 if (-e $pid_file) {
-	print "pid file $pid_file exists, search may already be running\n";
-	print "make sure that search is not running and remove\n";
-	exit
+	print "Not starting, pid file $pid_file exists\n";
+	exit;
 }
 
 my $daemon = Proc::Daemon->new(
@@ -24,15 +21,11 @@ my $daemon = Proc::Daemon->new(
 	child_STDERR => "logs/pricechart/search.txt",
 	pid_file     => $pid_file
 );
-
 $daemon->Init();
 
-$SIG{INT} = \&sig_handler;
+# shut down cleanly on kill
 $SIG{TERM} = \&sig_handler;
 
-print "assigned sig handlers\n";
-
-# mkdir "$cfg->{general}{var}/www/run";
 my $socket_path = "/var/www/run/search.sock";
 
 print "made run dir\n";
@@ -40,7 +33,6 @@ print "made run dir\n";
 my $socket = FCGI::OpenSocket($socket_path, 1024);
 my $request = FCGI::Request(\*STDIN, \*STDOUT, \*STDERR, \%ENV,
 	$socket, FCGI::FAIL_ACCEPT_ON_INTR);
-
 print "made socket and request objects\n";
 
 my $config = {
@@ -48,7 +40,6 @@ my $config = {
 	INCLUDE_PATH => "/home/kyle/src/pricechart/html"
 };
 my $template = Template->new($config);
-
 print "made new template config\n";
 
 my $dbh = get_dbh();
@@ -58,8 +49,7 @@ my $sql = "select part_num, manufacturer, description from products " .
 	"where description like ? or part_num like ? or manufacturer like ?";
 my $search_sth = $dbh->prepare($sql);
 
-print "about to start main loop\n";
-
+print "starting main loop\n";
 while ($request->Accept() >= 0) {
 	print "Content-Type: text/html\r\n\r\n";
 
@@ -84,6 +74,7 @@ while ($request->Accept() >= 0) {
 	}
 }
 
+print "shutting down\n";
 FCGI::CloseSocket($socket);
 unlink($socket_path, $pid_file);
 $dbh->disconnect();
