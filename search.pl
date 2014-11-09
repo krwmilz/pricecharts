@@ -30,9 +30,6 @@ $daemon->Init();
 $SIG{TERM} = \&sig_handler;
 
 my $socket_path = "/var/www/run/search.sock";
-
-print "made run dir\n";
-
 my $socket = FCGI::OpenSocket($socket_path, 1024);
 my $request = FCGI::Request(\*STDIN, \*STDOUT, \*STDERR, \%ENV,
 	$socket, FCGI::FAIL_ACCEPT_ON_INTR);
