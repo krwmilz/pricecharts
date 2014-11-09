@@ -14,18 +14,12 @@ use POSIX;
 
 
 our %args;
-getopts('f:np:v', \%args);
+getopts('np:v', \%args);
 
 $| = 1 if ($args{v});
 
-if (!$args{f}) {
-	if (-e "etc/pricechart.cfg") {
-		$cfg_file = "etc/pricechart.cfg";
-	} else {
-		$cfg_file = "/etc/pricechart.cfg";
-	}
-}
 
+my $cfg_file = "/etc/pricechart.cfg";
 my $parser = Config::Grammar->new({
 	_sections => ['vendors', 'general'],
 	vendors	=> {
