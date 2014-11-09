@@ -11,7 +11,7 @@ use shared;
 print "disconnecting dbh\n";
 $dbh->disconnect();
 
-my $pid_file = "$cfg->{general}{var}/run/pricegraph_search.pid";
+my $pid_file = "/var/www/run/search.pid";
 
 if (-e $pid_file) {
 	print "pid file $pid_file exists, search may already be running\n";
@@ -23,9 +23,10 @@ print "daemonizing\n";
 
 
 my $daemon = Proc::Daemon->new(
-	work_dir     => "/home/kyle/src/pricegraph",
-	child_STDOUT => "log/search.txt",
-	child_STDERR => "log/search.txt",
+	setuid       => 67,
+	work_dir     => "/var/www",
+	child_STDOUT => "logs/pricechart/search.txt",
+	child_STDERR => "logs/pricechart/search.txt",
 	pid_file     => $pid_file
 );
 
@@ -36,8 +37,8 @@ $SIG{TERM} = \&sig_handler;
 
 print "assigned sig handlers\n";
 
-mkdir "$cfg->{general}{var}/www/run";
-my $socket_path = "$cfg->{general}{var}/www/run/search.sock";
+# mkdir "$cfg->{general}{var}/www/run";
+my $socket_path = "/var/www/run/search.sock";
 
 print "made run dir\n";
 
@@ -47,20 +48,16 @@ my $request = FCGI::Request(\*STDIN, \*STDOUT, \*STDERR, \%ENV,
 
 print "made socket and request objects\n";
 
-chmod 0777, $socket_path;
-
-print "chmod 0777\n";
-
 my $config = {
-	INCLUDE_PATH => "html"
+	# XXX: this needs to be fixed
+	INCLUDE_PATH => "/home/kyle/src/pricechart/html"
 };
 my $template = Template->new($config);
 
 print "made new template config\n";
 
-my $db_dir = "$cfg->{general}{var}/db";
 my $dbh = DBI->connect(
-	"dbi:SQLite:dbname=$db_dir/pricechart.db",
+	"dbi:SQLite:dbname=/var/www/db/pricechart.db",
 	"",
 	"",
 	{ RaiseError => 1 }

@@ -42,7 +42,6 @@ my $parser = Config::Grammar->new({
 	},
 	general => {
 		_vars => [
-			'var',
 			'user_agent',
 			'email',
 			'smtp',
@@ -51,10 +50,10 @@ my $parser = Config::Grammar->new({
 });
 
 our $cfg =$parser->parse($cfg_file) or die "error: $parser->{err}\n";
-make_dir($cfg->{general}{var});
 
-my $db_dir = "$cfg->{general}{var}/db";
-make_dir($db_dir);
+my $db_dir = "/var/www/db";
+mkdir $db_dir;
+
 our $dbh = DBI->connect(
 	"dbi:SQLite:dbname=$db_dir/pricechart.db",
 	"",
@@ -86,22 +85,13 @@ sub get_ua
 sub get_log
 {
 	my $file = shift;
-	my $log_dir = "$cfg->{general}{var}/log";
+	my $log_dir = "/var/www/logs/pricechart";
 
-	make_dir($log_dir);
-	open my $log, ">>", "$log_dir/$file.txt";
+	mkdir $log_dir;
+	open my $log, ">>", "$log_dir/$file.log" || die "$!";
 
 	print $log strftime "%b %e %Y %H:%M ", localtime;
 	return $log;
-}
-
-sub make_dir
-{
-	my $dir = shift;
-
-	unless (-e $dir or mkdir $dir) {
-		die "Could not create directory $dir: $!\n"
-	}
 }
 
 sub vprint

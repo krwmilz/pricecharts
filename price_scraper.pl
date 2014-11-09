@@ -26,7 +26,7 @@ $dbh->do("create table if not exists prices(" .
 	"duration int, " .
 	"primary key(date, part_num, vendor, price))") or die $DBI::errstr;
 
-my $log = get_log("pricechart_scrapes");
+my $log = get_log("scrapes");
 printf $log "%-15s [", $part_num;
 
 vprint("$part_num\n");

@@ -13,8 +13,9 @@ my $config = {
 	INTERPOLATE => 1,
 	POST_CHOMP => 1,
 	EVAL_PERL => 1,
+	# XXX: this needs to be changed
 	INCLUDE_PATH => "html",
-	OUTPUT_PATH => "www/htdocs"
+	OUTPUT_PATH => "/var/www/htdocs/pricechart"
 };
 
 my $template = Template->new($config);
@@ -35,6 +36,6 @@ my $vars = {
 };
 
 $template->process("index.html", $vars, "index.html") || die $template->error();
-copy("html/pricechart.css", "www/htdocs/pricechart.css");
+copy("html/pricechart.css", "/var/www/htdocs/pricechart/pricechart.css");
 
 $dbh->disconnect();

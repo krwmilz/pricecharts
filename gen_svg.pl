@@ -13,9 +13,9 @@ use shared;
 # http://www.particleincell.com/wp-content/uploads/2012/06/bezier-spline.js
 #
 
-my $log = get_log("pricechart_gen_svg");
+# my $log = get_log("gen_svg");
 
-my $svg_dir = "$cfg->{general}{var}/www/htdocs/svg";
+my $svg_dir = "/var/www/htdocs/pricechart/svg";
 mkdir $svg_dir;
 
 my ($width, $height) = (900, 210);
