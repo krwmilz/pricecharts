@@ -14,8 +14,9 @@ if (-e $pid_file) {
 	exit;
 }
 
+my @struct_passwd = getpwnam("www");
 my $daemon = Proc::Daemon->new(
-	setuid       => 67,
+	setuid       => $struct_passwd[2],
 	work_dir     => "/var/www",
 	child_STDOUT => "logs/pricechart/search.txt",
 	child_STDERR => "logs/pricechart/search.txt",
