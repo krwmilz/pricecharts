@@ -14,6 +14,7 @@ use shared;
 #
 
 # my $log = get_log("gen_svg");
+my $dbh = get_dbh();
 
 my $svg_dir = "/var/www/htdocs/pricechart/svg";
 mkdir $svg_dir;

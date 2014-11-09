@@ -7,6 +7,7 @@ use shared;
 
 
 my $ua  = get_ua();
+my $dbh = get_dbh();
 
 # pick the oldest product
 my $cutoff = time - (30 * 24 * 60 * 60);

@@ -8,19 +8,14 @@ use Template;
 use Proc::Daemon;
 
 use shared;
-print "disconnecting dbh\n";
-$dbh->disconnect();
+
 
 my $pid_file = "/var/www/run/search.pid";
-
 if (-e $pid_file) {
 	print "pid file $pid_file exists, search may already be running\n";
 	print "make sure that search is not running and remove\n";
 	exit
 }
-
-print "daemonizing\n";
-
 
 my $daemon = Proc::Daemon->new(
 	setuid       => 67,
@@ -56,13 +51,7 @@ my $template = Template->new($config);
 
 print "made new template config\n";
 
-my $dbh = DBI->connect(
-	"dbi:SQLite:dbname=/var/www/db/pricechart.db",
-	"",
-	"",
-	{ RaiseError => 1 }
-) or die $DBI::errstr;
-
+my $dbh = get_dbh();
 print "opened db\n";
 
 my $sql = "select part_num, manufacturer, description from products " .

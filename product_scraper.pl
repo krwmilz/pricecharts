@@ -11,6 +11,7 @@ use shared;
 
 
 my $ua  = get_ua();
+my $dbh = get_dbh();
 srand;
 
 $dbh->do("create table if not exists products(" .

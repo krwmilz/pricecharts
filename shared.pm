@@ -10,7 +10,7 @@ use LWP::Simple;
 use POSIX;
 
 @ISA = ("Exporter");
-@EXPORT = qw(get_dom get_ua get_log vprint vprintf %args $cfg $dbh);
+@EXPORT = qw(get_dom get_ua get_log get_dbh vprint vprintf %args $cfg);
 
 
 our %args;
@@ -51,16 +51,19 @@ my $parser = Config::Grammar->new({
 
 our $cfg =$parser->parse($cfg_file) or die "error: $parser->{err}\n";
 
-my $db_dir = "/var/www/db";
-mkdir $db_dir;
+sub get_dbh
+{
+	my $db_dir = "/var/www/db";
+	mkdir $db_dir;
 
-our $dbh = DBI->connect(
-	"dbi:SQLite:dbname=$db_dir/pricechart.db",
-	"",
-	"",
-	{ RaiseError => 1 }
-) or die $DBI::errstr;
-
+	my $dbh = DBI->connect(
+		"dbi:SQLite:dbname=$db_dir/pricechart.db",
+		"",
+		"",
+		{ RaiseError => 1 }
+	) or die $DBI::errstr;
+	return $dbh;
+}
 
 sub get_dom
 {

@@ -9,6 +9,8 @@ use Template;
 use shared;
 
 
+my $dbh = get_dbh();
+
 my $config = {
 	INTERPOLATE => 1,
 	POST_CHOMP => 1,
