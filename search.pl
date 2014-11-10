@@ -70,8 +70,8 @@ while ($request->Accept() >= 0) {
 		results => $products
 	};
 
-	my $r = $template->process("search.html", $vars);
-	if ($r) {
+	if ($template->process("search.html", $vars)) {
+		print "Template error:\n";
 		print $template->error();
 	}
 }
