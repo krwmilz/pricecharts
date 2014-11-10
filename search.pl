@@ -17,6 +17,7 @@ if (-e $pid_file) {
 	exit;
 }
 
+# third field is uid
 my @struct_passwd = getpwnam("www");
 my $daemon = Proc::Daemon->new(
 	setuid       => $struct_passwd[2],
@@ -29,6 +30,8 @@ $daemon->Init();
 
 # shut down cleanly on kill
 $SIG{TERM} = \&sig_handler;
+# stdout/err doesn't get flushed to the log file otherwise
+$| = 1;
 
 my $socket_path = "/var/www/run/search.sock";
 my $socket = FCGI::OpenSocket($socket_path, 1024);
@@ -65,7 +68,7 @@ while ($request->Accept() >= 0) {
 	my $products = $search_sth->fetchall_arrayref();
 
 	my $vars = {
-		query => "$input",
+		query => $input,
 		num_results => scalar @$products,
 		results => $products
 	};
