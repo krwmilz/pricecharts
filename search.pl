@@ -57,11 +57,6 @@ my $search_sth = $dbh->prepare($sql);
 print ftime() . "starting main accept loop\n";
 while ($request->Accept() >= 0) {
 	print "Content-Type: text/html\r\n\r\n";
-
-	# for (sort keys %ENV) {
-	# 	print "$_: $ENV{$_} <br>\n";
-	# }
-
 	my (undef, $input) = split("=", $ENV{QUERY_STRING});
 
 	$search_sth->execute("%$input%", "%$input%", "%$input%");
