@@ -1,6 +1,11 @@
 [% WRAPPER wrapper.html %]
-	<p>Found <b>[% num_results %]</b> search results for <b>[% query
-	%]</b>:</p>
+	<p>Found <b>[% num_results %]</b> search
+	[% IF num_results == 1 %]
+		result
+	[% ELSE %]
+		results
+	[% END %]
+	for <b>[% query %]</b>:</p>
 	
 	[% FOREACH part_num IN results %]
 	[% part_num.1 %] [% part_num.2 %] ([% part_num.0 %])<br>
