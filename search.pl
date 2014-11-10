@@ -72,10 +72,7 @@ while ($request->Accept() >= 0) {
 		results => $products
 	};
 
-	if ($template->process("search.html", $vars)) {
-		print "Template error:\n";
-		print $template->error();
-	}
+	$template->process("search.html", $vars) || print $template->error();
 }
 
 print ftime() . "shutting down\n";
