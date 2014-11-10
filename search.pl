@@ -7,6 +7,7 @@ use FCGI;
 use Template;
 use Proc::Daemon;
 use POSIX;
+use URI::Escape;
 
 use shared;
 
@@ -58,6 +59,9 @@ print ftime() . "starting main accept loop\n";
 while ($request->Accept() >= 0) {
 	print "Content-Type: text/html\r\n\r\n";
 	my (undef, $input) = split("=", $ENV{QUERY_STRING});
+
+	# incoming query string is http mangled
+	$input = uri_unescape($input);
 
 	$search_sth->execute("%$input%", "%$input%", "%$input%");
 	my $products = $search_sth->fetchall_arrayref();
