@@ -33,9 +33,9 @@ $SIG{TERM} = \&sig_handler;
 # stdout/err doesn't get flushed to the log file otherwise
 $| = 1;
 
-my $socket_path = "/var/www/run/search.sock";
-my $socket = FCGI::OpenSocket($socket_path, 1024);
-print ftime() . "socket created on $socket_path\n";
+my $socket_file = "/var/www/run/search.sock";
+my $socket = FCGI::OpenSocket($socket_file, 1024);
+print ftime() . "socket created on $socket_file\n";
 my $request = FCGI::Request(\*STDIN, \*STDOUT, \*STDERR, \%ENV,
 	$socket, FCGI::FAIL_ACCEPT_ON_INTR);
 print ftime() . "fcgi request object created\n";
@@ -76,7 +76,7 @@ while ($request->Accept() >= 0) {
 
 print ftime() . "shutting down\n";
 FCGI::CloseSocket($socket);
-unlink($socket_path, $pid_file);
+unlink($socket_file, $pid_file);
 $dbh->disconnect();
 
 sub sig_handler
