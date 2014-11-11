@@ -117,7 +117,7 @@ while (my ($part_num, $description) = $parts_sth->fetchrow_array()) {
 			id => $_,
 			x => $margin_left + $width + 20,
 			y => $y,
-			style => "font-size: 12px; fill: #666",
+			style => "font-size: 14px; fill: #666",
 			"text-anchor" => "start"
 		)->cdata("\$$price");
 
@@ -139,7 +139,7 @@ while (my ($part_num, $description) = $parts_sth->fetchrow_array()) {
 		$svg->text(
 			id => "time_$time",
 			x => $x, y => $total_height,
-			style => "font-size: 12px; fill: #666",
+			style => "font-size: 14px; fill: #666",
 			"text-anchor" => "middle"
 		)->cdata($date);
 
