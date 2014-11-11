@@ -3,10 +3,12 @@
 use strict;
 use warnings;
 
-use Getopt::Std;
+use Config::Grammar;
 use Email::Simple;
 use Email::Send;
+use Getopt::Std;
 use HTML::Grabber;
+use LWP::Simple;
 
 use shared;
 
@@ -16,7 +18,8 @@ getopts("v", \%args);
 
 $| = 1 if ($args{v});
 
-my $ua  = get_ua();
+my $cfg = get_config();
+my $ua  = get_ua($cfg);
 my $dbh = get_dbh();
 srand;
 

@@ -3,7 +3,9 @@
 use strict;
 use warnings;
 
+use Config::Grammar;
 use Getopt::Std;
+use LWP::Simple;
 
 use shared;
 
@@ -13,7 +15,8 @@ getopts("nv", \%args);
 
 $| = 1 if ($args{v});
 
-my $ua  = get_ua();
+my $cfg = get_config();
+my $ua  = get_ua($cfg);
 my $dbh = get_dbh();
 
 # pick the oldest product

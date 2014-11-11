@@ -3,10 +3,14 @@
 use strict;
 use warnings;
 
+use Config::Grammar;
+
 use shared;
 
 
+my $cfg = get_config();
 my $dbh = get_dbh();
+
 $dbh->do("create table if not exists vendors(" .
 	"name text not null primary key, " .
 	"search_url not null, " .
