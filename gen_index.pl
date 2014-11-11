@@ -16,10 +16,9 @@ my $config = {
 	POST_CHOMP => 1,
 	EVAL_PERL => 1,
 	# XXX: this needs to be changed
-	INCLUDE_PATH => "html",
+	INCLUDE_PATH => "/home/kyle/src/pricechart/html",
 	OUTPUT_PATH => "/var/www/htdocs/pricechart"
 };
-
 my $template = Template->new($config);
 
 my $query = "select count(distinct manufacturer) from products";
