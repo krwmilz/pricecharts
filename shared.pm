@@ -12,9 +12,15 @@ use POSIX;
 sub get_config
 {
 	my $parser = Config::Grammar->new({
-		_sections => ['vendors', 'general'],
+		_sections => ['general', 'vendors'],
+		general => {
+			_vars => [
+				'user_agent',
+				'email',
+				'smtp',
+			],
+		},
 		vendors	=> {
-			# vendor regular expression
 			_sections => ['/[A-Za-z ]+/'],
 			'/[A-Za-z ]+/' => {
 				_vars => [
@@ -24,13 +30,6 @@ sub get_config
 					'color'
 				],
 			},
-		},
-		general => {
-			_vars => [
-				'user_agent',
-				'email',
-				'smtp',
-			],
 		},
 	});
 	my $cfg_file = "/etc/pricechart.cfg";
