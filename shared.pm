@@ -3,7 +3,6 @@
 package shared;
 use DBI;
 use Exporter;
-use HTML::Grabber;
 use POSIX;
 
 @ISA = ("Exporter");
