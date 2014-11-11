@@ -8,10 +8,6 @@ use POSIX;
 
 use shared;
 
-#
-# Spline code here:
-# http://www.particleincell.com/wp-content/uploads/2012/06/bezier-spline.js
-#
 
 # my $log = get_log("gen_svg");
 my $dbh = get_dbh();
@@ -80,9 +76,19 @@ while (my ($part_num, $description) = $parts_sth->fetchrow_array()) {
 		}
 		vprintf(@xs . " data points\n");
 
-		my $points = $svg->get_path(x => \@xs, y => \@ys);
+		my $px = compute_control_points(\@xs);
+		my $py = compute_control_points(\@ys);
+		my $p;
+		for (0..(scalar @xs - 2)) {
+			$p .= sprintf("M %f %f C %f %f %f %f %f %f ",
+				$xs[$_], $ys[$_],
+				$px->{"p1"}[$_], $py->{"p1"}[$_],
+				$px->{"p2"}[$_], $py->{"p2"}[$_],
+				$xs[$_ + 1], $ys[$_ + 1]
+			);
+		}
 		$svg->path(
-			%$points,
+			d => $p,
 			id => $vendor,
 			style => {
 				"fill-opacity" => 0,
@@ -162,3 +168,53 @@ while (my ($part_num, $description) = $parts_sth->fetchrow_array()) {
 
 # close $log;
 $dbh->disconnect();
+
+# shamefully ported javascript from
+# http://www.particleincell.com/wp-content/uploads/2012/06/bezier-spline.js
+sub compute_control_points
+{
+	my $K = shift;
+	my $n = @$K - 1;
+
+	my (@p1, @p2);
+	my (@a, @b, @c, @r);
+
+	# left segment
+	$a[0] = 0;
+	$b[0] = 2;
+	$c[0] = 1;
+	$r[0] = $K->[0] + 2 * $K->[1];
+
+	# internal segments
+	for (1..($n - 2)) {
+		$a[$_] = 1;
+		$b[$_] = 4;
+		$c[$_] = 1;
+		$r[$_] = 4 * $K->[$_] + 2 * $K->[$_ + 1];
+	}
+
+	# right segment
+	$a[$n - 1] = 2;
+	$b[$n - 1] = 7;
+	$c[$n - 1] = 0;
+	$r[$n - 1] = 8 * $K->[$n - 1] + $K->[$n];
+
+	# solves Ax=b with the Thomas algorithm
+	for (1..($n - 1)) {
+		my $m = $a[$_] / $b[$_ - 1];
+		$b[$_] = $b[$_] - $m * $c[$_ - 1];
+		$r[$_] = $r[$_] - $m * $r[$_ - 1];
+	}
+
+	$p1[$n - 1] = $r[$n - 1] / $b[$n - 1];
+	for (reverse(0..($n - 2))) {
+		$p1[$_] = ($r[$_] - $c[$_] * $p1[$_ + 1]) / $b[$_];
+	}
+
+	for (0..($n - 2)) {
+		$p2[$_] = 2 * $K->[$_ + 1] - $p1[$_ + 1];
+	}
+	$p2[$n - 1] = 0.5 * ($K->[$n] + $p1[$n - 1]);
+
+	return {"p1" => \@p1, "p2" => \@p2};
+}
