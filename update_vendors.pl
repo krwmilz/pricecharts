@@ -6,6 +6,7 @@ use warnings;
 use shared;
 
 
+my $dbh = get_dbh();
 $dbh->do("create table if not exists vendors(" .
 	"name text not null primary key, " .
 	"search_url not null, " .
