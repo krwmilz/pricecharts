@@ -22,8 +22,8 @@ my $dbh = get_dbh();
 
 # pick the oldest product
 my $cutoff = time - (30 * 24 * 60 * 60);
-my $sql = "select part_num, manufacturer from products where last_seen > $cutoff " .
-	"order by last_scraped asc";
+my $sql = "select part_num, manufacturer from products " .
+	"where last_seen > $cutoff order by last_scraped asc";
 my ($part_num, $manufacturer) = $dbh->selectrow_array($sql);
 exit unless (defined $part_num);
 
