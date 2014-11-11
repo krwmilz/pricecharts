@@ -43,11 +43,6 @@ my %product_map = ("televisions" => "Televisions",
 	"laptops" => "LaptopsNotebooks",
 	"hard_drives" => "HardDrives");
 
-my $email;
-tee("$vendor\n");
-tee("=") for (1..length $vendor);
-tee("\n\n");
-
 my $qry = "insert into products(part_num, manufacturer, description, type, " .
 	"first_seen, last_seen, last_scraped) values (?, ?, ?, ?, ?, ?, ?)";
 my $insert_sth = $dbh->prepare($qry);
@@ -56,11 +51,19 @@ my $insert_sth = $dbh->prepare($qry);
 $qry = "update products set last_seen = ? where part_num = ?";
 my $update_sth = $dbh->prepare($qry);
 
-for (keys %product_map) {
+my $summary .= "type        scraped total new errors time (s)\n";
+$summary    .= "----------- ------- ----- --- ------ --------\n";
+
+my $new_products;
+my $errors;
+
+for my $type (keys %product_map) {
 	my $class_url = "http://www.memoryexpress.com/Category/" .
-		"$product_map{$_}?PageSize=120&Page=";
+		"$product_map{$type}?PageSize=120&Page=";
 	my $dom = get_dom($class_url . "1", $ua);
 	next if (! defined $dom);
+
+	print "GET " . $class_url . "1 OK\n" if ($args{v});
 
 	$dom = $dom->find(".AJAX_List_Pager");
 	my @elements = $dom->find("li")->html_array();
@@ -71,19 +74,23 @@ for (keys %product_map) {
 		$pages = (@elements / 2) - 1;
 	}
 
+	print "$pages pages of products found\n" if ($args{v});
+
 	my @thumbnails;
 	for (1..$pages) {
 		$dom = get_dom($class_url . "$_", $ua);
 		return if (! defined $dom);
 
+		print "GET " . $class_url . "$_ OK\n" if ($args{v});
+
 		# $dom->filter(".AJAX_List_Body");
 		push @thumbnails, $dom->find(".PIV_Regular")->html_array();
 	}
 
-	tee("*** $_ (" . @thumbnails . ") ***\n");
+	my $total = scalar @thumbnails;
+	print "\nprocessing $type: ($total)\n" if ($args{v});
 
-	my $new = 0;
-	my $old = 0;
+	my ($new, $old) = (0, 0);
 	my $start = time;
 	for my $thumbnail_html (@thumbnails) {
 		sleep int(rand(10));
@@ -112,45 +119,59 @@ for (keys %product_map) {
 			($brand) = ($brand =~ m/Brand: ([A-Za-z]+)/);
 		}
 		if (!defined $brand || $brand eq "") {
-			vprint("could not find .ProductBrand, html was:\n");
-			vprint("$thumbnail_html\n\n");
+			$errors .= "could not find .ProductBrand, html was:\n";
+			$errors .= "$thumbnail_html\n\n";
+			print $errors if ($args{v});
 			next;
 		}
 
 		my $sql = "select * from products where part_num = ?";
 		if ($dbh->selectrow_arrayref($sql, undef, $part_num)) {
 			$update_sth->execute(time, $part_num);
-			vprint("  ($part_num) $brand $description\n");
+			print "updated $part_num\n" if ($args{v});
 			$old++;
 		}
 		else {
 			$insert_sth->execute($part_num, $brand, $description,
-				$_, time, time, 0);
-			tee("+ ($part_num) $brand $description\n");
+				$type, time, time, 0);
+			print "inserted $part_num\n" if ($args{v});
+			$new_products .= "$brand $description ($part_num)\n";
 			$new++;
 		}
 	}
 
-	tee("\n");
-	tee("scraped total new   time\n");
-	tee("------- ----- ---   ----\n");
-	tee(sprintf("%7s %5s %3s %4s s\n",
-		$new + $old, scalar @thumbnails, $new, time - $start));
+	$summary .= sprintf("%-11s %7s %5s %3s %6s %8s\n", $type, $new + $old,
+		$total, $new, $total - ($new + $old), time - $start);
+	print "\n" if ($args{v});
 }
 
 $dbh->disconnect();
 
-my $e_mail = Email::Simple->create(
+my $mail;
+$mail .= "$vendor\n";
+$mail .= "=" for (1..length $vendor);
+$mail .= "\n\n";
+
+$mail .= "$summary\n"      if ($summary);
+$mail .= "$new_products\n" if ($new_products);
+$mail .= $errors           if ($errors);
+
+my $email = Email::Simple->create(
 	header => [
 		From	=> "Santa Claus <sc\@np.com>",
 		To	=> $cfg->{general}{email},
 		Subject	=> "PriceChart product scrape",
 	],
-	body => $email);
+	body => $mail);
 
-my $sender = Email::Send->new({mailer => 'SMTP'});
-$sender->mailer_args([Host => $cfg->{general}{smtp}]);
-$sender->send($e_mail->as_string()) || print "Couldn't send email\n";
+if ($args{v}) {
+	print $email->as_string();
+}
+else {
+	my $sender = Email::Send->new({mailer => 'SMTP'});
+	$sender->mailer_args([Host => $cfg->{general}{smtp}]);
+	$sender->send($email->as_string()) || print "Couldn't send email\n";
+}
 
 sub get_tag_text
 {
@@ -159,18 +180,12 @@ sub get_tag_text
 
 	my $field = $dom->find($tag)->text();
 	if (!defined $field || $field eq "") {
-		vprint("could not find $tag, html was:\n");
-		vprint($dom->html());
-		vprint("\n\n");
+		$errors .= "could not find $tag, html was:\n";
+		$errors .= $dom->html();
+		$errors .= "\n\n";
+		print $errors if ($args{v});
+
 		return undef;
 	}
 	return $field;
-}
-
-sub tee
-{
-	my $line = shift;
-
-	vprint($line);
-	$email .= $line;
 }
