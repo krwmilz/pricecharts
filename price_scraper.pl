@@ -3,8 +3,15 @@
 use strict;
 use warnings;
 
+use Getopt::Std;
+
 use shared;
 
+
+my %args;
+getopts("nv", \%args);
+
+$| = 1 if ($args{v});
 
 my $ua  = get_ua();
 my $dbh = get_dbh();

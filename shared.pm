@@ -4,19 +4,12 @@ package shared;
 use Config::Grammar;
 use DBI;
 use Exporter;
-use Getopt::Std;
 use HTML::Grabber;
 use LWP::Simple;
 use POSIX;
 
 @ISA = ("Exporter");
 @EXPORT = qw(get_dom get_ua get_log get_dbh vprint vprintf %args $cfg);
-
-
-our %args;
-getopts('np:v', \%args);
-
-$| = 1 if ($args{v});
 
 
 my $cfg_file = "/etc/pricechart.cfg";
@@ -89,16 +82,6 @@ sub get_log
 
 	print $log strftime "%b %e %Y %H:%M ", localtime;
 	return $log;
-}
-
-sub vprint
-{
-	print $_[0] if ($args{v});
-}
-
-sub vprintf
-{
-	printf(@_) if ($args{v});
 }
 
 1;

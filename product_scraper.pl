@@ -3,12 +3,18 @@
 use strict;
 use warnings;
 
+use Getopt::Std;
 use Email::Simple;
 use Email::Send;
 use HTML::Grabber;
 
 use shared;
 
+
+my %args;
+getopts("v", \%args);
+
+$| = 1 if ($args{v});
 
 my $ua  = get_ua();
 my $dbh = get_dbh();

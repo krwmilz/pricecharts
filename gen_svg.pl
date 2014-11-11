@@ -3,11 +3,17 @@
 use strict;
 use warnings;
 
+use Getopt::Std;
 use SVG;
 use POSIX;
 
 use shared;
 
+
+my %args;
+getopts("v", \%args);
+
+$| = 1 if ($args{v});
 
 # my $log = get_log("gen_svg");
 my $dbh = get_dbh();
