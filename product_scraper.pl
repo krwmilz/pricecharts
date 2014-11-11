@@ -159,7 +159,7 @@ $mail .= $errors           if ($errors);
 my $email = Email::Simple->create(
 	header => [
 		From	=> "Santa Claus <sc\@np.com>",
-		To	=> $cfg->{general}{email},
+		To	=> $cfg->{email},
 		Subject	=> "PriceChart product scrape",
 	],
 	body => $mail);
@@ -169,7 +169,7 @@ if ($args{v}) {
 }
 else {
 	my $sender = Email::Send->new({mailer => 'SMTP'});
-	$sender->mailer_args([Host => $cfg->{general}{smtp}]);
+	$sender->mailer_args([Host => $cfg->{smtp}]);
 	$sender->send($email->as_string()) || print "Couldn't send email\n";
 }
 

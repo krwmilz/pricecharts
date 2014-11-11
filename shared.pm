@@ -12,14 +12,11 @@ use POSIX;
 sub get_config
 {
 	my $parser = Config::Grammar->new({
-		_sections => ['general'],
-		general => {
-			_vars => [
-				'user_agent',
-				'email',
-				'smtp',
-			],
-		},
+		_vars => [
+			'user_agent',
+			'email',
+			'smtp',
+		],
 	});
 	my $cfg_file = "/etc/pricechart.cfg";
 	return $parser->parse($cfg_file) or die "error: $parser->{err}\n";
@@ -56,7 +53,7 @@ sub get_ua
 {
 	my $cfg = shift;
 
-	my $ua = LWP::UserAgent->new(agent => $cfg->{general}{user_agent});
+	my $ua = LWP::UserAgent->new(agent => $cfg->{user_agent});
 	$ua->default_header("Accept" => "*/*");
 
 	return $ua;
