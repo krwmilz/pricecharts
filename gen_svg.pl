@@ -44,23 +44,17 @@ while (my ($part_num, $description) = $parts_sth->fetchrow_array()) {
 		$dbh->selectrow_array($sql, undef, $part_num);
 	next unless (defined $x_min);
 
-	my $domain = $x_max - $x_min;
-	my $range = $y_max - $y_min;
-	next if ($domain == 0);
-	next if ($range == 0);
+	my ($domain, $range) = ($x_max - $x_min, $y_max - $y_min);
+	next if ($domain == 0 || $range == 0);
 
-	vprint("$part_num:\n");
-	vprint("\tdomain: $x_min - $x_max\n");
-	vprint("\trange:  $y_min - $y_max\n");
-
-	my $x_scale = $width / $domain;
-	my $y_scale = $height / $range;
+	print "$part_num:\n" if ($args{v});
 
 	my $svg = SVG->new(viewBox => "0 0 $total_width $total_height");
+	my ($x_scale, $y_scale) = ($width / $domain, $height / $range);
 
 	$vendor_sth->execute($part_num);
 	while (my ($vendor) = $vendor_sth->fetchrow_array()) {
-		vprintf("\t$vendor: ");
+		print "\t$vendor: " if ($args{v});
 
 		$sql = "select color from vendors where name = ?";
 		my ($vendor_color) = $dbh->selectrow_array($sql, undef, $vendor);
@@ -80,7 +74,7 @@ while (my ($part_num, $description) = $parts_sth->fetchrow_array()) {
 				}
 			);
 		}
-		vprintf(@xs . " data points\n");
+		printf "%i data points\n", scalar @xs if ($args{v});
 
 		my $px = compute_control_points(\@xs);
 		my $py = compute_control_points(\@ys);
