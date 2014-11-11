@@ -50,22 +50,26 @@ my $prices_sth = $dbh->prepare($sql);
 $sql = "update products set last_seen = ? where part_num = ?";
 my $products_sth = $dbh->prepare($sql);
 
+$sql = "select * from vendors";
+my $vendor_sth = $dbh->prepare($sql);
+
 my $date = time;
-for (sort keys $cfg->{vendors}) {
+$vendor_sth->execute();
+while (my ($vendor, $url, $price_tag, $sale_tag) = $vendor_sth->fetchrow_array) {
+
 	my $start = time;
-	my $vendor = $cfg->{vendors}{$_};
+	print "$vendor:\n" if ($args{v});
 
-	print "$_:\n" if ($args{v});
-
-	my $dom = get_dom("$vendor->{search_uri}$part_num", $ua);
+	my $dom = get_dom($url . $part_num, $ua);
 	if (!defined $dom) {
 		msg("e", "error: dom");
 		next;
 	}
+	print "\turl GET ok\n" if ($args{v});
 
-	my $price = get_price($vendor->{"reg_price"}, $dom);
-	if ($vendor->{sale_price}) {
-		my $sale_price = get_price($vendor->{"sale_price"}, $dom);
+	my $price = get_price($price_tag, $dom);
+	if ($sale_tag) {
+		my $sale_price = get_price($sale_tag, $dom);
 		$price = $sale_price if (defined $sale_price);
 	}
 	if (! $price) {
@@ -86,11 +90,11 @@ for (sort keys $cfg->{vendors}) {
 		next;
 	}
 
-	msg(substr($_, 0, 1), "price = \$$price");
+	msg(substr($vendor, 0, 1), "price = \$$price");
 
 	next if ($args{n});
 
-	$prices_sth->execute($date, $part_num, $_, $price, time - $start);
+	$prices_sth->execute($date, $part_num, $vendor, $price, time - $start);
 	$products_sth->execute($date, $part_num);
 
 	print "\tdb updated\n" if ($args{v});
