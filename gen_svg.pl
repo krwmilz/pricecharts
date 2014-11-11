@@ -21,7 +21,7 @@ my $dbh = get_dbh();
 my $svg_dir = "/var/www/htdocs/pricechart/svg";
 mkdir $svg_dir;
 
-my ($width, $height) = (900, 210);
+my ($width, $height) = (900, 160);
 my ($margin_left, $margin_right) = (30, 70);
 my ($margin_top, $margin_bottom) = (20, 20);
 my $total_width = $width + $margin_right + $margin_left;
@@ -112,11 +112,10 @@ while (my ($part_num, $description) = $parts_sth->fetchrow_array()) {
 		id => "mask",
 		fill => "#FFF",
 	);
-
 	$mask->animate(
 		attributeName => "x",
 		values => "0;1000",
-		dur => "1s",
+		dur => "0.8s",
 		fill => "freeze",
 	);
 
