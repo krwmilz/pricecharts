@@ -22,9 +22,9 @@ my $dbh = get_dbh();
 
 # pick the oldest product
 my $cutoff = time - (30 * 24 * 60 * 60);
-my $sql = "select part_num from products where last_seen > $cutoff " .
+my $sql = "select part_num, manufacturer from products where last_seen > $cutoff " .
 	"order by last_scraped asc";
-my ($part_num) = $dbh->selectrow_array($sql);
+my ($part_num, $manufacturer) = $dbh->selectrow_array($sql);
 exit unless (defined $part_num);
 
 $dbh->do("update products set last_scraped = ? where part_num = ?",
@@ -39,9 +39,9 @@ $dbh->do("create table if not exists prices(" .
 	"primary key(date, part_num, vendor, price))") or die $DBI::errstr;
 
 my $log = get_log("scrapes");
-printf $log "%-15s [", $part_num;
+printf $log "%-25s [", $manufacturer . " " . $part_num;
 
-vprint("$part_num\n");
+print "$manufacturer $part_num\n" if ($args{v});
 
 $sql = "insert into prices(date, part_num, vendor, price, duration) " .
 	"values (?, ?, ?, ?, ?)";
@@ -55,7 +55,7 @@ for (sort keys $cfg->{vendors}) {
 	my $start = time;
 	my $vendor = $cfg->{vendors}{$_};
 
-	vprint("$_:\n");
+	print "$_:\n" if ($args{v});
 
 	my $dom = get_dom("$vendor->{search_uri}$part_num", $ua);
 	if (!defined $dom) {
@@ -93,7 +93,7 @@ for (sort keys $cfg->{vendors}) {
 	$prices_sth->execute($date, $part_num, $_, $price, time - $start);
 	$products_sth->execute($date, $part_num);
 
-	vprint("\tdb updated\n");
+	print "\tdb updated\n" if ($args{v});
 }
 
 my $duration = time - $date;
@@ -108,7 +108,7 @@ sub get_price
 	my $dom = shift;
 
 	my @prices = $dom->find($dom_element)->text_array();
-	vprintf("\t%s = %i\n", $dom_element, scalar @prices);
+	printf "\t%s = %i\n", $dom_element, scalar @prices if ($args{v});
 
 	return $prices[0];
 }
@@ -119,5 +119,5 @@ sub msg
 	my $verbose_msg = shift;
 
 	print $log $log_char;
-	vprint("\t$verbose_msg\n");
+	print "\t$verbose_msg\n" if ($args{v});
 }
