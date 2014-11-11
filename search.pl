@@ -4,58 +4,68 @@ use strict;
 use warnings;
 
 use FCGI;
+use Getopt::Std;
 use Template;
 use Proc::Daemon;
-use POSIX;
+use Unix::Syslog qw(:macros :subs);
 use URI::Escape;
 
 use shared;
 
 
-my $pid_file = "/var/www/run/search.pid";
-if (-e $pid_file) {
-	print "Not starting, pid file $pid_file exists\n";
+my %args;
+getopts("d", \%args);
+
+my $socket_file = "/var/www/run/search.sock";
+if (-e $socket_file) {
+	print "Not starting, socket $socket_file exists\n";
 	exit;
 }
 
-# third field is uid
-my @struct_passwd = getpwnam("www");
-my $daemon = Proc::Daemon->new(
-	setuid       => $struct_passwd[2],
-	work_dir     => "/var/www",
-	child_STDOUT => "logs/pricechart/search.txt",
-	child_STDERR => "logs/pricechart/search.txt",
-	pid_file     => $pid_file
-);
-$daemon->Init();
+openlog("pricechart_search", 0, LOG_DAEMON);
+syslog(LOG_INFO, "startup");
+
+my (undef, undef, $www_uid)           = getpwnam("www");
+my (undef, undef, undef, $daemon_gid) = getpwnam("daemon");
+
+my $socket = FCGI::OpenSocket($socket_file, 1024);
+chown $www_uid, $daemon_gid, $socket_file;
+syslog(LOG_INFO, "$socket_file created");
+
+my $request = FCGI::Request(\*STDIN, \*STDOUT, \*STDERR, \%ENV,
+	$socket, FCGI::FAIL_ACCEPT_ON_INTR);
+
+if ($args{d}) {
+	# stay in foreground, catch ctrl-c's
+	$SIG{INT} = \&sig_handler;
+}
+else {
+	# background
+	my $daemon = Proc::Daemon->new(
+		setuid       => $www_uid,
+		work_dir     => "/var/www",
+		dont_close_fd => [ $socket ],
+	);
+	$daemon->Init();
+}
 
 # shut down cleanly on kill
 $SIG{TERM} = \&sig_handler;
-# stdout/err doesn't get flushed to the log file otherwise
-$| = 1;
-
-my $socket_file = "/var/www/run/search.sock";
-my $socket = FCGI::OpenSocket($socket_file, 1024);
-print ftime() . "socket created on $socket_file\n";
-my $request = FCGI::Request(\*STDIN, \*STDOUT, \*STDERR, \%ENV,
-	$socket, FCGI::FAIL_ACCEPT_ON_INTR);
-print ftime() . "fcgi request object created\n";
 
 my $config = {
 	# XXX: this needs to be fixed
 	INCLUDE_PATH => "/home/kyle/src/pricechart/html"
 };
 my $template = Template->new($config);
-print ftime() . "templete config created\n";
 
 my $dbh = get_dbh();
-print ftime() . "database opened\n";
+syslog(LOG_INFO, "database opened");
 
 my $sql = "select part_num, manufacturer, description from products " .
 	"where description like ? or part_num like ? or manufacturer like ?";
 my $search_sth = $dbh->prepare($sql);
 
-print ftime() . "starting main accept loop\n";
+syslog(LOG_INFO, "ready, listening for connections");
 while ($request->Accept() >= 0) {
 	print "Content-Type: text/html\r\n\r\n";
 	my (undef, $input) = split("=", $ENV{QUERY_STRING});
@@ -75,18 +85,18 @@ while ($request->Accept() >= 0) {
 	$template->process("search.html", $vars) || print $template->error();
 }
 
-print ftime() . "shutting down\n";
+syslog(LOG_INFO, "shutting down");
+
 FCGI::CloseSocket($socket);
-unlink($socket_file, $pid_file);
+unlink($socket_file) or syslog(LOG_WARNING, "could not unlink $socket_file: $!");
+
+closelog();
 $dbh->disconnect();
 
 sub sig_handler
 {
-	$request->LastCall();
-	print ftime() . "caught signal\n";
-}
+	my $signame = shift;
 
-sub ftime
-{
-	return strftime "%b %e %Y %H:%M ", localtime;
+	$request->LastCall();
+	syslog(LOG_INFO, "caught SIG$signame");
 }
