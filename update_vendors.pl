@@ -4,8 +4,7 @@ use strict;
 use warnings;
 
 use Getopt::Std;
-
-use shared;
+use PriceChart::Shared;
 
 
 my %args;

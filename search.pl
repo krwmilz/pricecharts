@@ -6,11 +6,10 @@ use warnings;
 use FCGI;
 use Getopt::Std;
 use Template;
+use PriceChart::Shared;
 use Proc::Daemon;
 use Unix::Syslog qw(:macros :subs);
 use URI::Escape;
-
-use shared;
 
 
 my %args;

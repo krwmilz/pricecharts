@@ -7,8 +7,7 @@ use Config::Grammar;
 use Getopt::Std;
 use HTML::Grabber;
 use LWP::Simple;
-
-use shared;
+use PriceChart::Shared;
 
 
 my %args;

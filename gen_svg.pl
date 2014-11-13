@@ -6,8 +6,7 @@ use warnings;
 use Getopt::Std;
 use SVG;
 use POSIX;
-
-use shared;
+use PriceChart::Shared;
 
 
 my %args;

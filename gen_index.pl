@@ -4,9 +4,8 @@ use strict;
 use warnings;
 
 use File::Copy;
+use PriceChart::Shared;
 use Template;
-
-use shared;
 
 
 my $dbh = get_dbh();

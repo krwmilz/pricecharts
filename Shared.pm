@@ -1,6 +1,5 @@
-#!/usr/bin/env perl
+package PriceChart::Shared;
 
-package shared;
 use DBI;
 use Exporter;
 use POSIX;
