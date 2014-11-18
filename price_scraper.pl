@@ -49,7 +49,7 @@ my $prices_sth = $dbh->prepare($sql);
 $sql = "update products set last_seen = ? where part_num = ?";
 my $products_sth = $dbh->prepare($sql);
 
-$sql = "select * from vendors";
+$sql = "select * from vendors order by name";
 my $vendor_sth = $dbh->prepare($sql);
 
 my $date = time;
