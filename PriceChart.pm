@@ -1,4 +1,4 @@
-package PriceChart::Shared;
+package PriceChart;
 
 use DBI;
 use Exporter;
@@ -39,13 +39,16 @@ sub get_dom
 {
 	my $url = shift;
 	my $ua = shift;
+	my $verbose = shift;
 
 	my $resp = $ua->get($url);
-	if (! $resp->is_success) {
-		print "getting $url failed: " . $resp->status_line . "\n";
-		return undef;
+	if ($resp->is_success) {
+		print "GET $url " . $resp->status_line . "\n" if ($verbose);
+		return HTML::Grabber->new(html => $resp->decoded_content);
 	}
-	return HTML::Grabber->new(html => $resp->decoded_content);
+
+	print "GET $url " . $resp->status_line . "\n";
+	return undef;
 }
 
 sub get_ua

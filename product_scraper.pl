@@ -9,7 +9,7 @@ use Email::Send;
 use Getopt::Std;
 use HTML::Grabber;
 use LWP::Simple;
-use PriceChart::Shared;
+use PriceChart;
 
 
 my %args;
@@ -40,57 +40,60 @@ my $vendor = "Memory Express";
 my $product_url = "http://www.memoryexpress.com/Products/";
 my %product_map = ("televisions" => "Televisions",
 	"laptops" => "LaptopsNotebooks",
-	"hard_drives" => "HardDrives");
+	"hard drives" => "HardDrives");
 
-my $qry = "insert into products(part_num, manufacturer, description, type, " .
+my $sql = "insert into products(part_num, manufacturer, description, type, " .
 	"first_seen, last_seen, last_scraped) values (?, ?, ?, ?, ?, ?, ?)";
-my $insert_sth = $dbh->prepare($qry);
+my $insert_sth = $dbh->prepare($sql);
 
 # also update description, manufacturer?
-$qry = "update products set last_seen = ? where part_num = ?";
-my $update_sth = $dbh->prepare($qry);
+$sql = "update products set last_seen = ? where part_num = ?";
+my $update_sth = $dbh->prepare($sql);
 
 my $summary .= "type        scraped total new errors time (s)\n";
 $summary    .= "----------- ------- ----- --- ------ --------\n";
 
-my $new_products;
-my $errors;
+my ($new_products, $errors);
 
-for my $type (keys %product_map) {
+while (my ($type, $name) = each %product_map) {
+	print "Enumerating $type\n";
+
 	my $class_url = "http://www.memoryexpress.com/Category/" .
-		"$product_map{$type}?PageSize=120&Page=";
-	my $dom = get_dom($class_url . "1", $ua);
-	next if (! defined $dom);
+		"$name?PageSize=40&Page=";
 
-	print "GET " . $class_url . "1 OK\n" if ($args{v});
+	# Get first page of results
+	my $dom = get_dom($class_url . "1", $ua, $args{v});
+	next if (!defined $dom);
 
-	$dom = $dom->find(".AJAX_List_Pager");
-	my @elements = $dom->find("li")->html_array();
-	my $pages;
-	if (@elements == 2) {
-		$pages = 1;
-	} else {
-		$pages = (@elements / 2) - 1;
-	}
+	# Extract the first of two pager widgets on the page
+	my ($pager_html) = $dom->find(".AJAX_List_Pager")->html_array();
+	next if (!defined $pager_html);
+	print "Found .AJAX_List_Pager\n" if ($args{v});
 
-	print "$pages pages of products found\n" if ($args{v});
+	# Find how many pages of results we have
+	my $pager = HTML::Grabber->new(html => $pager_html);
+	my $pages = $pager->find("li")->html_array();
+	next unless ($pages);
 
+	# If more than 1 page of results are found, the pager contains a "next"
+	# arrow that needs to be accounted for
+	$pages-- if ($pages > 1);
+	print "Found $pages pages\n" if ($args{v});
+
+	# Loop over all results pages and append all products
 	my @thumbnails;
 	for (1..$pages) {
-		$dom = get_dom($class_url . "$_", $ua);
-		return if (! defined $dom);
+		$dom = get_dom($class_url . "$_", $ua, $args{v});
+		next if (!defined $dom);
 
-		print "GET " . $class_url . "$_ OK\n" if ($args{v});
-
-		# $dom->filter(".AJAX_List_Body");
+		# Each product is contained inside of their own PIV_Regular
 		push @thumbnails, $dom->find(".PIV_Regular")->html_array();
 	}
 
 	my $total = scalar @thumbnails;
-	print "\nprocessing $type: ($total)\n" if ($args{v});
+	print "Found $total $type\n" if ($args{v});
 
-	my ($new, $old) = (0, 0);
-	my $start = time;
+	my ($new, $old, $start) = (0, 0, time);
 	for my $thumbnail_html (@thumbnails) {
 		sleep int(rand(10));
 
@@ -101,7 +104,7 @@ for my $type (keys %product_map) {
 		next unless (defined $product_id);
 
 		# get the part number from the product page as early as possible
-		my $product_dom = get_dom("$product_url$product_id", $ua);
+		my $product_dom = get_dom("$product_url$product_id", $ua, $args{v});
 		my $part_num = get_tag_text($product_dom, "#ProductAdd");
 		next unless (defined $part_num);
 

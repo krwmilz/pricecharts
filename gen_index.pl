@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use File::Copy;
-use PriceChart::Shared;
+use PriceChart;
 use Template;
 
 

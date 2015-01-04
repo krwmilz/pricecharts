@@ -6,7 +6,7 @@ use warnings;
 use FCGI;
 use Getopt::Std;
 use Template;
-use PriceChart::Shared;
+use PriceChart;
 use Unix::Syslog qw(:macros :subs);
 use URI::Escape;
 

@@ -7,7 +7,7 @@ use Config::Grammar;
 use Getopt::Std;
 use HTML::Grabber;
 use LWP::Simple;
-use PriceChart::Shared;
+use PriceChart;
 
 
 my %args;
@@ -59,12 +59,11 @@ while (my ($vendor, $url, $price_tag, $sale_tag) = $vendor_sth->fetchrow_array) 
 	my $start = time;
 	print "$vendor:\n" if ($args{v});
 
-	my $dom = get_dom($url . $part_num, $ua);
+	my $dom = get_dom($url . $part_num, $ua, $args{v});
 	if (!defined $dom) {
 		msg("e", "error: dom");
 		next;
 	}
-	print "\turl GET ok\n" if ($args{v});
 
 	my $price = get_price($price_tag, $dom);
 	if ($sale_tag) {
