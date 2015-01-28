@@ -57,6 +57,7 @@ while (my ($part_num, $description) = $parts_sth->fetchrow_array()) {
 
 		$sql = "select color from vendors where name = ?";
 		my ($vendor_color) = $dbh->selectrow_array($sql, undef, $vendor);
+		next unless (defined $vendor_color);
 
 		my (@xs, @ys);
 		$point_sth->execute($part_num, $vendor);
