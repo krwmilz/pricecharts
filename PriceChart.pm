@@ -2,7 +2,6 @@ package PriceChart;
 
 use DBI;
 use Exporter;
-use POSIX;
 
 @ISA = ("Exporter");
 @EXPORT = qw(get_config get_dom get_ua get_log get_dbh);
@@ -43,6 +42,9 @@ sub get_dom
 
 	my $resp = $ua->get($url);
 	if ($resp->is_success) {
+		if (length($url) > 60) {
+			$url = "..." . substr($url, length($url) - 60);
+		}
 		print "GET $url " . $resp->status_line . "\n" if ($verbose);
 		return HTML::Grabber->new(html => $resp->decoded_content);
 	}
@@ -64,12 +66,16 @@ sub get_ua
 sub get_log
 {
 	my $file = shift;
+	my $verbose = shift;
 	my $log_dir = "/var/www/logs/pricechart";
 
-	mkdir $log_dir;
-	open my $log, ">>", "$log_dir/$file.log" || die "$!";
+	if ($verbose) {
+		open my $log, '>&', STDOUT or die "$!";
+		return $log;
+	}
 
-	print $log strftime "%b %e %Y %H:%M ", localtime;
+	mkdir $log_dir;
+	open my $log, ">>", "$log_dir/$file.log" or die "$!";
 	return $log;
 }
 
