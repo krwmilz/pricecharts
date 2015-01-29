@@ -10,11 +10,26 @@ use Exporter;
 sub get_config
 {
 	my $parser = Config::Grammar->new({
-		_vars => [
-			'user_agent',
-			'email',
-			'smtp',
-		],
+		_sections => ["general", "vendors"],
+		general => {
+			_vars => [
+				'user_agent',
+				'email',
+				'smtp'
+			],
+		},
+		vendors => {
+			_sections => ["/[A-Za-z ]+/"],
+			"/[A-Za-z ]+/" => {
+				_vars => [
+					"search_url",
+					"regular_price_tag",
+					"sale_price_tag",
+					"color",
+					"title"
+				]
+			}
+		}
 	});
 	my $cfg_file = "/etc/pricechart.cfg";
 	return $parser->parse($cfg_file) or die "error: $parser->{err}\n";
@@ -22,7 +37,9 @@ sub get_config
 
 sub get_dbh
 {
-	my $db_dir = "/var/www/db";
+	# XXX: needs to be changed in production!
+	# my $db_dir = "/var/www/db";
+	my $db_dir = "./";
 	mkdir $db_dir;
 
 	my $dbh = DBI->connect(
@@ -42,10 +59,10 @@ sub get_dom
 
 	my $resp = $ua->get($url);
 	if ($resp->is_success) {
-		if (length($url) > 60) {
-			$url = "..." . substr($url, length($url) - 60);
+		if (length($url) > 55) {
+			$url = "..." . substr($url, length($url) - 55);
 		}
-		print "GET $url " . $resp->status_line . "\n" if ($verbose);
+		print "info: GET $url " . $resp->status_line . "\n" if ($verbose);
 		return HTML::Grabber->new(html => $resp->decoded_content);
 	}
 
