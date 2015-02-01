@@ -56,7 +56,7 @@ $sql = "update products set last_seen = ? where part_num = ?";
 my $products_sth = $dbh->prepare($sql);
 
 my ($start, @status, $i) = (time, "", -1);
-while (my ($vendor, $props) = each $cfg->{"vendors"}) {
+while (my ($vendor, $props) = each %{$cfg->{"vendors"}}) {
 	my $url =	$props->{"search_url"};
 	my $color =	$props->{"color"};
 	my $price_tag =	$props->{"price_regular"};
@@ -109,7 +109,7 @@ printf $log "%s %-10s %-15s [%s] (%i s)\n", strftime("%F %T", localtime),
 
 close $log;
 
-# record that we finished scraping this product, successful or not
+# record that we finished scraping this product
 $dbh->do("update products set last_scraped = ? where part_num = ?",
 	undef, time, $part_num);
 
