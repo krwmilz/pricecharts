@@ -31,6 +31,8 @@ $dbh->do("create table if not exists products(" .
 	"last_seen int, " .
 	"last_scraped int)") or die $DBI::errstr;
 
+# $dbh->do("create table if not exists scrapes");
+
 #
 # Memory Express
 #
@@ -52,10 +54,10 @@ my $update_sth = $dbh->prepare($sql);
 my $summary .= "type        scraped total new errors time (s)\n";
 $summary    .= "----------- ------- ----- --- ------ --------\n";
 
-my ($new_products, $errors);
-
+my $new_products;
 while (my ($type, $name) = each %product_map) {
-	print "Enumerating $type\n";
+	my $info_hdr = "info: $type";
+	print "$info_hdr\n";
 
 	# this returns a search results page, link found through trial and error
 	my $class_url = "http://www.memoryexpress.com/Category/" .
@@ -65,10 +67,12 @@ while (my ($type, $name) = each %product_map) {
 	my $dom = get_dom($class_url . "1", $ua, $args{v});
 	next if (!defined $dom);
 
+	my $pager_hdr = "$info_hdr: .AJAX_List_Pager";
+
 	# extract the first of two pager widgets on the page
 	my ($pager_html) = $dom->find(".AJAX_List_Pager")->html_array();
 	next if (!defined $pager_html);
-	print "info: .AJAX_List_Pager found\n" if ($args{v});
+	print "$pager_hdr found\n" if ($args{v});
 
 	# find how many pages of results we have, each page is one <li> element
 	my $pager = HTML::Grabber->new(html => $pager_html);
@@ -77,135 +81,56 @@ while (my ($type, $name) = each %product_map) {
 
 	# if more than 1 <li> is found, one <li> is always a "next" arrow
 	$pages-- if ($pages > 1);
-	print "info: .AJAX_List_Pager: $pages pages\n" if ($args{v});
+	print "$pager_hdr: $pages pages\n" if ($args{v});
 
 	# loop over results pages and append product thumbnails
 	my @thumbnails;
 	for (1..$pages) {
 		# slow this down a bit
-		sleep int(rand(5));
+		my $sleep = int(rand(5));
+		print "$pager_hdr: $_/$pages: $sleep s wait\n" if ($args{v});
+		sleep $sleep;
 
 		$dom = get_dom($class_url . "$_", $ua, $args{v});
 		next if (!defined $dom);
 
 		# each product thumbnail has class=PIV_Regular
-		push @thumbnails, $dom->find(".PIV_Regular")->html_array();
-
-		next if ($args{t});
+		my @temp_thumbs = $dom->find(".PIV_Regular")->html_array();
+		printf "$pager_hdr: $_/$pages: %i thumbs found\n", scalar @temp_thumbs if ($args{v});
+		push @thumbnails, @temp_thumbs;
 	}
 
 	my $total = scalar @thumbnails;
-	print "info: found $total $type, scraping individually\n" if ($args{v});
+	print "$info_hdr: $total total\n" if ($args{v});
 
 	# extract part number, brand, and description
-	my ($new, $old, $start, $i) = (0, 0, time, 0);
+	my ($new, $old, $errors, $start, $i) = (0, 0, 0, time, 0);
 	for my $thumbnail_html (@thumbnails) {
 		$i++;
-		my $hdr = "$type: $i/$total";
 
-		my $sleep = int(rand(20));
-		print "info: $hdr ($sleep s wait)\n" if ($args{v});
-		sleep $sleep;
-
-		# make new html grabber instance with the thumbnail html
-		my $thumbnail_dom = HTML::Grabber->new(html => $thumbnail_html);
-
-		# has to be found otherwise we can't do anything
-		my $product_id = get_tag_text($thumbnail_dom, ".ProductId");
-		if (!defined $product_id) {
-			print "error: $hdr: .ProductId not found\n";
+		my $ret = scrape_thumbnail($type, $thumbnail_html, "$i/$total");
+		if (!defined $ret) {
+			$errors++;
+			last if ($args{t});
 			next;
 		}
-		else {
-			print "info: $hdr: .ProductId = $product_id\n" if ($args{v});
-		}
+		$ret ? $new++ : $old++;
 
-		# visit the extended description page
-		my $product_url = "http://www.memoryexpress.com/Products/";
-		my $product_dom = get_dom("$product_url$product_id", $ua, $args{v});
-
-		# the part number is inside of id=ProductAdd always
-		my $part_num = get_tag_text($product_dom, "#ProductAdd");
-		if (!defined $part_num) {
-			print "error: $hdr: #ProductAdd not found\n";
-			next;
-		}
-
-		# extract the part number, always is text inside of the tag
-		($part_num) = ($part_num =~ m/Part #:\s*(.*)\r/);
-		if (!defined $part_num || $part_num eq "") {
-			print "error: $hdr: part num regex failed\n";
-			next;
-		}
-		else {
-			print "info: $hdr: part_num = $part_num\n" if ($args{v});
-		}
-
-		# extract the product tile
-		my $desc = get_tag_text($thumbnail_dom, ".ProductTitle");
-		if (!defined $desc) {
-			print "error: $hdr: .ProductTitle was not found.\n";
-			next;
-		}
-		else {
-			my $tmp_desc = $desc;
-			if (length($tmp_desc) > 35) {
-				$tmp_desc = substr($tmp_desc, 0, 40) . "...";
-			}
-			print "info: $hdr: .ProductTitle = $tmp_desc\n" if ($args{v});
-		}
-
-		# extract the brand, sometimes shows up as text
-		my $brand = $thumbnail_dom->find(".ProductBrand")->text();
-		if ($brand eq "") {
-			print "info: $hdr: .ProductBrand not text\n" if ($args{v});
-			# and sometimes shows up inside the tag attributes
-			$brand = $thumbnail_dom->find(".ProductBrand")->html();
-			($brand) = ($brand =~ m/Brand: ([A-Za-z]+)/);
-		}
-		if (!defined $brand || $brand eq "") {
-			print "error: $hdr: .ProductBrand not found, html:\n";
-			print "$thumbnail_html\n";
-			next;
-		}
-		else {
-			print "info: $hdr: .ProductBrand = $brand\n" if ($args{v});
-		}
-
-		# use existence of part_num to decide on update or insert new
-		my $sql = "select * from products where part_num = ?";
-		if ($dbh->selectrow_arrayref($sql, undef, $part_num)) {
-			# update
-			$update_sth->execute(time, $part_num);
-			print "info: $hdr: db updated\n" if ($args{v});
-			$old++;
-		}
-		else {
-			# insert new
-			$insert_sth->execute($part_num, $brand, $desc,
-				$type, time, time, 0);
-			print "info: $hdr: db inserted\n" if ($args{v});
-			$new_products .= "$brand $desc ($part_num)\n";
-			$new++;
-		}
 		last if ($args{t});
 	}
 
 	$summary .= sprintf("%-11s %7s %5s %3s %6s %8s\n", $type, $new + $old,
-		$total, $new, $total - ($new + $old), time - $start);
-	print "\n" if ($args{v});
+		$total, $new, $errors, time - $start);
 }
 
 $dbh->disconnect();
 
-my $mail;
-$mail .= "$vendor\n";
+my $mail = "$vendor\n";
 $mail .= "=" for (1..length $vendor);
 $mail .= "\n\n";
 
 $mail .= "$summary\n"      if ($summary);
 $mail .= "$new_products\n" if ($new_products);
-$mail .= $errors           if ($errors);
 
 my $email = Email::Simple->create(
 	header => [
@@ -218,26 +143,103 @@ my $email = Email::Simple->create(
 
 if ($args{v}) {
 	print $email->as_string();
+	exit 0;
 }
-else {
-	my $sender = Email::Send->new({mailer => 'SMTP'});
-	$sender->mailer_args([Host => $cfg->{"general"}{"smtp"}]);
-	$sender->send($email->as_string()) || print "Couldn't send email\n";
+
+my $sender = Email::Send->new({mailer => 'SMTP'});
+$sender->mailer_args([Host => $cfg->{"general"}{"smtp"}]);
+$sender->send($email->as_string()) || print "Couldn't send email\n";
+
+sub scrape_thumbnail
+{
+	my $type = shift;
+	my $html = shift;
+	my $count = shift;
+
+	my $error_hdr = "error: $type: $count";
+	my $info_hdr = "info: $type: $count";
+
+	my $sleep = int(rand(20));
+	printf "$info_hdr (%ss wait)\n", $sleep if ($args{v});
+	sleep $sleep;
+
+	# make new html grabber instance with the thumbnail html
+	my $dom = HTML::Grabber->new(html => $html);
+
+	# has to be found otherwise we can't do anything
+	my $product_id = get_tag_text($dom, ".ProductId", $error_hdr);
+	return undef unless defined $product_id;
+
+	# visit the extended description page
+	my $product_url = "http://www.memoryexpress.com/Products/";
+	my $product_dom = get_dom("$product_url$product_id", $ua, $args{v});
+
+	# the part number is inside of id=ProductAdd always
+	my $part_num = get_tag_text($product_dom, "#ProductAdd", $error_hdr);
+	return undef unless defined $part_num;
+
+	# extract the part number, always is text inside of the tag
+	($part_num) = ($part_num =~ m/Part #:\s*(.*)\r/);
+	if (!defined $part_num) {
+		print "$error_hdr: part num regex failed\n";
+		return undef;
+	}
+
+	# extract the product description
+	my $desc = get_tag_text($dom, ".ProductTitle", $error_hdr);
+	return undef unless defined $desc;
+
+	# extract the brand, sometimes shows up as text
+	my $brand = $dom->find(".ProductBrand")->text();
+	if ($brand eq "") {
+		# and sometimes shows up inside the tag attributes
+		$brand = $dom->find(".ProductBrand")->html();
+		($brand) = ($brand =~ m/Brand: ([A-Za-z]+)/);
+	}
+	if (!defined $brand || $brand eq "") {
+		print "$error_hdr: .ProductBrand not found, html was:\n";
+		print "$html\n";
+		return undef;
+	}
+
+	my $tmp_desc = $desc;
+	if (length($tmp_desc) > 50) {
+		$tmp_desc = substr($tmp_desc, 0, 50) . "...";
+	}
+	print "$info_hdr: $brand $part_num\n" if ($args{v});
+	print "$info_hdr: $tmp_desc\n" if ($args{v});
+
+	# use existence of part_num to decide on update or insert new
+	my $sql = "select * from products where part_num = ?";
+	if ($dbh->selectrow_arrayref($sql, undef, $part_num)) {
+		# update
+		$update_sth->execute(time, $part_num);
+		print "$info_hdr: db updated\n" if ($args{v});
+		return 0;
+	}
+	else {
+		# insert new
+		$insert_sth->execute($part_num, $brand, $desc, $type, time,
+			time, 0);
+		print "$info_hdr: db inserted\n" if ($args{v});
+		$new_products .= "$brand $desc ($part_num)\n";
+		return 1;
+	}
+	# $scrapes_sth->execute("thumbnail", time - $start, time);
 }
 
 sub get_tag_text
 {
 	my $dom = shift;
 	my $tag = shift;
+	my $error_hdr = shift;
 
 	my $field = $dom->find($tag)->text();
 	if (!defined $field || $field eq "") {
-		$errors .= "error: could not find $tag, html was:\n";
-		$errors .= $dom->html();
-		$errors .= "\n\n";
-		print $errors if ($args{v});
-
+		print "$error_hdr: $tag not found or empty, html was:\n";
+		print $dom->html() . "\n";
 		return undef;
 	}
+
 	return $field;
 }
