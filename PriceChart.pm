@@ -23,16 +23,19 @@ sub get_config
 			"/[A-Za-z ]+/" => {
 				_vars => [
 					"search_url",
-					"regular_price_tag",
-					"sale_price_tag",
+					"price_regular",
+					"price_sale",
 					"color",
 					"title"
 				]
 			}
 		}
 	});
+
 	my $cfg_file = "/etc/pricechart.cfg";
-	return $parser->parse($cfg_file) or die "error: $parser->{err}\n";
+	my $cfg = $parser->parse($cfg_file) or die "error: $parser->{err}\n";
+
+	return $cfg;
 }
 
 sub get_dbh
@@ -66,7 +69,7 @@ sub get_dom
 		return HTML::Grabber->new(html => $resp->decoded_content);
 	}
 
-	print "GET $url " . $resp->status_line . "\n";
+	print "error: GET $url " . $resp->status_line . "\n";
 	return undef;
 }
 

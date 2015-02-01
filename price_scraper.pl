@@ -20,7 +20,7 @@ $| = 1 if ($args{v});
 
 my $log = get_log("scrapes", $args{v});
 my $cfg = get_config();
-my $ua  = get_ua($cfg);
+my $ua  = get_ua($cfg->{"general"});
 my $dbh = get_dbh();
 
 # allow products to go out of stock. if we haven't seen them for > 30 days
@@ -35,37 +35,37 @@ if ($args{p} && $args{m}) {
 }
 exit unless (defined $part_num);
 
-# keep track of when we last tried to scrape this product
-$dbh->do("update products set last_scraped = ? where part_num = ?",
-	undef, time, $part_num);
-
 $dbh->do("create table if not exists prices(" .
 	"date int not null, " .
 	"part_num text not null, " .
 	"vendor text not null, " .
 	"price int not null, " .
+	"color text not null, " .
 	"duration int, " .
+	"title text, " .
 	"primary key(date, part_num, vendor, price))"
 ) or die $DBI::errstr;
 
-
 print "info: $manufacturer $part_num\n" if ($args{v});
 
-$sql = "insert into prices(date, part_num, vendor, price, duration) " .
-	"values (?, ?, ?, ?, ?)";
+$sql = "insert into prices(date, part_num, vendor, color, price, duration) " .
+	"values (?, ?, ?, ?, ?, ?)";
 my $prices_sth = $dbh->prepare($sql);
 
 $sql = "update products set last_seen = ? where part_num = ?";
 my $products_sth = $dbh->prepare($sql);
 
-$sql = "select * from vendors order by name";
-my $vendor_sth = $dbh->prepare($sql);
-
 my ($start, @status, $i) = (time, "", -1);
-$vendor_sth->execute();
-while (my ($vendor, $url, $price_tag, $sale_tag) = $vendor_sth->fetchrow_array) {
+while (my ($vendor, $props) = each $cfg->{"vendors"}) {
+	my $url =	$props->{"search_url"};
+	my $color =	$props->{"color"};
+	my $price_tag =	$props->{"price_regular"};
+	my $sale_tag =	$props->{"price_sale"};
+
 	my $vendor_start = time;
 	$status[++$i] = " ";
+
+	print "info: $vendor\n" if ($args{v});
 
 	# for products with short part numbers, also search manufacturer
 	my $search;
@@ -77,10 +77,7 @@ while (my ($vendor, $url, $price_tag, $sale_tag) = $vendor_sth->fetchrow_array) 
 
 	# get a page of search results from a vendor
 	my $search_results = get_dom($url . $search, $ua, $args{v});
-	if (!defined $search_results) {
-		print $log "error: $vendor: couldn't GET search results\n";
-		next;
-	}
+	next unless defined $search_results;
 
 	# search search_results for particular html tags that should be prices
 	my $price_r = get_valid_price($price_tag, $search_results, $vendor);
@@ -93,12 +90,15 @@ while (my ($vendor, $url, $price_tag, $sale_tag) = $vendor_sth->fetchrow_array) 
 	$price = $price_s if ($price_s);
 	$price = min($price_r, $price_s) if ($price_r && $price_s);
 
+	# XXX: also think about scraping title here
+
 	# everything looks good
 	$status[$i] = substr($vendor, 0, 1);
 	print "info: $vendor: final = \$$price\n" if ($args{v});
 
 	next if ($args{n});
-	$prices_sth->execute($start, $part_num, $vendor, $price, time - $vendor_start);
+	$prices_sth->execute($start, $part_num, $vendor, $color,
+		$price, time - $vendor_start);
 	$products_sth->execute($start, $part_num);
 
 	print "info: $vendor: db updated\n" if ($args{v});
@@ -108,6 +108,11 @@ printf $log "%s %-10s %-15s [%s] (%i s)\n", strftime("%F %T", localtime),
 	$manufacturer, $part_num, join("", @status), time - $start;
 
 close $log;
+
+# record that we finished scraping this product, successful or not
+$dbh->do("update products set last_scraped = ? where part_num = ?",
+	undef, time, $part_num);
+
 $dbh->disconnect();
 
 exit 0;
@@ -127,7 +132,7 @@ sub get_valid_price
 	print "info: $vendor: $dom_tag ($num_prices)\n" if ($args{v});
 
 	# do a fuzzy search for digit combinations that look like a price
-	# XXX: use the first found price in the page
+	# XXX: uses the first found price in the page
 	my ($price, @others) = ($search_prices[0] =~ m/(\d[\d,]+)/);
 	return undef unless defined $price;
 
