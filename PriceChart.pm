@@ -86,7 +86,7 @@ sub get_ua
 {
 	my $cfg = shift;
 
-	my $ua = LWP::UserAgent->new(agent => $cfg->{user_agent});
+	my $ua = LWP::UserAgent->new(agent => $cfg->{"general"}{"user_agent"});
 	$ua->default_header("Accept" => "*/*");
 
 	return $ua;
