@@ -61,6 +61,7 @@ while (my ($vendor, $props) = each %{$cfg->{"vendors"}}) {
 	my $color =	$props->{"color"};
 	my $price_tag =	$props->{"price_regular"};
 	my $sale_tag =	$props->{"price_sale"};
+	my $title_tag = $props->{"title"};
 
 	my $vendor_start = time;
 	$status[++$i] = " ";
@@ -90,7 +91,11 @@ while (my ($vendor, $props) = each %{$cfg->{"vendors"}}) {
 	$price = $price_s if ($price_s);
 	$price = min($price_r, $price_s) if ($price_r && $price_s);
 
-	# XXX: also think about scraping title here
+	# scrape and display title, don't do anything with it yet
+	my $title = $search_results->find($title_tag)->text();
+	$title =~ s/^\s+//;
+	$title =~ s/\s+$//;
+	print "info: $vendor: title = $title\n" if ($args{v});
 
 	# everything looks good
 	$status[$i] = substr($vendor, 0, 1);
