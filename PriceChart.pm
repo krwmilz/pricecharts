@@ -10,12 +10,21 @@ use Exporter;
 sub get_config
 {
 	my $parser = Config::Grammar->new({
-		_sections => ["general", "vendors"],
+		_sections => ["general", "http", "vendors"],
 		general => {
 			_vars => [
 				'user_agent',
 				'email',
-				'smtp'
+				'smtp',
+			],
+		},
+		http => {
+			_vars => [
+				"socket_file",
+				"uid",
+				"gid",
+				"chroot",
+				"db_dir",
 			],
 		},
 		vendors => {
@@ -41,8 +50,8 @@ sub get_config
 sub get_dbh
 {
 	# XXX: needs to be changed in production!
-	# my $db_dir = "/var/www/db";
-	my $db_dir = "./";
+	my $db_dir = shift || "/var/www/db";
+	# my $db_dir = "./";
 	mkdir $db_dir;
 
 	my $dbh = DBI->connect(

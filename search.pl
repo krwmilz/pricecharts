@@ -3,84 +3,82 @@
 use strict;
 use warnings;
 
+# because we chroot all dependencies must be explicitly listed
+use Config::Grammar;
+use DBD::SQLite;
+use Encode;
 use FCGI;
 use Getopt::Std;
 use Template;
+use Template::Context;
+use Template::Filters;
+use Template::Iterator;
+use Template::Parser;
+use Template::Plugins;
+use Template::Stash::XS;
 use PriceChart;
 use Unix::Syslog qw(:macros :subs);
 use URI::Escape;
 
 
 my %args;
-getopts("d", \%args);
+getopts("v", \%args);
 
-my $socket_file = "/var/www/run/search.sock";
-if (-e $socket_file) {
-	print "Not starting, socket $socket_file exists\n";
-	exit;
-}
-
-if (!$args{d} && fork()) {
-	exit;
-}
-
-openlog("pricechart_search", LOG_PID, LOG_DAEMON);
-
-my $socket = FCGI::OpenSocket($socket_file, 1024);
-syslog(LOG_DEBUG, "$socket_file created");
-
-if (my $child_pid = fork()) {
-	# keep the parent around to clean up the socket after we're done
-
-	$SIG{INT} = \&parent_sig;
-	$SIG{TERM} = \&parent_sig;
-	sub parent_sig
-	{
-		my $signal = shift;
-		kill $signal, $child_pid;
+# fork into background unless verbose
+unless ($args{v}) {
+	if (fork()) {
+		exit;
 	}
-
-	# wait for the child to finish
-	waitpid($child_pid, 0);
-
-	FCGI::CloseSocket($socket);
-	unlink($socket_file) or
-		syslog(LOG_WARNING, "could not unlink $socket_file: $!");
-	closelog();
-	exit;
 }
 
-my $uid = getpwnam("www");
-my $gid = getgrnam("daemon");
+my $cfg = get_config();
+my $db_dir = $cfg->{"http"}{"db_dir"};
+my $socket_file = $cfg->{"http"}{"socket_file"};
+my $uid_name = $cfg->{"http"}{"uid"};
+my $gid_name = $cfg->{"http"}{"gid"};
 
-# change ownership on socket otherwise httpd can't talk to us
-chown $uid, $gid, $socket_file;
+# this looks up information in /etc
+my $uid = getpwnam($uid_name) or die "error: uid does not exist";
+my $gid = getgrnam($gid_name) or die "error: gid does not exist";
+print "info: $uid_name:$gid_name -> $uid:$gid\n" if ($args{v});;
 
-# drop privileges
+chroot($cfg->{"http"}{"chroot"});
+chdir("/");
+print "info: chroot done\n" if ($args{v});
+
+# XXX: verify we have indeed dropped privileges?
 $< = $> = $uid;
 $( = $) = "$gid $gid";
+print "info: uid:gid set to $<:$(\n" if ($args{v});
+
+openlog("pricechart_fcgi", LOG_PID, LOG_DAEMON);
+print "info: open syslog ok\n" if ($args{v});
+
+if (-e $socket_file) {
+	my $msg = "socket file $socket_file exists\n";
+	print "error: $msg\n" if ($args{v});
+	syslog(LOG_ERR, $msg);
+	exit;
+}
+
+# XXX: i need to be sudo for this to work? after we've dropped privileges?
+my $socket = FCGI::OpenSocket($socket_file, 1024);
+print "info: open $socket_file ok\n" if ($args{v});
+
+my $dbh = get_dbh($db_dir);
+print "info: open $db_dir/pricechart.db ok\n" if ($args{v});
 
 my $request = FCGI::Request(\*STDIN, \*STDOUT, \*STDERR, \%ENV,
 	$socket, FCGI::FAIL_ACCEPT_ON_INTR);
 
 $SIG{INT} = \&child_sig;
 $SIG{TERM} = \&child_sig;
-sub child_sig
-{
-	my $signame = shift;
-
-	$request->LastCall();
-	syslog(LOG_DEBUG, "caught SIG$signame");
-}
 
 my $config = {
-	# XXX: this needs to be fixed
-	INCLUDE_PATH => "/home/kyle/src/pricechart/html"
+	INCLUDE_PATH => "/htdocs/pricechart/templates"
 };
-my $template = Template->new($config);
-
-my $dbh = get_dbh();
-syslog(LOG_DEBUG, "database opened");
+my $template = Template->new($config) || die $Template::ERROR . "\n";
+print "info: template config ok\n" if ($args{v});
 
 my $sql = "select part_num, manufacturer, description from products " .
 	"where description like ? or part_num like ? or manufacturer like ?";
@@ -103,7 +101,20 @@ while ($request->Accept() >= 0) {
 		results => $products
 	};
 
-	$template->process("search.html", $vars) || print $template->error();
+	$template->process("search.html", $vars) or print $template->error();
 }
-syslog(LOG_INFO, "shut down");
+syslog(LOG_INFO, "shutdown");
+closelog();
+
 $dbh->disconnect();
+
+FCGI::CloseSocket($socket);
+unlink($socket_file) or print "error: could not unlink $socket_file: $!";
+
+sub child_sig
+{
+	my $signame = shift;
+
+	$request->LastCall();
+	print "info: caught SIG$signame\n" if ($args{v});
+}
