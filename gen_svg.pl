@@ -22,61 +22,67 @@ my $dbh = get_dbh($cfg->{"general"});
 my $svg_dir = "/var/www/htdocs/pricechart/svg";
 mkdir $svg_dir;
 
-my ($width, $height) = (900, 160);
-my ($margin_left, $margin_right) = (30, 70);
-my ($margin_top, $margin_bottom) = (20, 20);
-my $total_width = $width + $margin_right + $margin_left;
-my $total_height = $height + $margin_top + $margin_bottom;
+my ($left, $width, $right, $top, $height, $bottom) = (30, 900, 70, 20, 160, 20);
+my $total_width = $right + $width + $left;
+my $total_height = $top + $height + $bottom;
 
-my $sql = "select date, price from prices where " .
+if ($args{v}) {
+	print  "info: left, width, right  = $left, $width, $right\n";
+	print  "info: top, height, bottom = $top, $height, $bottom\n";
+	printf "info: total size = %ix%i\n", $total_width, $total_height;
+}
+
+my $sql = "select date, price, color from prices where " .
 	"part_num = ? and vendor = ? order by date";
 my $point_sth = $dbh->prepare($sql);
 
 $sql = "select distinct vendor from prices where part_num = ?";
 my $vendor_sth = $dbh->prepare($sql);
 
-my $parts_sth = $dbh->prepare("select part_num, description from products");
-$parts_sth->execute();
-while (my ($part_num, $description) = $parts_sth->fetchrow_array()) {
+$sql = "select manufacturer, part_num, description from products";
+my $parts_sth = $dbh->prepare($sql);
 
+my $found_one = undef;
+$parts_sth->execute();
+while (my ($brand, $part_num, $description) = $parts_sth->fetchrow_array()) {
 	$sql = "select min(date), max(date), min(price), max(price) " .
 		"from prices where part_num = ?";
 	my ($x_min, $x_max, $y_min, $y_max) =
 		$dbh->selectrow_array($sql, undef, $part_num);
+	# make sure we have at least one price to work with
 	next unless (defined $x_min);
 
+	# avoid division by zero
 	my ($domain, $range) = ($x_max - $x_min, $y_max - $y_min);
 	next if ($domain == 0 || $range == 0);
 
-	print "$part_num:\n" if ($args{v});
+	print "info: $part_num: domain = $domain, range = $range" if ($args{v});
+	my $found_one = 1;
 
 	my $svg = SVG->new(viewBox => "0 0 $total_width $total_height");
 	my ($x_scale, $y_scale) = ($width / $domain, $height / $range);
 
 	$vendor_sth->execute($part_num);
 	while (my ($vendor) = $vendor_sth->fetchrow_array()) {
-		print "\t$vendor: " if ($args{v});
-
-		$sql = "select color from vendors where name = ?";
-		my ($vendor_color) = $dbh->selectrow_array($sql, undef, $vendor);
-		next unless (defined $vendor_color);
+		my $info_hdr = "info: $part_num: $vendor";
+		print "$info_hdr\n" if ($args{v});
 
 		my (@xs, @ys);
 		$point_sth->execute($part_num, $vendor);
-		while (my ($date, $price) = $point_sth->fetchrow_array) {
-			push @xs, ($date - $x_min) * $x_scale + $margin_left;
-			push @ys, ($price - $y_min) * $y_scale + $margin_top;
+		while (my ($date, $price, $color) = $point_sth->fetchrow_array) {
+			push @xs, ($date - $x_min) * $x_scale + $left;
+			push @ys, ($price - $y_min) * $y_scale + $top;
 
 			$svg->circle(
 				cx => $xs[-1], cy => $ys[-1],
 				r => 2,
 				style => {
-					"fill" => $vendor_color,
-					"stroke" => $vendor_color
+					"fill" => $color,
+					"stroke" => $color
 				}
 			);
 		}
-		printf "%i data points\n", scalar @xs if ($args{v});
+		printf "$info_hdr: %i data pairs\n", scalar @xs if ($args{v});
 
 		my $px = compute_control_points(\@xs);
 		my $py = compute_control_points(\@ys);
@@ -94,13 +100,14 @@ while (my ($part_num, $description) = $parts_sth->fetchrow_array()) {
 			id => $vendor,
 			style => {
 				"fill-opacity" => 0,
-				fill => $vendor_color,
-				stroke => $vendor_color,
+				# fill => $color,
+				# stroke => $color,
 				"stroke-width" => 2,
 			}
 		);
 	}
 
+	# when graph is loaded make a sliding motion show the graph lines
 	my $mask = $svg->rectangle(
 		x => 0, y => 0,
 		width => 1000, height => 250,
@@ -118,11 +125,11 @@ while (my ($part_num, $description) = $parts_sth->fetchrow_array()) {
 	my $num_labels = 5;
 	for (0..$num_labels) {
 		my $price = $y_max - $range * $_ / $num_labels;
-		my $y = $margin_top + $height * $_ / $num_labels;
+		my $y = $top + $height * $_ / $num_labels;
 
 		$svg->text(
 			id => $_,
-			x => $margin_left + $width + 20,
+			x => $left + $width + 20,
 			y => $y,
 			style => "font-size: 14px; fill: #666",
 			"text-anchor" => "start"
@@ -130,8 +137,8 @@ while (my ($part_num, $description) = $parts_sth->fetchrow_array()) {
 
 		$svg->line(
 			id => "line_$_",
-			x1 => $margin_left, y1 => $y,
-			x2 => $total_width - $margin_right, y2 => $y,
+			x1 => $left, y1 => $y,
+			x2 => $total_width - $right, y2 => $y,
 			fill => "#CCC",
 			stroke => "#CCC",
 			"stroke-width" => 1,
@@ -141,7 +148,7 @@ while (my ($part_num, $description) = $parts_sth->fetchrow_array()) {
 	for (0..$num_labels) {
 		my $time = $x_min + $_ * $domain / $num_labels;
 		my $date = strftime "%b %e %Y", localtime($time);
-		my $x = $margin_left + $_ / $num_labels * $width;
+		my $x = $left + $_ / $num_labels * $width;
 
 		$svg->text(
 			id => "time_$time",
@@ -152,8 +159,8 @@ while (my ($part_num, $description) = $parts_sth->fetchrow_array()) {
 
 		$svg->line(
 			id => "date_marker_$_",
-			x1 => $x, y1 => $margin_top + $height,
-			x2 => $x, y2 => $margin_top + $height + 5,
+			x1 => $x, y1 => $top + $height,
+			x2 => $x, y2 => $top + $height + 5,
 			fill => "#CCC",
 			stroke => "#CCC",
 			"stroke-width" => 1,
@@ -163,6 +170,10 @@ while (my ($part_num, $description) = $parts_sth->fetchrow_array()) {
 	open my $svg_fh, ">", "$svg_dir/$part_num.svg" or die $!;
 	print $svg_fh $svg->xmlify;
 	close $svg_fh;
+}
+
+unless ($found_one && $args{v}) {
+	print "info: no products with non-zero domain and range found\n";
 }
 
 # print $log @$part_nums . " products generated\n";
