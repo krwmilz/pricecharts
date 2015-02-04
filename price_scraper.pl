@@ -48,20 +48,23 @@ $dbh->do("create table if not exists prices(" .
 
 print "info: $manufacturer $part_num\n" if ($args{v});
 
-$sql = "insert into prices(date, part_num, vendor, color, price, duration) " .
-	"values (?, ?, ?, ?, ?, ?)";
+$sql = "insert into prices(date, part_num, vendor, color, price, duration, title) " .
+	"values (?, ?, ?, ?, ?, ?, ?)";
 my $prices_sth = $dbh->prepare($sql);
 
 $sql = "update products set last_seen = ? where part_num = ?";
 my $products_sth = $dbh->prepare($sql);
 
+my $timestamp = strftime("%F %T", localtime);
 my ($start, @status, $i) = (time, "", -1);
-while (my ($vendor, $props) = each %{$cfg->{"vendors"}}) {
-	my $url =	$props->{"search_url"};
-	my $color =	$props->{"color"};
-	my $price_tag =	$props->{"price_regular"};
-	my $sale_tag =	$props->{"price_sale"};
-	my $title_tag = $props->{"title"};
+for my $vendor (sort keys %{$cfg->{"vendors"}}) {
+	my %props =	%{$cfg->{"vendors"}{$vendor}};
+	# this could probably be done smarter
+	my $url =	$props{"search_url"};
+	my $color =	$props{"color"};
+	my $price_tag =	$props{"price_regular"};
+	my $sale_tag =	$props{"price_sale"};
+	my $desc_tag = $props{"title"};
 
 	my $vendor_start = time;
 	$status[++$i] = " ";
@@ -91,11 +94,16 @@ while (my ($vendor, $props) = each %{$cfg->{"vendors"}}) {
 	$price = $price_s if ($price_s);
 	$price = min($price_r, $price_s) if ($price_r && $price_s);
 
-	# scrape and display title, don't do anything with it yet
-	my $title = $search_results->find($title_tag)->text();
-	$title =~ s/^\s+//;
-	$title =~ s/\s+$//;
-	print "info: $vendor: title = $title\n" if ($args{v});
+	# scrape description
+	my $desc = $search_results->find($desc_tag)->text();
+	$desc =~ s/^\s+//;
+	$desc =~ s/\s+$//;
+	if ($desc ne "" && $args{v}) {
+		if (length($desc) > 50) {
+			$desc = substr($desc, 0, 50) . "...";
+		}
+		print "info: $vendor: $desc\n";
+	}
 
 	# everything looks good
 	$status[$i] = substr($vendor, 0, 1);
@@ -103,14 +111,14 @@ while (my ($vendor, $props) = each %{$cfg->{"vendors"}}) {
 
 	next if ($args{n});
 	$prices_sth->execute($start, $part_num, $vendor, $color,
-		$price, time - $vendor_start);
+		$price, time - $vendor_start, $desc);
 	$products_sth->execute($start, $part_num);
 
 	print "info: $vendor: db updated\n" if ($args{v});
 }
 
-printf $log "%s %-10s %-15s [%s] (%i s)\n", strftime("%F %T", localtime),
-	$manufacturer, $part_num, join("", @status), time - $start;
+printf $log "%s %-10s %-15s [%s] (%i s)\n", $timestamp, $manufacturer,
+	$part_num, join("", @status), time - $start;
 
 close $log;
 
