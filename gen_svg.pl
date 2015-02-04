@@ -3,6 +3,7 @@
 use strict;
 use warnings;
 
+use Config::Grammar;
 use Getopt::Std;
 use SVG;
 use POSIX;
@@ -15,7 +16,8 @@ getopts("v", \%args);
 $| = 1 if ($args{v});
 
 # my $log = get_log("gen_svg");
-my $dbh = get_dbh();
+my $cfg = get_config();
+my $dbh = get_dbh($cfg->{"general"});
 
 my $svg_dir = "/var/www/htdocs/pricechart/svg";
 mkdir $svg_dir;

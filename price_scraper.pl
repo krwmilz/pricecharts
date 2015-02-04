@@ -21,7 +21,7 @@ $| = 1 if ($args{v});
 my $log = get_log("scrapes", $args{v});
 my $cfg = get_config();
 my $ua  = get_ua($cfg->{"general"});
-my $dbh = get_dbh();
+my $dbh = get_dbh($cfg->{"general"});
 
 # allow products to go out of stock. if we haven't seen them for > 30 days
 # chances are retailers aren't carrying them anymore

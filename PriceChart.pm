@@ -16,6 +16,7 @@ sub get_config
 				'user_agent',
 				'email',
 				'smtp',
+				"db"
 			],
 		},
 		http => {
@@ -49,9 +50,8 @@ sub get_config
 
 sub get_dbh
 {
-	# XXX: needs to be changed in production!
-	my $db_dir = shift || "/var/www/db";
-	# my $db_dir = "./";
+	my $cfg = shift;
+	my $db_dir = shift || $cfg->{"db"};
 	mkdir $db_dir;
 
 	my $dbh = DBI->connect(
@@ -60,6 +60,7 @@ sub get_dbh
 		"",
 		{ RaiseError => 1 }
 	) or die $DBI::errstr;
+
 	return $dbh;
 }
 

@@ -19,7 +19,7 @@ $| = 1 if ($args{v});
 
 my $cfg = get_config();
 my $ua  = get_ua($cfg->{"general"});
-my $dbh = get_dbh();
+my $dbh = get_dbh($cfg->{"general"});
 srand;
 
 $dbh->do("create table if not exists products(" .
