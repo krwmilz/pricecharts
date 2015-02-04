@@ -65,7 +65,7 @@ if (-e $socket_file) {
 my $socket = FCGI::OpenSocket($socket_file, 1024);
 print "info: open $socket_file ok\n" if ($args{v});
 
-my $dbh = get_dbh($db_dir);
+my $dbh = get_dbh($cfg->{"general"}, $db_dir);
 print "info: open $db_dir/pricechart.db ok\n" if ($args{v});
 
 my $request = FCGI::Request(\*STDIN, \*STDOUT, \*STDERR, \%ENV,
@@ -75,7 +75,7 @@ $SIG{INT} = \&child_sig;
 $SIG{TERM} = \&child_sig;
 
 my $config = {
-	INCLUDE_PATH => "/htdocs/pricechart/templates"
+	INCLUDE_PATH => $cfg->{"http"}{"templates"}
 };
 my $template = Template->new($config) || die $Template::ERROR . "\n";
 print "info: template config ok\n" if ($args{v});
