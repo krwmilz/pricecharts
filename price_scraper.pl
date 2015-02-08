@@ -160,7 +160,7 @@ sub get_valid_price
 	# sanity check on the numerical value of the price
 	$price =~ s/,//;
 	if ($price <= 0 || $price > 10000) {
-		print $log "error: $vendor: price \$$price out of range\n";
+		print $log "error: $vendor: price $price out of range\n";
 		return undef;
 	}
 
