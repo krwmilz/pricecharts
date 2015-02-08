@@ -64,7 +64,7 @@ for my $vendor (sort keys %{$cfg->{"vendors"}}) {
 	my $color =	$props{"color"};
 	my $price_tag =	$props{"price_regular"};
 	my $sale_tag =	$props{"price_sale"};
-	my $desc_tag = $props{"title"};
+	my $desc_tag =  $props{"title"};
 
 	my $vendor_start = time;
 	$status[++$i] = " ";
@@ -94,15 +94,18 @@ for my $vendor (sort keys %{$cfg->{"vendors"}}) {
 	$price = $price_s if ($price_s);
 	$price = min($price_r, $price_s) if ($price_r && $price_s);
 
-	# scrape description
-	my $desc = $search_results->find($desc_tag)->text();
-	$desc =~ s/^\s+//;
-	$desc =~ s/\s+$//;
-	if ($desc ne "" && $args{v}) {
-		if (length($desc) > 50) {
-			$desc = substr($desc, 0, 50) . "...";
+	my $desc = "";
+	if ($desc_tag) {
+		# scrape description
+		$desc = $search_results->find($desc_tag)->text();
+		$desc =~ s/^\s+//;
+		$desc =~ s/\s+$//;
+		if ($desc ne "" && $args{v}) {
+			if (length($desc) > 50) {
+				$desc = substr($desc, 0, 50) . "...";
+			}
+			print "info: $vendor: $desc\n";
 		}
-		print "info: $vendor: $desc\n";
 	}
 
 	# everything looks good
