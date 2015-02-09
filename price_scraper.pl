@@ -29,6 +29,11 @@ my $cutoff = time - (30 * 24 * 60 * 60);
 my $sql = "select part_num, manufacturer from products " .
 	"where last_seen > $cutoff order by last_scraped asc";
 my ($part_num, $manufacturer) = $dbh->selectrow_array($sql);
+
+# prevent races with other scrapers, claim ownership as soon as possible
+$dbh->do("update products set last_scraped = ? where part_num = ?",
+	undef, time, $part_num);
+
 if ($args{p} && $args{m}) {
 	$part_num = $args{p};
 	$manufacturer = $args{m};
@@ -124,11 +129,6 @@ printf $log "%s %-10s %-20s [%s] (%i s)\n", $timestamp, $manufacturer,
 	$part_num, join("", @status), time - $start;
 
 close $log;
-
-# record that we finished scraping this product
-$dbh->do("update products set last_scraped = ? where part_num = ?",
-	undef, time, $part_num);
-
 $dbh->disconnect();
 
 exit 0;
