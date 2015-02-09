@@ -211,7 +211,7 @@ sub compute_control_points
 	$c[$n - 1] = 0;
 	$r[$n - 1] = 8 * $K->[$n - 1] + $K->[$n];
 
-	# solves Ax=b with the Thomas algorithm
+	# solves Ax = b with the Thomas algorithm
 	for (1..($n - 1)) {
 		my $m = $a[$_] / $b[$_ - 1];
 		$b[$_] = $b[$_] - $m * $c[$_ - 1];
