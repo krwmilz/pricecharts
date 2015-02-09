@@ -222,7 +222,7 @@ sub scrape_thumbnail
 		$insert_sth->execute($part_num, $brand, $desc, $type, time,
 			time, 0);
 		print "$info_hdr: db inserted\n" if ($args{v});
-		$new_products .= "$brand $desc ($part_num)\n";
+		$new_products .= "$brand $part_num: $tmp_desc\n";
 		return 1;
 	}
 	# $scrapes_sth->execute("thumbnail", time - $start, time);
