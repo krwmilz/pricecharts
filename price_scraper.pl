@@ -149,6 +149,7 @@ sub get_valid_price
 
 	# do a fuzzy search for digit combinations that look like a price
 	# XXX: uses the first found price in the page
+	# XXX: this does not work on single digit prices, ie $7.00
 	my ($price, @others) = ($search_prices[0] =~ m/(\d[\d,]+)/);
 	return undef unless defined $price;
 
