@@ -26,6 +26,8 @@ sub get_config
 				"gid",
 				"chroot",
 				"db_dir",
+				"htdocs",
+				"templates",
 			],
 		},
 		vendors => {
