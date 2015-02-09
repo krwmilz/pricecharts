@@ -51,8 +51,8 @@ my $insert_sth = $dbh->prepare($sql);
 $sql = "update products set last_seen = ? where part_num = ?";
 my $update_sth = $dbh->prepare($sql);
 
-my $summary .= "type        scraped total new errors time (s)\n";
-$summary    .= "----------- ------- ----- --- ------ --------\n";
+my $summary .= "type                 ok percent errors new duration\n";
+$summary    .= "--------------- ------- ------- ------ --- --------\n";
 
 my $new_products;
 while (my ($type, $name) = each %product_map) {
@@ -89,7 +89,7 @@ while (my ($type, $name) = each %product_map) {
 		# slow this down a bit
 		my $sleep = int(rand(5));
 		print "$pager_hdr: $_/$pages: $sleep s wait\n" if ($args{v});
-		sleep $sleep;
+		sleep $sleep unless ($args{t});
 
 		$dom = get_dom($class_url . "$_", $ua, $args{v});
 		next if (!defined $dom);
@@ -98,29 +98,54 @@ while (my ($type, $name) = each %product_map) {
 		my @temp_thumbs = $dom->find(".PIV_Regular")->html_array();
 		printf "$pager_hdr: $_/$pages: %i thumbs found\n", scalar @temp_thumbs if ($args{v});
 		push @thumbnails, @temp_thumbs;
+
+		last if ($args{t});
 	}
 
 	my $total = scalar @thumbnails;
 	print "$info_hdr: $total total\n" if ($args{v});
 
-	# extract part number, brand, and description
-	my ($new, $old, $errors, $start, $i) = (0, 0, 0, time, 0);
+	# extract and store part number, brand, and description
+	my ($new, $old, $err, $start, $i) = (0, 0, 0, time, 0);
 	for my $thumbnail_html (@thumbnails) {
 		$i++;
+		my $thumb_hdr = "$info_hdr: $i/$total";
 
-		my $ret = scrape_thumbnail($type, $thumbnail_html, "$i/$total");
-		if (!defined $ret) {
-			$errors++;
-			last if ($args{t});
+		# look less suspicious
+		my $sleep = int(rand(20));
+		printf "$thumb_hdr (%ss wait)\n", $sleep if ($args{v});
+		sleep $sleep unless ($args{t});
+
+		# attempt to extract information from thumbnail_html
+		my ($brand, $part_num, $desc, $tmp_desc) =
+			scrape_thumbnail("$type: $i/$total", $thumbnail_html);
+		if (!defined $brand) {
+			$err++;
 			next;
 		}
-		$ret ? $new++ : $old++;
+
+		# extraction looks good, insert or update the database
+		my $sql = "select * from products where part_num = ?";
+		if ($dbh->selectrow_arrayref($sql, undef, $part_num)) {
+			# also check description and manufacturer are consistent?
+			$update_sth->execute(time, $part_num);
+			print "$thumb_hdr: db updated\n" if ($args{v});
+			$old++;
+		}
+		else {
+			$insert_sth->execute($part_num, $brand, $desc, $type,
+				time, time, 0);
+			print "$thumb_hdr db inserted\n" if ($args{v});
+			$new_products .= "$brand $part_num: $tmp_desc\n";
+			$new++;
+		}
 
 		last if ($args{t});
 	}
 
-	$summary .= sprintf("%-11s %7s %5s %3s %6s %8s\n", $type, $new + $old,
-		$total, $new, $errors, time - $start);
+	my $ok = $new + $old;
+	$summary .= sprintf("%-15s %7s %6.1f%% %6i %3i %7is\n", $type,
+		"$ok/$total", $ok * 100.0 / $total, $err, $new, time - $start);
 }
 
 $dbh->disconnect();
@@ -146,22 +171,22 @@ if ($args{v}) {
 	exit 0;
 }
 
-my $sender = Email::Send->new({mailer => 'SMTP'});
+my $sender = Email::Send->new({mailer => "SMTP"});
 $sender->mailer_args([Host => $cfg->{"general"}{"smtp"}]);
 $sender->send($email->as_string()) || print "Couldn't send email\n";
 
+
+#
+# this checks the input html for 3 things, part num, manufacturer, and
+# description. if any of these aren't found, fail.
+#
 sub scrape_thumbnail
 {
-	my $type = shift;
+	my $thumb_hdr = shift;
 	my $html = shift;
-	my $count = shift;
 
-	my $error_hdr = "error: $type: $count";
-	my $info_hdr = "info: $type: $count";
-
-	my $sleep = int(rand(20));
-	printf "$info_hdr (%ss wait)\n", $sleep if ($args{v});
-	sleep $sleep;
+	my $error_hdr = "error: $thumb_hdr";
+	my $info_hdr = "info: $thumb_hdr";
 
 	# make new html grabber instance with the thumbnail html
 	my $dom = HTML::Grabber->new(html => $html);
@@ -209,25 +234,12 @@ sub scrape_thumbnail
 	print "$info_hdr: $brand $part_num\n" if ($args{v});
 	print "$info_hdr: $tmp_desc\n" if ($args{v});
 
-	# use existence of part_num to decide on update or insert new
-	my $sql = "select * from products where part_num = ?";
-	if ($dbh->selectrow_arrayref($sql, undef, $part_num)) {
-		# update
-		$update_sth->execute(time, $part_num);
-		print "$info_hdr: db updated\n" if ($args{v});
-		return 0;
-	}
-	else {
-		# insert new
-		$insert_sth->execute($part_num, $brand, $desc, $type, time,
-			time, 0);
-		print "$info_hdr: db inserted\n" if ($args{v});
-		$new_products .= "$brand $part_num: $tmp_desc\n";
-		return 1;
-	}
-	# $scrapes_sth->execute("thumbnail", time - $start, time);
+	return ($brand, $part_num, $desc, $tmp_desc);
 }
 
+#
+# unwrap the plain text inside of an html tag
+#
 sub get_tag_text
 {
 	my $dom = shift;
