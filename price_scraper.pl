@@ -120,7 +120,7 @@ for my $vendor (sort keys %{$cfg->{"vendors"}}) {
 	print "info: $vendor: db updated\n" if ($args{v});
 }
 
-printf $log "%s %-10s %-15s [%s] (%i s)\n", $timestamp, $manufacturer,
+printf $log "%s %-10s %-20s [%s] (%i s)\n", $timestamp, $manufacturer,
 	$part_num, join("", @status), time - $start;
 
 close $log;
