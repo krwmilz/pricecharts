@@ -49,7 +49,7 @@ print "info: $vendors vendors\n" if ($args{v});
 my $time = time - (7 * 24 * 60 * 60);
 $query = "select count(part_num) from products where first_seen > ?";
 my ($new_products) = $dbh->selectrow_array($query, undef, $time);
-print "info: $new_products new products within 1 week\n" if ($args{v});
+print "info: $new_products new products (1 week)\n" if ($args{v});
 
 my $vars = {
 	num_vendors => $vendors,
@@ -58,7 +58,7 @@ my $vars = {
 	new_products => $new_products
 };
 
-$template->process("index.html", $vars, "index.html") || die $template->error();
+$template->process("index.html", $vars, "index.html") || die $template->error() . "\n";
 copy("$include/pricechart.css", "$output/pricechart.css");
 print "info: $include/pricechart.css -> $output/\n" if ($args{v});
 
