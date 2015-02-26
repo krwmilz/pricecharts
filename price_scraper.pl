@@ -20,7 +20,7 @@ $| = 1 if ($args{v});
 
 my $log = get_log("scrapes", $args{v});
 my $cfg = get_config();
-my $ua  = get_ua($cfg->{"general"});
+my $ua  = new_ua($cfg->{"general"}, $args{v});
 my $dbh = get_dbh($cfg->{"general"});
 
 # allow products to go out of stock. if we haven't seen them for > 30 days

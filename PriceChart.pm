@@ -4,7 +4,7 @@ use DBI;
 use Exporter;
 
 @ISA = ("Exporter");
-@EXPORT = qw(get_config get_dom get_ua get_log get_dbh);
+@EXPORT = qw(get_config get_dom new_ua get_log get_dbh);
 
 
 sub get_config
@@ -85,12 +85,22 @@ sub get_dom
 	return undef;
 }
 
-sub get_ua
+sub new_ua
 {
 	my $cfg = shift;
+	my $verbose = shift || 0;
 
-	my $ua = LWP::UserAgent->new(agent => $cfg->{"general"}{"user_agent"});
+	my $ua = LWP::UserAgent->new();
 	$ua->default_header("Accept" => "*/*");
+	$ua->default_header("Accept-Encoding" => scalar HTTP::Message::decodable());
+	$ua->default_header("Accept-Charset" => "utf-8");
+	$ua->default_header("Accept-Language" => "en-US");
+	$ua->default_header("Host" => "localhost:8177");
+	$ua->default_header("User-Agent" => $cfg->{"user_agent"});
+
+	while (my ($name, $value) = each %{$ua->default_headers}) {
+		print "info: new_ua: $name: $value\n";
+	}
 
 	return $ua;
 }
