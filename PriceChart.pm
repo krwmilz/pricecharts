@@ -81,7 +81,8 @@ sub get_dom
 		return HTML::Grabber->new(html => $resp->decoded_content);
 	}
 
-	print "error: GET $url " . $resp->status_line . "\n";
+	print "error: GET $url failed\n";
+	print "error: " . $resp->status_line . "\n";
 	return undef;
 }
 
@@ -95,11 +96,14 @@ sub new_ua
 	$ua->default_header("Accept-Encoding" => scalar HTTP::Message::decodable());
 	$ua->default_header("Accept-Charset" => "utf-8");
 	$ua->default_header("Accept-Language" => "en-US");
-	$ua->default_header("Host" => "localhost:8177");
 	$ua->default_header("User-Agent" => $cfg->{"user_agent"});
 
-	while (my ($name, $value) = each %{$ua->default_headers}) {
-		print "info: new_ua: $name: $value\n";
+	if ($verbose) {
+		print "info: new_ua: user agent http headers are:\n";
+		my $headers = $ua->default_headers;
+		for (sort keys %$headers) {
+			print "              $_: " . $headers->{$_}. "\n";
+		}
 	}
 
 	return $ua;
