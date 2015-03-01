@@ -10,6 +10,7 @@ use List::Util qw(min);
 use LWP::Simple;
 use PriceChart;
 use POSIX;
+use Term::ReadKey;
 use URI::Escape;
 
 
@@ -109,7 +110,8 @@ for my $vendor (sort keys %{$cfg->{"vendors"}}) {
 			if (length($desc) > 50) {
 				$desc = substr($desc, 0, 50) . "...";
 			}
-			print "info: $vendor: $desc\n";
+			my $desc_s = trunc_line($desc, length($vendor) + 9);
+			print "info: $vendor: $desc_s\n";
 		}
 	}
 

@@ -4,7 +4,7 @@ use DBI;
 use Exporter;
 
 @ISA = ("Exporter");
-@EXPORT = qw(get_config get_dom new_ua get_log get_dbh);
+@EXPORT = qw(get_config get_dom get_log get_dbh trunc_line new_ua);
 
 
 sub get_config
@@ -74,10 +74,8 @@ sub get_dom
 
 	my $resp = $ua->get($url);
 	if ($resp->is_success) {
-		if (length($url) > 55) {
-			$url = "..." . substr($url, length($url) - 55);
-		}
-		print "info: GET $url " . $resp->status_line . "\n" if ($verbose);
+		my $short_url = trunc_line($url, length($resp->status_line) + 11, 1);
+		print "info: GET " . $resp->status_line . " $short_url\n" if ($verbose);
 		return HTML::Grabber->new(html => $resp->decoded_content);
 	}
 
@@ -99,10 +97,11 @@ sub new_ua
 	$ua->default_header("User-Agent" => $cfg->{"user_agent"});
 
 	if ($verbose) {
-		print "info: new_ua: user agent http headers are:\n";
+		print "info: new_ua: http headers are:\n";
 		my $headers = $ua->default_headers;
 		for (sort keys %$headers) {
-			print "              $_: " . $headers->{$_}. "\n";
+			my $header = trunc_line($headers->{$_}, length($_) + 16);
+			print "              $_: $header\n";
 		}
 	}
 
@@ -123,6 +122,25 @@ sub get_log
 	mkdir $log_dir;
 	open my $log, ">>", "$log_dir/$file.log" or die "$!";
 	return $log;
+}
+
+sub trunc_line
+{
+	my $line = shift;
+	my $prefix = shift || 0;
+	my $front = shift || 0;
+
+	my ($wchar) = Term::ReadKey::GetTerminalSize();
+	if (length($line) < ($wchar - $prefix - 3)) {
+		return $line;
+	}
+
+	if ($front) {
+		my $chopped = substr($line, length($line) - ($wchar - $prefix - 3));
+		return "..." . $chopped;
+	}
+	my $chopped = substr($line, 0, ($wchar - $prefix - 3));
+	return $chopped . "...";
 }
 
 1;

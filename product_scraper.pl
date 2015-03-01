@@ -11,6 +11,7 @@ use Getopt::Std;
 use HTML::Grabber;
 use LWP::Simple;
 use PriceChart;
+use Term::ReadKey;
 
 
 my %args;
@@ -217,12 +218,9 @@ sub mem_exp_scrape_thumbnail
 		return undef;
 	}
 
-	my $tmp_desc = $desc;
-	if (length($tmp_desc) > 50) {
-		$tmp_desc = substr($tmp_desc, 0, 50) . "...";
-	}
+	my $shortened_desc = trunc_line($desc, length($info_hdr) + 2);
 	print "$info_hdr: $brand $part_num\n" if ($args{v});
-	print "$info_hdr: $tmp_desc\n" if ($args{v});
+	print "$info_hdr: $shortened_desc\n" if ($args{v});
 
 	return ($brand, $part_num, $desc);
 }
