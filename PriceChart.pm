@@ -111,8 +111,10 @@ sub new_ua
 sub get_log
 {
 	my $file = shift;
-	my $verbose = shift;
+	my $verbose = shift || 0;
 	my $log_dir = "/var/www/logs/pricechart";
+
+	return undef unless defined $file;
 
 	if ($verbose) {
 		open my $log, '>&', STDOUT or die "$!";
