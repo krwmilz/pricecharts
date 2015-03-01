@@ -124,7 +124,7 @@ for my $vendor (sort keys %{$cfg->{"vendors"}}) {
 		$price, time - $vendor_start, $desc);
 	$products_sth->execute($start, $part_num);
 
-	print "info: $vendor: db updated\n" if ($args{v});
+	print "info: $vendor: updated db\n" if ($args{v});
 }
 
 printf $log "%s %-10s %-20s [%s] (%i s)\n", $timestamp, $manufacturer,
