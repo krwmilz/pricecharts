@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Config::Grammar;
+use DBI;
 use Email::Simple;
 use Email::Send;
 use Getopt::Std;
@@ -18,8 +19,9 @@ getopts("tv", \%args);
 $| = 1 if ($args{v});
 
 my $cfg = get_config();
-my $ua  = get_ua($cfg->{"general"});
+my $ua  = new_ua($cfg->{"general"}, $args{v});
 my $dbh = get_dbh($cfg->{"general"});
+# my $log = get_log("products.txt", $args{v});
 srand;
 
 $dbh->do("create table if not exists products(" .
@@ -33,16 +35,6 @@ $dbh->do("create table if not exists products(" .
 
 # $dbh->do("create table if not exists scrapes");
 
-#
-# Memory Express
-#
-
-my $vendor = "Memory Express";
-my %product_map = (
-	"televisions" => "Televisions",
-	"laptops" => "LaptopsNotebooks",
-	"hard drives" => "HardDrives");
-
 my $sql = "insert into products(part_num, manufacturer, description, type, " .
 	"first_seen, last_seen, last_scraped) values (?, ?, ?, ?, ?, ?, ?)";
 my $insert_sth = $dbh->prepare($sql);
@@ -51,13 +43,37 @@ my $insert_sth = $dbh->prepare($sql);
 $sql = "update products set last_seen = ? where part_num = ?";
 my $update_sth = $dbh->prepare($sql);
 
-my $summary .= "type                 ok percent errors new duration\n";
-$summary    .= "--------------- ------- ------- ------ --- --------\n";
+#
+# Memory Express
+#
+my $mail = "Memory Express\n==============\n\n";
+$mail   .= "type                 ok percent errors new duration\n";
+$mail   .= "--------------- ------- ------- ------ --- --------\n";
 
-my $new_products;
+my %product_map = (
+	"televisions" => "Televisions",
+	"laptops" => "LaptopsNotebooks",
+	"hard drives" => "HardDrives"
+);
 while (my ($type, $name) = each %product_map) {
+	mem_exp_scrape_class($type, $name);
+}
+
+$dbh->disconnect();
+send_email($mail, $args{v});
+
+#
+# scrape an entire class of products, inserting or updating the db as needed.
+# general flow is get all thumbnails on the unfiltered search results page, then
+# for each of these get the part number, brand, and description.
+#
+sub mem_exp_scrape_class
+{
+	my $type = shift;
+	my $name = shift;
+
 	my $info_hdr = "info: $type";
-	print "$info_hdr\n";
+	print "$info_hdr\n" if ($args{v});
 
 	# this returns a search results page, link found through trial and error
 	my $class_url = "http://www.memoryexpress.com/Category/" .
@@ -65,19 +81,19 @@ while (my ($type, $name) = each %product_map) {
 
 	# get first page of results
 	my $dom = get_dom($class_url . "1", $ua, $args{v});
-	next if (!defined $dom);
+	return undef if (!defined $dom);
 
 	my $pager_hdr = "$info_hdr: .AJAX_List_Pager";
 
 	# extract the first of two pager widgets on the page
 	my ($pager_html) = $dom->find(".AJAX_List_Pager")->html_array();
-	next if (!defined $pager_html);
+	return undef if (!defined $pager_html);
 	print "$pager_hdr found\n" if ($args{v});
 
 	# find how many pages of results we have, each page is one <li> element
 	my $pager = HTML::Grabber->new(html => $pager_html);
 	my $pages = $pager->find("li")->html_array();
-	next unless ($pages);
+	return undef unless ($pages);
 
 	# if more than 1 <li> is found, one <li> is always a "next" arrow
 	$pages-- if ($pages > 1);
@@ -86,9 +102,11 @@ while (my ($type, $name) = each %product_map) {
 	# loop over results pages and append product thumbnails
 	my @thumbnails;
 	for (1..$pages) {
+		my $page_hdr = "$pager_hdr: $_/$pages";
+
 		# slow this down a bit
 		my $sleep = int(rand(5));
-		print "$pager_hdr: $_/$pages: $sleep s wait\n" if ($args{v});
+		printf "$page_hdr: (%is wait)\n", $sleep if ($args{v});
 		sleep $sleep unless ($args{t});
 
 		$dom = get_dom($class_url . "$_", $ua, $args{v});
@@ -96,7 +114,8 @@ while (my ($type, $name) = each %product_map) {
 
 		# each product thumbnail has class=PIV_Regular
 		my @temp_thumbs = $dom->find(".PIV_Regular")->html_array();
-		printf "$pager_hdr: $_/$pages: %i thumbs found\n", scalar @temp_thumbs if ($args{v});
+		my $num_thumbs = scalar @temp_thumbs;
+		print "$page_hdr: $num_thumbs thumbs found\n" if ($args{v});
 		push @thumbnails, @temp_thumbs;
 
 		last if ($args{t});
@@ -117,8 +136,8 @@ while (my ($type, $name) = each %product_map) {
 		sleep $sleep unless ($args{t});
 
 		# attempt to extract information from thumbnail_html
-		my ($brand, $part_num, $desc, $tmp_desc) =
-			scrape_thumbnail("$type: $i/$total", $thumbnail_html);
+		my ($brand, $part_num, $desc) =
+			mem_exp_scrape_thumbnail("$type: $i/$total", $thumbnail_html);
 		if (!defined $brand) {
 			$err++;
 			next;
@@ -129,14 +148,13 @@ while (my ($type, $name) = each %product_map) {
 		if ($dbh->selectrow_arrayref($sql, undef, $part_num)) {
 			# also check description and manufacturer are consistent?
 			$update_sth->execute(time, $part_num);
-			print "$thumb_hdr: db updated\n" if ($args{v});
+			print "$thumb_hdr: updated db\n" if ($args{v});
 			$old++;
 		}
 		else {
 			$insert_sth->execute($part_num, $brand, $desc, $type,
 				time, time, 0);
-			print "$thumb_hdr db inserted\n" if ($args{v});
-			$new_products .= "$brand $part_num: $tmp_desc\n";
+			print "$thumb_hdr:  inserted into db\n" if ($args{v});
 			$new++;
 		}
 
@@ -144,43 +162,15 @@ while (my ($type, $name) = each %product_map) {
 	}
 
 	my $ok = $new + $old;
-	$summary .= sprintf("%-15s %7s %6.1f%% %6i %3i %7is\n", $type,
+	$mail .= sprintf("%-15s %7s %6.1f%% %6i %3i %7is\n", $type,
 		"$ok/$total", $ok * 100.0 / $total, $err, $new, time - $start);
 }
-
-$dbh->disconnect();
-
-my $mail = "$vendor\n";
-$mail .= "=" for (1..length $vendor);
-$mail .= "\n\n";
-
-$mail .= "$summary\n"      if ($summary);
-$mail .= "$new_products\n" if ($new_products);
-
-my $email = Email::Simple->create(
-	header => [
-		From	=> "Santa Claus <sc\@np.com>",
-		To	=> $cfg->{"general"}{"email"},
-		Subject	=> "PriceChart product scrape",
-	],
-	body => $mail
-);
-
-if ($args{v}) {
-	print $email->as_string();
-	exit 0;
-}
-
-my $sender = Email::Send->new({mailer => "SMTP"});
-$sender->mailer_args([Host => $cfg->{"general"}{"smtp"}]);
-$sender->send($email->as_string()) || print "Couldn't send email\n";
-
 
 #
 # this checks the input html for 3 things, part num, manufacturer, and
 # description. if any of these aren't found, fail.
 #
-sub scrape_thumbnail
+sub mem_exp_scrape_thumbnail
 {
 	my $thumb_hdr = shift;
 	my $html = shift;
@@ -234,7 +224,7 @@ sub scrape_thumbnail
 	print "$info_hdr: $brand $part_num\n" if ($args{v});
 	print "$info_hdr: $tmp_desc\n" if ($args{v});
 
-	return ($brand, $part_num, $desc, $tmp_desc);
+	return ($brand, $part_num, $desc);
 }
 
 #
@@ -254,4 +244,31 @@ sub get_tag_text
 	}
 
 	return $field;
+}
+
+#
+# send an email with the summary of the scrape
+#
+sub send_email
+{
+	my $mail = shift;
+	my $verbose = shift || 0;
+
+	if ($verbose) {
+		print $mail;
+		return;
+	}
+
+	my $email = Email::Simple->create(
+		header => [
+			From	=> "Santa Claus <sc\@np.com>",
+			To	=> $cfg->{"general"}{"email"},
+			Subject	=> "pricechart product scrape",
+		],
+		body => $mail
+	);
+
+	my $sender = Email::Send->new({mailer => "SMTP"});
+	$sender->mailer_args([Host => $cfg->{"general"}{"smtp"}]);
+	$sender->send($email->as_string()) || print "Couldn't send email\n";
 }
