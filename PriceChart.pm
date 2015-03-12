@@ -77,11 +77,11 @@ sub get_dom
 	my $resp = $ua->get($url);
 	if ($resp->is_success) {
 		my $short_url = trunc_line($url, length($resp->status_line) + 11, 1);
-		print "info: GET " . $resp->status_line . " $short_url\n" if ($verbose);
+		print "info: get_dom: " . $resp->status_line . " $short_url\n" if ($verbose);
 		return HTML::Grabber->new(html => $resp->decoded_content);
 	}
 
-	print "error: GET $url failed\n";
+	print "error: get_dom: $url failed\n";
 	print "error: " . $resp->status_line . "\n";
 	return undef;
 }
