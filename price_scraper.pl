@@ -75,8 +75,6 @@ for my $vendor (sort keys %{$cfg->{"vendors"}}) {
 	my $vendor_start = time;
 	$status[++$i] = " ";
 
-	print "info: $vendor\n" if ($args{v});
-
 	# for products with short part numbers, also search manufacturer
 	my $search;
 	if (length($part_num) < 6) {
@@ -114,14 +112,13 @@ for my $vendor (sort keys %{$cfg->{"vendors"}}) {
 
 	# everything looks good
 	$status[$i] = substr($vendor, 0, 1);
-	print "info: $vendor: final = \$$price\n" if ($args{v});
 
 	next if ($args{n});
 	$prices_sth->execute($start, $part_num, $vendor, $color,
 		$price, time - $vendor_start, $desc);
 	$products_sth->execute($start, $part_num);
 
-	print "info: $vendor: updated db\n" if ($args{v});
+	print "info: $vendor: db: inserted \$$price\n" if ($args{v});
 }
 
 printf $log "%s %-10s %-20s [%s] (%i s)\n", $timestamp, $manufacturer,
