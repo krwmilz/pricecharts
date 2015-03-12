@@ -4,7 +4,6 @@ use strict;
 use warnings;
 
 use Config::Grammar;
-use DBI;
 use Email::Simple;
 use Email::Send;
 use Getopt::Std;
@@ -60,6 +59,8 @@ while (my ($type, $name) = each %product_map) {
 	mem_exp_scrape_class($type, $name);
 }
 
+$update_sth = undef;
+$insert_sth = undef;
 $dbh->disconnect();
 send_email($mail, $args{v});
 
@@ -72,9 +73,59 @@ sub mem_exp_scrape_class
 {
 	my $type = shift;
 	my $name = shift;
-
 	my $info_hdr = "info: $type";
-	print "$info_hdr\n" if ($args{v});
+
+	my $thumbnails = mem_exp_get_thumbnails($name, $info_hdr);
+	return undef unless defined $thumbnails;
+
+	my $total = scalar @$thumbnails;
+	print "$info_hdr: $total total\n" if ($args{v});
+
+	# extract and store part number, brand, and description
+	my ($new, $old, $err, $start, $i) = (0, 0, 0, time, 0);
+	for my $thumbnail_html (@$thumbnails) {
+		$i++;
+		my $thumb_hdr = "$info_hdr: $i/$total";
+
+		# look less suspicious
+		sleep_rand($thumb_hdr, 20);
+
+		# attempt to extract information from thumbnail html
+		my ($brand, $part_num, $desc) =
+			mem_exp_scrape_thumbnail("$type: $i/$total", $thumbnail_html);
+		unless (defined $brand && defined $part_num && defined $desc) {
+			$err++;
+			next;
+		}
+
+		# extraction looks good, insert or update the database
+		$sql = "select * from products where part_num = ?";
+		if ($dbh->selectrow_arrayref($sql, undef, $part_num)) {
+			# also check description and manufacturer are consistent?
+			$update_sth->execute(time, $part_num) or die $dbh->errstr();
+			print "$thumb_hdr: updated db\n" if ($args{v});
+			$old++;
+		}
+		else {
+			$insert_sth->execute($part_num, $brand, $desc, $type,
+				time, time, 0) or die $dbh->errstr();
+			print "$thumb_hdr: inserted into db\n" if ($args{v});
+			$new++;
+		}
+	}
+
+	my $ok = $new + $old;
+	$mail .= sprintf("%-15s %7s %6.1f%% %6i %3i %7is\n", $type,
+		"$ok/$total", $ok * 100.0 / $total, $err, $new, time - $start);
+}
+
+#
+# get all thumbnails from generic unfiltered search page
+#
+sub mem_exp_get_thumbnails
+{
+	my $name = shift;
+	my $info_hdr = shift;
 
 	# this returns a search results page, link found through trial and error
 	my $class_url = "http://www.memoryexpress.com/Category/" .
@@ -104,17 +155,17 @@ sub mem_exp_scrape_class
 	my @thumbnails;
 	for (1..$pages) {
 		my $page_hdr = "$pager_hdr: $_/$pages";
+		sleep_rand($page_hdr, 5);
 
-		# slow this down a bit
-		my $sleep = int(rand(5));
-		printf "$page_hdr: (%is wait)\n", $sleep if ($args{v});
-		sleep $sleep unless ($args{t});
-
+		# get a search pages dom
 		$dom = get_dom($class_url . "$_", $ua, $args{v});
 		next if (!defined $dom);
 
 		# each product thumbnail has class=PIV_Regular
 		my @temp_thumbs = $dom->find(".PIV_Regular")->html_array();
+		if ($args{t}) {
+			@temp_thumbs = ($temp_thumbs[0]);
+		}
 		my $num_thumbs = scalar @temp_thumbs;
 		print "$page_hdr: $num_thumbs thumbs found\n" if ($args{v});
 		push @thumbnails, @temp_thumbs;
@@ -122,49 +173,7 @@ sub mem_exp_scrape_class
 		last if ($args{t});
 	}
 
-	my $total = scalar @thumbnails;
-	print "$info_hdr: $total total\n" if ($args{v});
-
-	# extract and store part number, brand, and description
-	my ($new, $old, $err, $start, $i) = (0, 0, 0, time, 0);
-	for my $thumbnail_html (@thumbnails) {
-		$i++;
-		my $thumb_hdr = "$info_hdr: $i/$total";
-
-		# look less suspicious
-		my $sleep = int(rand(20));
-		printf "$thumb_hdr (%ss wait)\n", $sleep if ($args{v});
-		sleep $sleep unless ($args{t});
-
-		# attempt to extract information from thumbnail_html
-		my ($brand, $part_num, $desc) =
-			mem_exp_scrape_thumbnail("$type: $i/$total", $thumbnail_html);
-		if (!defined $brand) {
-			$err++;
-			next;
-		}
-
-		# extraction looks good, insert or update the database
-		my $sql = "select * from products where part_num = ?";
-		if ($dbh->selectrow_arrayref($sql, undef, $part_num)) {
-			# also check description and manufacturer are consistent?
-			$update_sth->execute(time, $part_num);
-			print "$thumb_hdr: updated db\n" if ($args{v});
-			$old++;
-		}
-		else {
-			$insert_sth->execute($part_num, $brand, $desc, $type,
-				time, time, 0);
-			print "$thumb_hdr:  inserted into db\n" if ($args{v});
-			$new++;
-		}
-
-		last if ($args{t});
-	}
-
-	my $ok = $new + $old;
-	$mail .= sprintf("%-15s %7s %6.1f%% %6i %3i %7is\n", $type,
-		"$ok/$total", $ok * 100.0 / $total, $err, $new, time - $start);
+	return \@thumbnails;
 }
 
 #
@@ -269,4 +278,14 @@ sub send_email
 	my $sender = Email::Send->new({mailer => "SMTP"});
 	$sender->mailer_args([Host => $cfg->{"general"}{"smtp"}]);
 	$sender->send($email->as_string()) || print "Couldn't send email\n";
+}
+
+sub sleep_rand
+{
+	my $header = shift;
+	my $upper_limit = shift || 0;
+
+	my $sleep = int(rand($upper_limit));
+	printf "$header: (%ss wait)\n", $sleep if ($args{v});
+	sleep $sleep unless ($args{t});
 }
