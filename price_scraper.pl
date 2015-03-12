@@ -107,10 +107,7 @@ for my $vendor (sort keys %{$cfg->{"vendors"}}) {
 		$desc =~ s/^\s+//;
 		$desc =~ s/\s+$//;
 		if ($desc ne "" && $args{v}) {
-			if (length($desc) > 50) {
-				$desc = substr($desc, 0, 50) . "...";
-			}
-			my $desc_s = trunc_line($desc, length($vendor) + 9);
+			my $desc_s = trunc_line($desc, length($vendor) + 8);
 			print "info: $vendor: $desc_s\n";
 		}
 	}
