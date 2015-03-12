@@ -133,7 +133,11 @@ sub trunc_line
 	my $line = shift;
 	my $prefix = shift || 0;
 
-	my ($term_width) = Term::ReadKey::GetTerminalSize();
+	my $term_width = 80;
+	if (POSIX::isatty(STDOUT)) {
+		($term_width) = Term::ReadKey::GetTerminalSize();
+	}
+
 	my $len = $term_width - $prefix - 3;
 	if (length($line) < $len) {
 		return $line;
