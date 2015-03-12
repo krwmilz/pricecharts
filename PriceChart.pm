@@ -125,22 +125,26 @@ sub get_log
 	return $log;
 }
 
+#
+# make a possibly long line fit on a single line, with ellipses
+#
 sub trunc_line
 {
 	my $line = shift;
 	my $prefix = shift || 0;
 	my $front = shift || 0;
 
-	my ($wchar) = Term::ReadKey::GetTerminalSize();
-	if (length($line) < ($wchar - $prefix - 3)) {
+	my ($term_width) = Term::ReadKey::GetTerminalSize();
+	my $len = $term_width - $prefix - 3;
+	if (length($line) < $len) {
 		return $line;
 	}
 
 	if ($front) {
-		my $chopped = substr($line, length($line) - ($wchar - $prefix - 3));
+		my $chopped = substr($line, length($line) - $len);
 		return "..." . $chopped;
 	}
-	my $chopped = substr($line, 0, ($wchar - $prefix - 3));
+	my $chopped = substr($line, 0, $len);
 	return $chopped . "...";
 }
 
