@@ -130,14 +130,13 @@ sub get_log
 #
 sub trunc_line
 {
-	my $line = shift;
+	my $line = shift || return undef;
 	my $prefix = shift || 0;
 
-	my $term_width = 80;
-	if (POSIX::isatty(STDOUT)) {
-		($term_width) = Term::ReadKey::GetTerminalSize();
-	}
+	# if stdout is not a tty, it's likely a log file, output everything
+	return $line unless (POSIX::isatty(STDOUT));
 
+	my ($term_width) = Term::ReadKey::GetTerminalSize();
 	my $len = $term_width - $prefix - 3;
 	if (length($line) < $len) {
 		return $line;
