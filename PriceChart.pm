@@ -76,7 +76,7 @@ sub get_dom
 
 	my $resp = $ua->get($url);
 	if ($resp->is_success) {
-		my $short_url = trunc_line($url, length($resp->status_line) + 11, 1);
+		my $short_url = trunc_line($url, length($resp->status_line) + 16);
 		print "info: get_dom: " . $resp->status_line . " $short_url\n" if ($verbose);
 		return HTML::Grabber->new(html => $resp->decoded_content);
 	}
@@ -132,7 +132,6 @@ sub trunc_line
 {
 	my $line = shift;
 	my $prefix = shift || 0;
-	my $front = shift || 0;
 
 	my ($term_width) = Term::ReadKey::GetTerminalSize();
 	my $len = $term_width - $prefix - 3;
@@ -140,10 +139,6 @@ sub trunc_line
 		return $line;
 	}
 
-	if ($front) {
-		my $chopped = substr($line, length($line) - $len);
-		return "..." . $chopped;
-	}
 	my $chopped = substr($line, 0, $len);
 	return $chopped . "...";
 }
