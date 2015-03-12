@@ -98,13 +98,10 @@ sub new_ua
 	$ua->default_header("Accept-Language" => "en-US");
 	$ua->default_header("User-Agent" => $cfg->{"user_agent"});
 
-	if ($verbose) {
-		print "info: new_ua: http headers are:\n";
-		my $headers = $ua->default_headers;
-		for (sort keys %$headers) {
-			my $header = trunc_line($headers->{$_}, length($_) + 16);
-			print "              $_: $header\n";
-		}
+	my $headers = $ua->default_headers;
+	for (sort keys %$headers) {
+		my $header = trunc_line($headers->{$_}, length($_) + 18);
+		print "info: new_ua: $_ => $header\n" if ($verbose);
 	}
 
 	return $ua;
