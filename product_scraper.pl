@@ -21,7 +21,7 @@ $| = 1 if ($args{v});
 
 my $cfg = get_config();
 my $ua  = new_ua($cfg->{"general"}, $args{v});
-my $dbh = get_dbh($cfg->{"general"});
+my $dbh = get_dbh($cfg->{"general"}, undef, $args{v});
 # my $log = get_log("products.txt", $args{v});
 srand;
 
