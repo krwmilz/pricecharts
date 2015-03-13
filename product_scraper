@@ -11,6 +11,7 @@ use HTML::Grabber;
 use LWP::Simple;
 use PriceChart;
 use Term::ReadKey;
+use POSIX;
 
 
 my %args;
