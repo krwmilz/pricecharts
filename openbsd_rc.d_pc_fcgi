@@ -1,0 +1,7 @@
+#!/bin/sh
+
+daemon="/home/kyle/src/pricechart/pc_fcgi"
+
+. /etc/rc.d/rc.subr
+
+rc_cmd $1

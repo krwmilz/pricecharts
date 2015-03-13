@@ -1,4 +1,11 @@
+USR_LOCAL_BIN=/usr/local/bin
+LIBDATA=/usr/local/libdata/perl5/site_perl
+
+DEV_ETC=/home/kyle/src/pricechart
+BINS=price_scraper product_scraper gen_index pc_fcgi
+
 install:
-	cp price_scraper.pl product_scraper.pl ~/bin
-	cp PriceChart.pm /usr/local/libdata/perl5/site_perl/
-	# cp etc/pricechart_search /etc/rc.d/
+	cp $(BINS) $(USR_LOCAL_BIN)/
+	sed -e "s@$(DEV_ETC)@$(USR_LOCAL_BIN)@" < openbsd_rc.d_pc_fcgi \
+		> /etc/rc.d/pc_fcgi
+	cp PriceChart.pm $(LIBDATA)/
