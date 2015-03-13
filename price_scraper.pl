@@ -6,6 +6,7 @@ use warnings;
 use Config::Grammar;
 use Getopt::Std;
 use HTML::Grabber;
+use IO::Tee;
 use List::Util qw(min);
 use LWP::Simple;
 use PriceChart;
@@ -19,8 +20,8 @@ getopts("m:np:v", \%args);
 
 $| = 1 if ($args{v});
 
-my $log = get_log("scrapes", $args{v});
 my $cfg = get_config();
+my $log = get_log($cfg->{"http"}, "price_scrapes.txt", $args{v});
 my $ua  = new_ua($cfg->{"general"}, $args{v});
 my $dbh = get_dbh($cfg->{"general"}, undef, $args{v});
 
@@ -124,7 +125,9 @@ for my $vendor (sort keys %{$cfg->{"vendors"}}) {
 printf $log "%s %-10s %-20s [%s] (%i s)\n", $timestamp, $manufacturer,
 	$part_num, join("", @status), time - $start;
 
-close $log;
+$log->close();
+$prices_sth = undef;
+$products_sth = undef;
 $dbh->disconnect();
 
 exit 0;

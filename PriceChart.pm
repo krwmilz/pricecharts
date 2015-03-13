@@ -28,6 +28,7 @@ sub get_config
 				"db_dir",
 				"htdocs",
 				"templates",
+				"logs",
 			],
 		},
 		vendors => {
@@ -109,20 +110,22 @@ sub new_ua
 
 sub get_log
 {
-	my $file = shift;
+	my $cfg = shift || return undef;
+	my $file = shift || return undef;
 	my $verbose = shift || 0;
-	my $log_dir = "/var/www/logs/pricechart";
-
-	return undef unless defined $file;
-
-	if ($verbose) {
-		open my $log, '>&', STDOUT or die "$!";
-		return $log;
-	}
+	my $path = $cfg->{"chroot"} . $cfg->{"logs"} . "/" . $file;
 
 	mkdir $log_dir;
-	open my $log, ">>", "$log_dir/$file.log" or die "$!";
-	return $log;
+	open my $log, ">>", $path or die "can't open $path: $!";
+
+	if ($verbose) {
+		print "info: get_log: outputting to tee\n";
+		open my $std_out, '>&', STDOUT or die "$!";
+
+		return IO::Tee->new($log, $std_out);
+	}
+
+	return IO::Tee->new($log);
 }
 
 #
