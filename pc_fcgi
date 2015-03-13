@@ -26,34 +26,32 @@ getopts("v", \%args);
 
 # fork into background unless verbose
 unless ($args{v}) {
-	if (fork()) {
-		exit;
-	}
+	exit if (fork());
 }
 
 my $cfg = get_config();
-my $db_dir = $cfg->{"http"}{"db_dir"};
-my $socket_file = $cfg->{"http"}{"socket_file"};
-my $uid_name = $cfg->{"http"}{"uid"};
-my $gid_name = $cfg->{"http"}{"gid"};
+my %http_cfg = %{$cfg->{"http"}};
 
-# this looks up information in /etc
-my $uid = getpwnam($uid_name) or die "error: uid does not exist";
-my $gid = getgrnam($gid_name) or die "error: gid does not exist";
+# translates user/group names to id's, needs to be before chroot
+my $uid_name = $http_cfg{"uid"};
+my $gid_name = $http_cfg{"gid"};
+my $uid = getpwnam($uid_name) or die "error: user $uid_name does not exist\n";
+my $gid = getgrnam($gid_name) or die "error: group $gid_name does not exist\n";
 print "info: $uid_name:$gid_name -> $uid:$gid\n" if ($args{v});;
 
-chroot($cfg->{"http"}{"chroot"});
+print "info: chrooting to $http_cfg{chroot}\n" if ($args{v});
+chroot($http_cfg{"chroot"});
 chdir("/");
-print "info: chroot done\n" if ($args{v});
 
 # XXX: verify we have indeed dropped privileges?
-$< = $> = $uid;
 $( = $) = "$gid $gid";
+$< = $> = $uid;
 print "info: uid:gid set to $<:$(\n" if ($args{v});
 
+print "info: opening syslog\n" if ($args{v});
 openlog("pricechart_fcgi", LOG_PID, LOG_DAEMON);
-print "info: open syslog ok\n" if ($args{v});
 
+my $socket_file = $http_cfg{"socket_file"};
 if (-e $socket_file) {
 	my $msg = "socket file $socket_file exists\n";
 	print "error: $msg\n" if ($args{v});
@@ -62,27 +60,28 @@ if (-e $socket_file) {
 }
 
 # XXX: i need to be sudo for this to work? after we've dropped privileges?
+print "info: opening $socket_file\n" if ($args{v});
 my $socket = FCGI::OpenSocket($socket_file, 1024);
-print "info: open $socket_file ok\n" if ($args{v});
 
+my $db_dir = $http_cfg{"db_dir"};
+print "info: opening $db_dir/pricechart.db\n" if ($args{v});
 my $dbh = get_dbh($cfg->{"general"}, $db_dir);
-print "info: open $db_dir/pricechart.db ok\n" if ($args{v});
 
 my $request = FCGI::Request(\*STDIN, \*STDOUT, \*STDERR, \%ENV,
 	$socket, FCGI::FAIL_ACCEPT_ON_INTR);
 
-$SIG{INT} = \&child_sig;
-$SIG{TERM} = \&child_sig;
-
-my $config = {
-	INCLUDE_PATH => $cfg->{"http"}{"templates"}
-};
+print "info: making template config\n" if ($args{v});
+my $config = { INCLUDE_PATH => $http_cfg{"templates"} };
 my $template = Template->new($config) || die $Template::ERROR . "\n";
-print "info: template config ok\n" if ($args{v});
 
+# db query we take input from the user for
 my $sql = "select part_num, manufacturer, description from products " .
 	"where description like ? or part_num like ? or manufacturer like ?";
 my $search_sth = $dbh->prepare($sql);
+
+# intercept signals to shut down cleanly
+$SIG{INT} = \&child_sig;
+$SIG{TERM} = \&child_sig;
 
 syslog(LOG_INFO, "startup");
 while ($request->Accept() >= 0) {
@@ -106,6 +105,7 @@ while ($request->Accept() >= 0) {
 syslog(LOG_INFO, "shutdown");
 closelog();
 
+$search_sth = undef;
 $dbh->disconnect();
 
 FCGI::CloseSocket($socket);
