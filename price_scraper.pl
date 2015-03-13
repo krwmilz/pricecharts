@@ -53,7 +53,7 @@ $dbh->do("create table if not exists prices(" .
 	"primary key(date, part_num, vendor, price))"
 ) or die $DBI::errstr;
 
-print "info: $manufacturer $part_num\n" if ($args{v});
+print "info: scraping $manufacturer $part_num\n" if ($args{v});
 
 $sql = "insert into prices(date, part_num, vendor, color, price, duration, title) " .
 	"values (?, ?, ?, ?, ?, ?, ?)";
@@ -134,10 +134,9 @@ exit 0;
 
 sub get_valid_price
 {
-	my $dom_tag = shift;
+	my $dom_tag = shift || return undef;
 	my $search_results = shift;
 	my $vendor = shift;
-	return undef unless (defined $dom_tag);
 
 	# break the search_results page down into individual results
 	my @search_prices = $search_results->find($dom_tag)->text_array();
@@ -157,7 +156,7 @@ sub get_valid_price
 	print "info: $vendor: $dom_tag" . "[0] ($num_prices)\n" if ($args{v});
 	return undef if (@others);
 
-	# sanity check on the numerical value of the price
+	# sanity check the numerical price value
 	$price =~ s/,//;
 	if ($price <= 0 || $price > 10000) {
 		print $log "error: $vendor: price $price out of range\n";
