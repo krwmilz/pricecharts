@@ -1,4 +1,4 @@
-[% WRAPPER wrapper.html %]
+[% WRAPPER wrapper.tt2 %]
 	<div class="column">
 		<h1>Welcome</h1>
 

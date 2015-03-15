@@ -1,15 +1,23 @@
 USR_LOCAL_BIN=/usr/local/bin
-LIBDATA=/usr/local/libdata/perl5/site_perl
+PERL_LIBDATA=/usr/local/libdata/perl5/site_perl
+HTDOCS=/var/www/htdocs
 
-DEV_ETC=/home/kyle/src/pricechart
+DEV_BIN=/home/kyle/src/pricechart
 BINS=price_scraper product_scraper gen_index pc_fcgi
+LIBS=PriceChart.pm
 
 install:
 	cp $(BINS) $(USR_LOCAL_BIN)/
-	sed -e "s@$(DEV_ETC)@$(USR_LOCAL_BIN)@" < openbsd_rc.d_pc_fcgi \
+	cp $(LIBS) $(PERL_LIBDATA)/
+
+	sed -e "s@$(DEV_BIN)@$(USR_LOCAL_BIN)@" < openbsd_rc.d_pc_fcgi \
 		> /etc/rc.d/pc_fcgi
 	chmod 555 /etc/rc.d/pc_fcgi
-	cp PriceChart.pm $(LIBDATA)/
+
+	mkdir $(HTDOCS)/pricechart
+	cp -R html/* $(HTDOCS)/pricechart/
 
 uninstall:
 	rm /etc/rc.d/pc_fcgi
+	# rm $(PERL_LIBDATA)/$(LIBS)
+	# rm $(USR_LOCAL_BIN)/$(BINS)

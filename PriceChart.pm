@@ -27,7 +27,6 @@ sub get_config
 				"chroot",
 				"db_dir",
 				"htdocs",
-				"templates",
 				"logs",
 			],
 		},

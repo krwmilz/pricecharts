@@ -1,4 +1,4 @@
-[% WRAPPER wrapper.html %]
+[% WRAPPER wrapper.tt2 %]
 	<p>Found <b>[% num_results %]</b> search
 	[% IF num_results == 1 %]
 		result

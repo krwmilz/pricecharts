@@ -71,8 +71,8 @@ my $dbh = get_dbh($cfg->{"general"}, $db_dir);
 my $request = FCGI::Request(\*STDIN, \*STDOUT, \*STDERR, \%ENV, $socket,
 	FCGI::FAIL_ACCEPT_ON_INTR);
 
-print "info: making template config\n" if ($args{v});
-my $config = { INCLUDE_PATH => $http_cfg{"templates"} };
+print "info: making template, include_path = $http_cfg{htdocs}\n" if ($args{v});
+my $config = { INCLUDE_PATH => $http_cfg{"htdocs"} };
 my $template = Template->new($config) || die $Template::ERROR . "\n";
 
 # db query we take input from the user for
@@ -101,7 +101,7 @@ while ($request->Accept() >= 0) {
 		results => $products
 	};
 
-	$template->process("search.html", $vars) or print $template->error();
+	$template->process("search.tt2", $vars) or print $template->error();
 }
 syslog(LOG_INFO, "shutdown");
 closelog();
