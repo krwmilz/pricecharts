@@ -19,8 +19,9 @@ my $cfg = get_config();
 my $dbh = get_dbh($cfg->{"general"});
 
 my $http_cfg = $cfg->{"http"};
-my $include = $http_cfg->{"chroot"} . $http_cfg->{"templates"};
 my $output =  $http_cfg->{"chroot"} . $http_cfg->{"htdocs"};
+my $include = $output;
+# my $include = "/home/kyle/src/pricechart/html";
 
 print "info: including from: $include\n" if ($args{v});
 print "info: outputting to:  $output\n" if ($args{v});
@@ -58,8 +59,7 @@ my $vars = {
 	new_products => $new_products
 };
 
-$template->process("index.html", $vars, "index.html") || die $template->error() . "\n";
-copy("$include/pricechart.css", "$output/pricechart.css");
-print "info: $include/pricechart.css -> $output/\n" if ($args{v});
+$template->process("index.tt2", $vars, "index.html")
+	|| die "template: " . $template->error() . "\n";
 
 $dbh->disconnect();
