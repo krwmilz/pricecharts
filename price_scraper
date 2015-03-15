@@ -62,7 +62,7 @@ my $prices_sth = $dbh->prepare($sql);
 $sql = "update products set last_seen = ? where part_num = ?";
 my $products_sth = $dbh->prepare($sql);
 
-my $timestamp = strftime("%F %T", localtime);
+my $timestamp = strftime("%F %T> ", localtime);
 my ($start, @status, $i) = (time, "", -1);
 for my $vendor (sort keys %{$cfg->{"vendors"}}) {
 	my %props =	%{$cfg->{"vendors"}{$vendor}};
