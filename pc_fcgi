@@ -39,6 +39,7 @@ my $uid = getpwnam($uid_name) or die "error: user $uid_name does not exist\n";
 my $gid = getgrnam($gid_name) or die "error: group $gid_name does not exist\n";
 print "info: $uid_name:$gid_name -> $uid:$gid\n" if ($args{v});;
 
+# chroot early
 print "info: chrooting to $http_cfg{chroot}\n" if ($args{v});
 chroot($http_cfg{"chroot"});
 chdir("/");
@@ -49,7 +50,7 @@ $< = $> = $uid;
 print "info: uid:gid set to $<:$(\n" if ($args{v});
 
 print "info: opening syslog\n" if ($args{v});
-openlog("pricechart_fcgi", LOG_PID, LOG_DAEMON);
+openlog("pc_fcgi", LOG_PID, LOG_DAEMON);
 
 my $socket_file = $http_cfg{"socket_file"};
 if (-e $socket_file) {
@@ -67,8 +68,8 @@ my $db_dir = $http_cfg{"db_dir"};
 print "info: opening $db_dir/pricechart.db\n" if ($args{v});
 my $dbh = get_dbh($cfg->{"general"}, $db_dir);
 
-my $request = FCGI::Request(\*STDIN, \*STDOUT, \*STDERR, \%ENV,
-	$socket, FCGI::FAIL_ACCEPT_ON_INTR);
+my $request = FCGI::Request(\*STDIN, \*STDOUT, \*STDERR, \%ENV, $socket,
+	FCGI::FAIL_ACCEPT_ON_INTR);
 
 print "info: making template config\n" if ($args{v});
 my $config = { INCLUDE_PATH => $http_cfg{"templates"} };
@@ -80,7 +81,7 @@ my $sql = "select part_num, manufacturer, description from products " .
 my $search_sth = $dbh->prepare($sql);
 
 # intercept signals to shut down cleanly
-$SIG{INT} = \&child_sig;
+$SIG{INT} =  \&child_sig;
 $SIG{TERM} = \&child_sig;
 
 syslog(LOG_INFO, "startup");
