@@ -115,7 +115,7 @@ sub get_log
 	unless (-d substr($log_path, 0, rindex($log_path, '/'))) {
 		mkdir $log_path or die "couldn't mkdir $log_path: $!" ;
 	}
-	print "info: get_log: opening $log_path\n";
+	print "info: get_log: opening $log_path\n" if ($args{v});
 	open my $log, ">>", $log_path or die "can't open $log_path: $!";
 
 	if ($verbose) {
