@@ -85,6 +85,7 @@ while (my ($brand, $part_num, $description) = $parts_sth->fetchrow_array()) {
 			$line_color = $color;
 		}
 		printf "$info_hdr (%i data pairs)\n", scalar @xs if ($args{v});
+		next if (scalar @xs < 2);
 
 		my $px = compute_control_points(\@xs);
 		my $py = compute_control_points(\@ys);
@@ -171,6 +172,16 @@ while (my ($brand, $part_num, $description) = $parts_sth->fetchrow_array()) {
 		);
 	}
 
+	# giant hack, if the part number has / in it, make some directories
+	if ($part_num =~ /\//) {
+		print "info: $part_num: found '/' in file name\n" if ($args{v});
+		my $needed_dirs = substr($part_num, 0, rindex($part_num, '/'));
+
+		print "info: mkdiring $svg_dir/$needed_dirs\n" if ($args{v});
+		unless (-d "$svg_dir/$needed_dirs") {
+			mkdir "$svg_dir/$needed_dirs" or die "$!";
+		}
+	}
 	open my $svg_fh, ">", "$svg_dir/$part_num.svg" or die $!;
 	print $svg_fh $svg->xmlify;
 	close $svg_fh;
