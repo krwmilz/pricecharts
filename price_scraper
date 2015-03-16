@@ -145,26 +145,25 @@ sub get_valid_price
 	my $num_prices = @search_prices;
 	return undef if ($num_prices == 0);
 
-	print "info: $vendor: $dom_tag ($num_prices)\n" if ($args{v});
+	print "info: $vendor: $dom_tag: $num_prices elements\n" if ($args{v});
+	my $hdr = "$vendor: $dom_tag" . "[0]";
 
 	# do a fuzzy search for digit combinations that look like a price
 	# XXX: uses the first found price in the page
 	# XXX: this does not work on single digit prices, ie $7.00
 	my ($price, @others) = ($search_prices[0] =~ m/(\d[\d,]+)/);
-	return undef unless defined $price;
-
-	# print total regex matches we had above
-	$num_prices = @others + 1;
-	print "info: $vendor: $dom_tag" . "[0] ($num_prices)\n" if ($args{v});
-	return undef if (@others);
+	if (!defined $price && @others) {
+		print $log "error: $hdr: wrong number of regexs\n";
+		return undef;
+	}
 
 	# sanity check the numerical price value
 	$price =~ s/,//;
 	if ($price <= 0 || $price > 10000) {
-		print $log "error: $vendor: price $price out of range\n";
+		print $log "error: $hdr: price $price out of range\n";
 		return undef;
 	}
 
-	print "info: $vendor: $dom_tag" . "[0]: \$$price\n" if ($args{v});
+	print "info: $hdr: \$$price\n" if ($args{v});
 	return $price;
 }
