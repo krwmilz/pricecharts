@@ -66,7 +66,7 @@ my $socket = FCGI::OpenSocket($socket_file, 1024);
 
 my $db_dir = $http_cfg{"db_dir"};
 print "info: opening $db_dir/pricechart.db\n" if ($args{v});
-my $dbh = get_dbh($cfg->{"general"}, $db_dir);
+my $dbh = get_dbh($cfg->{"http"}, $db_dir, $args{v});
 
 my $request = FCGI::Request(\*STDIN, \*STDOUT, \*STDERR, \%ENV, $socket,
 	FCGI::FAIL_ACCEPT_ON_INTR);

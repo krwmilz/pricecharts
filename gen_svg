@@ -17,7 +17,7 @@ $| = 1 if ($args{v});
 
 # my $log = get_log("gen_svg");
 my $cfg = get_config();
-my $dbh = get_dbh($cfg->{"general"});
+my $dbh = get_dbh($cfg->{"http"}, undef, $args{v});
 
 my $svg_dir = $cfg->{"http"}{"chroot"} . $cfg->{"http"}{"htdocs"} . "/svg";
 print "info: rendering svgs to $svg_dir\n" if ($args{v});

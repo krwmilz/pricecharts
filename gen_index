@@ -16,7 +16,7 @@ getopts("v", \%args);
 $| = 1 if ($args{v});
 
 my $cfg = get_config();
-my $dbh = get_dbh($cfg->{"general"});
+my $dbh = get_dbh($cfg->{"http"}, undef, $args{v});
 
 my $work_dir =  $cfg->{"http"}{"chroot"} . $cfg->{"http"}{"htdocs"};
 print "info: work dir: $work_dir\n" if ($args{v});

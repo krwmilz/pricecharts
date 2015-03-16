@@ -16,7 +16,6 @@ sub get_config
 				'user_agent',
 				'email',
 				'smtp',
-				"db"
 			],
 		},
 		http => {
@@ -53,7 +52,7 @@ sub get_config
 sub get_dbh
 {
 	my $cfg = shift;
-	my $db_dir = shift || $cfg->{"db"};
+	my $db_dir = shift || $cfg->{"chroot"} . $cfg->{"db_dir"};
 	my $verbose = shift || undef;
 
 	mkdir $db_dir;

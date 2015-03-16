@@ -22,7 +22,7 @@ $| = 1 if ($args{v});
 
 my $cfg = get_config();
 my $ua  = new_ua($cfg->{"general"}, $args{v});
-my $dbh = get_dbh($cfg->{"general"}, undef, $args{v});
+my $dbh = get_dbh($cfg->{"http"}, undef, $args{v});
 my $tmp_file = "/tmp/product_scraper.txt";
 my $log = get_log($tmp_file, $args{v});
 srand;
