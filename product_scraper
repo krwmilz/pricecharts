@@ -8,6 +8,7 @@ use Email::Simple;
 use Email::Send;
 use Getopt::Std;
 use HTML::Grabber;
+use IO::Tee;
 use LWP::Simple;
 use PriceChart;
 use Term::ReadKey;
@@ -22,7 +23,8 @@ $| = 1 if ($args{v});
 my $cfg = get_config();
 my $ua  = new_ua($cfg->{"general"}, $args{v});
 my $dbh = get_dbh($cfg->{"general"}, undef, $args{v});
-# my $log = get_log($cfg->{"http"}, "products.txt", $args{v});
+my $tmp_file = "/tmp/product_scraper.txt";
+my $log = get_log($tmp_file, $args{v});
 srand;
 
 $dbh->do("create table if not exists products(" .
@@ -47,9 +49,9 @@ my $update_sth = $dbh->prepare($sql);
 #
 # Memory Express
 #
-my $mail = "Memory Express\n==============\n\n";
-$mail   .= "type                 ok percent errors new duration\n";
-$mail   .= "--------------- ------- ------- ------ --- --------\n";
+print $log "Memory Express\n==============\n\n";
+print $log "type                 ok percent errors new duration\n";
+print $log "--------------- ------- ------- ------ --- --------\n";
 
 my %product_map = (
 	"televisions" => "Televisions",
@@ -63,7 +65,8 @@ while (my ($type, $name) = each %product_map) {
 $update_sth = undef;
 $insert_sth = undef;
 $dbh->disconnect();
-send_email($mail, $args{v});
+$log->close();
+send_email($args{v});
 
 #
 # scrape an entire class of products, inserting or updating the db as needed.
@@ -116,7 +119,7 @@ sub mem_exp_scrape_class
 	}
 
 	my $ok = $new + $old;
-	$mail .= sprintf("%-15s %7s %6.1f%% %6i %3i %7is\n", $type,
+	print $log sprintf("%-15s %7s %6.1f%% %6i %3i %7is\n", $type,
 		"$ok/$total", $ok * 100.0 / $total, $err, $new, time - $start);
 }
 
@@ -133,7 +136,7 @@ sub mem_exp_get_thumbnails
 		"$name?PageSize=40&Page=";
 
 	# get first page of results
-	my $dom = get_dom($class_url . "1", $ua, $args{v});
+	my $dom = get_dom($class_url . "1", $ua, $args{v}, $log);
 	return undef if (!defined $dom);
 
 	my $pager_hdr = "$info_hdr: .AJAX_List_Pager";
@@ -159,7 +162,7 @@ sub mem_exp_get_thumbnails
 		sleep_rand($page_hdr, 5);
 
 		# get a search pages dom
-		$dom = get_dom($class_url . "$_", $ua, $args{v});
+		$dom = get_dom($class_url . "$_", $ua, $args{v}, $log);
 		next if (!defined $dom);
 
 		# each product thumbnail has class=PIV_Regular
@@ -198,7 +201,7 @@ sub mem_exp_scrape_thumbnail
 
 	# visit the extended description page
 	my $product_url = "http://www.memoryexpress.com/Products/";
-	my $product_dom = get_dom("$product_url$product_id", $ua, $args{v});
+	my $product_dom = get_dom("$product_url$product_id", $ua, $args{v}, $log);
 
 	# the part number is inside of id=ProductAdd always
 	my $part_num = get_tag_text($product_dom, "#ProductAdd", $error_hdr);
@@ -207,7 +210,7 @@ sub mem_exp_scrape_thumbnail
 	# extract the part number, always is text inside of the tag
 	($part_num) = ($part_num =~ m/Part #:\s*(.*)\r/);
 	if (!defined $part_num) {
-		print "$error_hdr: part num regex failed\n";
+		print $log "$error_hdr: part num regex failed\n";
 		return undef;
 	}
 
@@ -223,8 +226,8 @@ sub mem_exp_scrape_thumbnail
 		($brand) = ($brand =~ m/Brand: ([A-Za-z]+)/);
 	}
 	if (!defined $brand || $brand eq "") {
-		print "$error_hdr: .ProductBrand not found, html was:\n";
-		print "$html\n";
+		print $log "$error_hdr: .ProductBrand not found, html was:\n";
+		print $log "$html\n";
 		return undef;
 	}
 
@@ -246,8 +249,8 @@ sub get_tag_text
 
 	my $field = $dom->find($tag)->text();
 	if (!defined $field || $field eq "") {
-		print "$error_hdr: $tag not found or empty, html was:\n";
-		print $dom->html() . "\n";
+		print $log "$error_hdr: $tag not found or empty, html was:\n";
+		print $log $dom->html() . "\n";
 		return undef;
 	}
 
@@ -259,14 +262,15 @@ sub get_tag_text
 #
 sub send_email
 {
-	my $mail = shift;
 	my $verbose = shift || 0;
 
-	if ($verbose) {
-		print $mail;
-		return;
-	}
+	open my $fh, "<", $tmp_file or die "couldn't open $tmp_file: $!";
+	my $mail;
+	$mail .= $_ for (<$fh>);
+	close $fh;
+	unlink($tmp_file) or warn "couldn't unlink $tmp_file: $!";
 
+	return if ($verbose);
 	my $email = Email::Simple->create(
 		header => [
 			From	=> "Santa Claus <sc\@np.com>",

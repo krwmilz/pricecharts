@@ -73,6 +73,7 @@ sub get_dom
 	my $url = shift;
 	my $ua = shift;
 	my $verbose = shift;
+	my $log = shift;
 
 	my $resp = $ua->get($url);
 	if ($resp->is_success) {
@@ -81,8 +82,7 @@ sub get_dom
 		return HTML::Grabber->new(html => $resp->decoded_content);
 	}
 
-	print "error: get_dom: $url failed\n";
-	print "error: " . $resp->status_line . "\n";
+	print $log "error: get_dom: " . $resp->status_line . " $url\n";
 	return undef;
 }
 
@@ -109,13 +109,14 @@ sub new_ua
 
 sub get_log
 {
-	my $cfg = shift || return undef;
-	my $file = shift || return undef;
+	my $log_path = shift || return undef;
 	my $verbose = shift || 0;
-	my $path = $cfg->{"chroot"} . $cfg->{"logs"} . "/" . $file;
 
-	mkdir $log_dir;
-	open my $log, ">>", $path or die "can't open $path: $!";
+	unless (-d substr($log_path, 0, rindex($log_path, '/'))) {
+		mkdir $log_path or die "couldn't mkdir $log_path: $!" ;
+	}
+	print "info: get_log: opening $log_path\n";
+	open my $log, ">>", $log_path or die "can't open $log_path: $!";
 
 	if ($verbose) {
 		print "info: get_log: outputting to tee\n";
