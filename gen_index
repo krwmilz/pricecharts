@@ -18,8 +18,7 @@ $| = 1 if ($args{v});
 my $cfg = get_config();
 my $dbh = get_dbh($cfg->{"general"});
 
-my $http_cfg = $cfg->{"http"};
-my $work_dir =  $http_cfg->{"chroot"} . $http_cfg->{"htdocs"};
+my $work_dir =  $cfg->{"http"}{"chroot"} . $cfg->{"http"}{"htdocs"};
 print "info: work dir: $work_dir\n" if ($args{v});
 
 my $config = {
@@ -41,15 +40,16 @@ $query = "select count(distinct vendor) from prices";
 my ($v) = $dbh->selectrow_array($query);
 
 my $time = time - (7 * 24 * 60 * 60);
-$query = "select count(part_num) from products where first_seen > ?";
-my ($n) = $dbh->selectrow_array($query, undef, $time);
+$query = "select description, part_num from products where first_seen > $time";
+my $new_products = $dbh->selectall_arrayref($query);
+my $n = @$new_products;
 
 print "info: $m manufacturers, $p products ($n new), $v vendors\n" if ($args{v});
 my $vars = {
 	num_vendors => $v,
 	num_manufacturers => $m,
 	num_products => $p,
-	new_products => $n
+	new_products => $new_products
 };
 
 $template->process("index.tt2", $vars, "index.html")

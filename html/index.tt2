@@ -2,7 +2,7 @@
 	<div class="column">
 		<h1>Welcome</h1>
 
-		<p> Welcome to <em>Price</em><b>Chart</b>, a price comparison
+		<p> Welcome to <em>Price</em>Chart, a price comparison
 		service for consumer electronics.
 		Currently <b>[% num_products %]</b> products from
 		<b>[% num_manufacturers %]</b> manufacturers are tracked across
@@ -33,5 +33,14 @@
 		<p> This is important because the price difference between
 		different retailers for the same product is often hundreds of
 		dollars if not more. </p>
+	</div>
+
+	<div class="column">
+		<h1>New Products</h1>
+		<ul>
+			[% FOREACH new_product IN new_products %]
+			<li>[% new_product.0 %] [% new_product.1 %]
+			[% END %]
+		</ul>
 	</div>
 [% END %]
