@@ -36,10 +36,10 @@
 	</div>
 
 	<div class="column">
-		<h1>New Products</h1>
+		<h1>New Products ([% num_new %])</h1>
 		<ul>
 			[% FOREACH new_product IN new_products %]
-			<li>[% new_product.0 %] [% new_product.1 %]
+			<li>[% new_product.0 %]
 			[% END %]
 		</ul>
 	</div>

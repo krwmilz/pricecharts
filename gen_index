@@ -40,15 +40,16 @@ $query = "select count(distinct vendor) from prices";
 my ($v) = $dbh->selectrow_array($query);
 
 my $time = time - (7 * 24 * 60 * 60);
-$query = "select description, part_num from products where first_seen > $time";
+$query = "select description from products where first_seen > $time";
 my $new_products = $dbh->selectall_arrayref($query);
-my $n = @$new_products;
 
+my $n = @$new_products;
 print "info: $m manufacturers, $p products ($n new), $v vendors\n" if ($args{v});
 my $vars = {
 	num_vendors => $v,
 	num_manufacturers => $m,
 	num_products => $p,
+	num_new => $n,
 	new_products => $new_products
 };
 
