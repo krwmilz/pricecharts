@@ -57,6 +57,7 @@ sub get_dbh
 	my $verbose = shift || undef;
 
 	mkdir $db_dir;
+	print "info: get_dbh: opening $db_dir/pricechart.db\n" if ($verbose);
 	my $dbh = DBI->connect(
 		"dbi:SQLite:dbname=$db_dir/pricechart.db",
 		"",
@@ -64,7 +65,6 @@ sub get_dbh
 		{RaiseError => 1}
 	) or die $DBI::errstr;
 
-	print "info: get_dbh: opened $db_dir/pricechart.db\n" if ($verbose);
 	return $dbh;
 }
 
