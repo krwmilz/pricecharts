@@ -4,6 +4,7 @@ HTDOCS=/var/www/htdocs
 
 DEV_BIN=/home/kyle/src/pricechart
 BINS=price_scraper product_scraper gen_index pc_fcgi gen_svg
+# WARNING stupid idiom used below if adding > 1 item to LIBS!!
 LIBS=PriceChart.pm
 
 install:
@@ -20,6 +21,6 @@ install:
 	chown -R www $(HTDOCS)/pricechart
 
 uninstall:
-	rm /etc/rc.d/pc_fcgi
-	# rm $(PERL_LIBDATA)/$(LIBS)
+	# rm /etc/rc.d/pc_fcgi
+	rm $(PERL_LIBDATA)/$(LIBS)
 	# rm $(USR_LOCAL_BIN)/$(BINS)
