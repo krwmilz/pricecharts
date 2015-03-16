@@ -8,8 +8,11 @@
 	for <b>[% query %]</b>:</p>
 	
 	[% FOREACH part_num IN results %]
-	[% part_num.1 %] [% part_num.2 %] ([% part_num.0 %])<br>
-	<object data="/svg/[% part_num.0 %].svg" type="image/svg+xml">
-	</object>
+	<div class="product">
+		<b>[% part_num.1 %]</b> [% part_num.0 %]<br>
+		[% part_num.2 %] <br>
+		<object data="/svg/[% part_num.0 %].svg" type="image/svg+xml">
+		</object>
+	</div>
 	[% END %]
 [% END %]

@@ -35,6 +35,12 @@ p {
 	float: left;
 }
 
+.product {
+	border: 1px solid black;
+	padding: 10px;
+	margin: 10px;
+}
+
 @media (max-width: 640px) {
 	.column {
 		width: 90%;

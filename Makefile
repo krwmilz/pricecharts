@@ -3,7 +3,7 @@ PERL_LIBDATA=/usr/local/libdata/perl5/site_perl
 HTDOCS=/var/www/htdocs
 
 DEV_BIN=/home/kyle/src/pricechart
-BINS=price_scraper product_scraper gen_index pc_fcgi
+BINS=price_scraper product_scraper gen_index pc_fcgi gen_svg
 LIBS=PriceChart.pm
 
 install:
@@ -15,6 +15,7 @@ install:
 	chmod 555 /etc/rc.d/pc_fcgi
 
 	mkdir -p $(HTDOCS)/pricechart
+	mkdir -p $(HTDOCS)/pricechart/svg
 	cp -R html/* $(HTDOCS)/pricechart/
 	chown -R www $(HTDOCS)/pricechart
 
