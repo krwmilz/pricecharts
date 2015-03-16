@@ -14,8 +14,9 @@ install:
 		> /etc/rc.d/pc_fcgi
 	chmod 555 /etc/rc.d/pc_fcgi
 
-	mkdir $(HTDOCS)/pricechart
+	mkdir -p $(HTDOCS)/pricechart
 	cp -R html/* $(HTDOCS)/pricechart/
+	chown -R www $(HTDOCS)/pricechart
 
 uninstall:
 	rm /etc/rc.d/pc_fcgi
