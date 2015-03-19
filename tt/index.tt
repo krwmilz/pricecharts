@@ -39,7 +39,8 @@
 		<h1>New Products ([% num_new %])</h1>
 		<ul>
 			[% FOREACH new_product IN new_products %]
-			<li>[% new_product.0 %]
+			<li><a href="/products/[% new_product.2 %].html">
+					[% new_product.0 %] [% new_product.1 %]</a>
 			[% END %]
 		</ul>
 	</div>
