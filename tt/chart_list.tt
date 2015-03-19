@@ -1,5 +1,6 @@
 [% WRAPPER wrapper.tt %]
-	<h1>[% name %]</h1>
+	<h1><img class="logo" src="/logo/[% name_lc %].svg"></img>
+		([% num_products %] total)</h1>
 	[% FOREACH part_num IN products %]
 		<div class="product">
 			<img class="logo_small" src="/logo/[% part_num.1 %].svg"></img>

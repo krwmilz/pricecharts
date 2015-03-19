@@ -89,7 +89,9 @@ sub gen_link_page
 			scalar @$part_nums) if ($args{v});
 
 		my $vars = {
-			name => $dir_prefix,
+			name => $result,
+			name_lc => $result_lc,
+			num_products => scalar @$part_nums,
 			products => $part_nums,
 		};
 		$template->process("chart_list.tt", $vars,
