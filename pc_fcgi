@@ -72,7 +72,7 @@ my $request = FCGI::Request(\*STDIN, \*STDOUT, \*STDERR, \%ENV, $socket,
 	FCGI::FAIL_ACCEPT_ON_INTR);
 
 print "info: making template, include_path = $http_cfg{htdocs}\n" if ($args{v});
-my $config = { INCLUDE_PATH => $http_cfg{"htdocs"} };
+my $config = { INCLUDE_PATH => "$http_cfg{htdocs}/tt" };
 my $template = Template->new($config) || die $Template::ERROR . "\n";
 
 # db query we take input from the user for
@@ -101,7 +101,7 @@ while ($request->Accept() >= 0) {
 		results => $products
 	};
 
-	$template->process("tt/search.tt", $vars) or print $template->error();
+	$template->process("search.tt", $vars) or print "template: " . $template->error();
 }
 syslog(LOG_INFO, "shutdown");
 closelog();
