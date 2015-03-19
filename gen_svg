@@ -92,8 +92,13 @@ while (my ($brand, $part_num, $description) = $parts_sth->fetchrow_array()) {
 			-closed => "false"
 		);
 
+		my $tag = $svg->anchor(
+			-href => $cfg->{vendors}{$vendor}{search_url} . $part_num,
+			target => "new_window"
+		);
+
 		# polyline sucks, spline would look nicer
-		$svg->polyline(
+		$tag->polyline(
 			%$points, id => $vendor,
 			style => {
 				"fill-opacity" => 0, fill => "#$line_color",
