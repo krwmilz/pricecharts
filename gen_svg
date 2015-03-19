@@ -15,7 +15,6 @@ getopts("av", \%args);
 
 $| = 1 if ($args{v});
 
-# my $log = get_log("gen_svg");
 my $cfg = get_config();
 my $dbh = get_dbh($cfg->{"http"}, undef, $args{v});
 
@@ -30,9 +29,8 @@ my $total_width = $right + $width + $left;
 my $total_height = $top + $height + $bottom;
 
 if ($args{v}) {
-	print  "info: left, width, right  = $left, $width, $right\n";
-	print  "info: top, height, bottom = $top, $height, $bottom\n";
-	printf "info: total size = %ix%i\n", $total_width, $total_height;
+	print  "info: left, width, right, total  = $left, $width, $right, $total_width\n";
+	print  "info: top, height, bottom, total = $top, $height, $bottom, $total_height\n";
 }
 
 my $sql = "select date, price, color from prices where " .
@@ -46,35 +44,40 @@ $sql = "select manufacturer, part_num, description from products";
 my $parts_sth = $dbh->prepare($sql);
 
 $parts_sth->execute();
-print "info: generating svgs  ";
-my ($raw_total, $total, $series) = (0, 0, 0);
+print "info: generating svg's  ";
+my ($raw_total, $rendered_total, $points, $series) = (0, 0, 0, 0);
 while (my ($brand, $part_num, $description) = $parts_sth->fetchrow_array()) {
 	$raw_total++;
+	spin();
+
+	# make sure we have at least one price to work with
 	$sql = "select min(date), max(date), min(price), max(price) " .
 		"from prices where part_num = ?";
 	my ($x_min, $x_max, $y_min, $y_max) =
 		$dbh->selectrow_array($sql, undef, $part_num);
-	# make sure we have at least one price to work with
 	next unless (defined $x_min);
 
 	# avoid division by zero
 	my ($domain, $range) = ($x_max - $x_min, $y_max - $y_min);
 	next if ($domain == 0 || $range == 0);
 
+	# clamp the total size of this thing with viewBox
 	my $svg = SVG->new(viewBox => "0 0 $total_width $total_height");
 	my ($x_scale, $y_scale) = ($width / $domain, $height / $range);
 
+	# render each series
 	$vendor_sth->execute($part_num);
 	while (my ($vendor) = $vendor_sth->fetchrow_array()) {
-		spin();
-
 		my (@xs, @ys);
-		$point_sth->execute($part_num, $vendor);
 		my $line_color = "#000";
+
+		$point_sth->execute($part_num, $vendor);
 		while (my ($date, $price, $color) = $point_sth->fetchrow_array) {
+			# transform and clamp real world coordinates
 			push @xs, ($date - $x_min) * $x_scale + $left;
 			push @ys, ($price - $y_min) * $y_scale + $top;
 
+			# small filled in circles to indicate data points
 			$svg->circle(
 				cx => $xs[-1], cy => $ys[-1],
 				r => 2,
@@ -84,22 +87,19 @@ while (my ($brand, $part_num, $description) = $parts_sth->fetchrow_array()) {
 				}
 			);
 			$line_color = $color;
+			$points++;
 		}
 		my $points = $svg->get_path(
-			x => \@xs, y => \@ys,
-			-type => "polyline",
+			x => \@xs, y => \@ys, -type => "polyline",
 			-closed => "false"
 		);
 
 		# polyline sucks, spline would look nicer
 		$svg->polyline(
-			%$points,
-			id => $vendor,
+			%$points, id => $vendor,
 			style => {
-				"fill-opacity" => 0,
-				fill => "#$line_color",
-				stroke => "#$line_color",
-				"stroke-width" => 2,
+				"fill-opacity" => 0, fill => "#$line_color",
+				stroke => "#$line_color", "stroke-width" => 2,
 			}
 		);
 		$series++;
@@ -107,43 +107,35 @@ while (my ($brand, $part_num, $description) = $parts_sth->fetchrow_array()) {
 
 	# when graph is loaded make a sliding motion show the graph lines
 	my $mask = $svg->rectangle(
-		x => 0, y => 0,
-		width => 1000, height => 250,
-		rx => 0, ry => 0,
-		id => "mask",
-		fill => "#FFF",
+		x => 0, y => 0, width => 1000, height => 250, rx => 0, ry => 0,
+		id => "mask", fill => "#FFF"
 	);
 	$mask->animate(
-		attributeName => "x",
-		values => "0;1000",
-		dur => "0.8s",
-		fill => "freeze",
-		-method => ""
+		attributeName => "x", values => "0;1000", dur => "0.8s",
+		fill => "freeze", -method => ""
 	);
 
+	# prices along the side
 	my $num_labels = 5;
 	for (0..$num_labels) {
 		my $price = $y_max - $range * $_ / $num_labels;
 		my $y = $top + $height * $_ / $num_labels;
 
 		$svg->text(
-			id => $_,
-			x => $left + $width + 20,
-			y => $y,
+			id => $_, x => $left + $width + 20, y => $y,
 			style => "font-size: 14px; fill: #666",
 			"text-anchor" => "start"
 		)->cdata("\$$price");
 
 		$svg->line(
-			id => "line_$_",
-			x1 => $left, y1 => $y,
+			id => "line_$_", x1 => $left, y1 => $y,
 			x2 => $total_width - $right, y2 => $y,
-			fill => "#CCC",
-			stroke => "#CCC",
+			fill => "#CCC", stroke => "#CCC",
 			"stroke-width" => 1,
 		);
 	}
 
+	# dates along the bottom
 	for (0..$num_labels) {
 		my $time = $x_min + $_ * $domain / $num_labels;
 		my $date = strftime "%b %e %Y", localtime($time);
@@ -168,27 +160,20 @@ while (my ($brand, $part_num, $description) = $parts_sth->fetchrow_array()) {
 
 	# giant hack, if the part number has / in it, make some directories
 	if ($part_num =~ /\//) {
-		# print "info: $part_num: found '/' in file name\n" if ($args{v});
 		my $needed_dirs = substr($part_num, 0, rindex($part_num, '/'));
-
-		unless (-d "$svg_dir/$needed_dirs") {
-			print "info: mkdiring $svg_dir/$needed_dirs\n" if ($args{v});
-			mkdir "$svg_dir/$needed_dirs" or die "$!";
-		}
+		xmkdir("$svg_dir/$needed_dirs", $args{v});
 	}
-	open my $svg_fh, ">", "$svg_dir/$part_num.svg" or die $!;
+	open my $svg_fh, ">", "$svg_dir/$part_num.svg" or
+		die "couldn't open $svg_dir/$part_num: $!";
 	print $svg_fh $svg->xmlify;
 	close $svg_fh;
 
-	$total++;
+	$rendered_total++;
 }
 print "\n";
-printf "info: %i svgs rendered (%i skipped) with %i series total\n", $total,
-	$raw_total - $total, $series;
+printf "info: %i svg's rendered (%i skipped), %i series (%i points)\n",
+	$rendered_total, $raw_total - $rendered_total, $series, $points;
 
-# print $log @$part_nums . " products generated\n";
-
-# close $log;
 $dbh->disconnect();
 
 my $state = 0;
@@ -197,5 +182,5 @@ sub spin
 	my @spin_states = ("-", "\\", "|", "/");
 
 	print "\b";
-	print $spin_states[$state++ % 4];
+	print $spin_states[++$state % 4];
 }
