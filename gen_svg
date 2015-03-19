@@ -11,7 +11,7 @@ use PriceChart;
 
 
 my %args;
-getopts("v", \%args);
+getopts("av", \%args);
 
 $| = 1 if ($args{v});
 
@@ -46,7 +46,10 @@ $sql = "select manufacturer, part_num, description from products";
 my $parts_sth = $dbh->prepare($sql);
 
 $parts_sth->execute();
+print "info: generating svgs  ";
+my ($raw_total, $total, $series) = (0, 0, 0);
 while (my ($brand, $part_num, $description) = $parts_sth->fetchrow_array()) {
+	$raw_total++;
 	$sql = "select min(date), max(date), min(price), max(price) " .
 		"from prices where part_num = ?";
 	my ($x_min, $x_max, $y_min, $y_max) =
@@ -58,14 +61,12 @@ while (my ($brand, $part_num, $description) = $parts_sth->fetchrow_array()) {
 	my ($domain, $range) = ($x_max - $x_min, $y_max - $y_min);
 	next if ($domain == 0 || $range == 0);
 
-	print "info: $part_num: domain = $domain, range = $range\n" if ($args{v});
-
 	my $svg = SVG->new(viewBox => "0 0 $total_width $total_height");
 	my ($x_scale, $y_scale) = ($width / $domain, $height / $range);
 
 	$vendor_sth->execute($part_num);
 	while (my ($vendor) = $vendor_sth->fetchrow_array()) {
-		my $info_hdr = "info: $part_num: $vendor";
+		spin();
 
 		my (@xs, @ys);
 		$point_sth->execute($part_num, $vendor);
@@ -84,23 +85,15 @@ while (my ($brand, $part_num, $description) = $parts_sth->fetchrow_array()) {
 			);
 			$line_color = $color;
 		}
-		printf "$info_hdr (%i data pairs)\n", scalar @xs if ($args{v});
-		next if (scalar @xs < 2);
+		my $points = $svg->get_path(
+			x => \@xs, y => \@ys,
+			-type => "polyline",
+			-closed => "false"
+		);
 
-		my $px = compute_control_points(\@xs);
-		my $py = compute_control_points(\@ys);
-		my $p;
-		for (0..(scalar @xs - 2)) {
-			$p .= sprintf("M %f %f C %f %f %f %f %f %f ",
-				$xs[$_], $ys[$_],
-				$px->{"p1"}[$_], $py->{"p1"}[$_],
-				$px->{"p2"}[$_], $py->{"p2"}[$_],
-				$xs[$_ + 1], $ys[$_ + 1]
-			);
-		}
-		print "$info_hdr: making path, color = $line_color\n" if ($args{v});
-		$svg->path(
-			d => $p,
+		# polyline sucks, spline would look nicer
+		$svg->polyline(
+			%$points,
 			id => $vendor,
 			style => {
 				"fill-opacity" => 0,
@@ -109,6 +102,7 @@ while (my ($brand, $part_num, $description) = $parts_sth->fetchrow_array()) {
 				"stroke-width" => 2,
 			}
 		);
+		$series++;
 	}
 
 	# when graph is loaded make a sliding motion show the graph lines
@@ -174,7 +168,7 @@ while (my ($brand, $part_num, $description) = $parts_sth->fetchrow_array()) {
 
 	# giant hack, if the part number has / in it, make some directories
 	if ($part_num =~ /\//) {
-		print "info: $part_num: found '/' in file name\n" if ($args{v});
+		# print "info: $part_num: found '/' in file name\n" if ($args{v});
 		my $needed_dirs = substr($part_num, 0, rindex($part_num, '/'));
 
 		unless (-d "$svg_dir/$needed_dirs") {
@@ -185,59 +179,23 @@ while (my ($brand, $part_num, $description) = $parts_sth->fetchrow_array()) {
 	open my $svg_fh, ">", "$svg_dir/$part_num.svg" or die $!;
 	print $svg_fh $svg->xmlify;
 	close $svg_fh;
+
+	$total++;
 }
+print "\n";
+printf "info: %i svgs rendered (%i skipped) with %i series total\n", $total,
+	$raw_total - $total, $series;
 
 # print $log @$part_nums . " products generated\n";
 
 # close $log;
 $dbh->disconnect();
 
-# shamefully ported javascript from
-# http://www.particleincell.com/wp-content/uploads/2012/06/bezier-spline.js
-sub compute_control_points
+my $state = 0;
+sub spin
 {
-	my $K = shift;
-	my $n = @$K - 1;
+	my @spin_states = ("-", "\\", "|", "/");
 
-	my (@p1, @p2);
-	my (@a, @b, @c, @r);
-
-	# left segment
-	$a[0] = 0;
-	$b[0] = 2;
-	$c[0] = 1;
-	$r[0] = $K->[0] + 2 * $K->[1];
-
-	# internal segments
-	for (1..($n - 2)) {
-		$a[$_] = 1;
-		$b[$_] = 4;
-		$c[$_] = 1;
-		$r[$_] = 4 * $K->[$_] + 2 * $K->[$_ + 1];
-	}
-
-	# right segment
-	$a[$n - 1] = 2;
-	$b[$n - 1] = 7;
-	$c[$n - 1] = 0;
-	$r[$n - 1] = 8 * $K->[$n - 1] + $K->[$n];
-
-	# solves Ax = b with the Thomas algorithm
-	for (1..($n - 1)) {
-		my $m = $a[$_] / $b[$_ - 1];
-		$b[$_] = $b[$_] - $m * $c[$_ - 1];
-		$r[$_] = $r[$_] - $m * $r[$_ - 1];
-	}
-
-	$p1[$n - 1] = $r[$n - 1] / $b[$n - 1];
-	for (reverse(0..($n - 2))) {
-		$p1[$_] = ($r[$_] - $c[$_] * $p1[$_ + 1]) / $b[$_];
-	}
-
-	for (0..($n - 2)) {
-		$p2[$_] = 2 * $K->[$_ + 1] - $p1[$_ + 1];
-	}
-	$p2[$n - 1] = 0.5 * ($K->[$n] + $p1[$n - 1]);
-
-	return {"p1" => \@p1, "p2" => \@p2};
+	print "\b";
+	print $spin_states[$state++ % 4];
 }
