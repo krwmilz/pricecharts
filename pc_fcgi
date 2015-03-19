@@ -101,7 +101,7 @@ while ($request->Accept() >= 0) {
 		results => $products
 	};
 
-	$template->process("search.tt2", $vars) or print $template->error();
+	$template->process("tt/search.tt", $vars) or print $template->error();
 }
 syslog(LOG_INFO, "shutdown");
 closelog();

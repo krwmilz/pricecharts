@@ -7,7 +7,9 @@
 	<link rel="stylesheet" type="text/css" href="/pricechart.css" />
 </head>
 <body>
-	<a id="title" href='/'><em>Price</em><b>Chart</b></a>
+	<a id="title" href="/"><em>Price</em><b>Chart</b></a>
+	<a href="/manufacturers.html">Manufacturers</a>
+	<a href="/vendors.html">Retailers</a>
 	<form method="get" action="/search.html">
 		<fieldset>
 			<input type="text" name="q" />
@@ -19,8 +21,8 @@
 	[% content %]
 
 	<hr class="clear_both">
-	<div id="footer">
-		<a href="mailto:kyle@getaddrinfo.net">Feedback/Donate</a>
-	</div>
+	<!--div id="footer">
+		<a href="mailto:not_real@getaddrinfo.net">Feedback/Donate</a>
+	</div-->
 </body>
 </html>

@@ -6,6 +6,7 @@ DEV_BIN=/home/kyle/src/pricechart
 BINS=price_scraper product_scraper gen_index pc_fcgi gen_svg
 # WARNING stupid idiom used below if adding > 1 item to LIBS!!
 LIBS=PriceChart.pm
+HTML=tt logo pricechart.css
 
 install:
 	cp $(BINS) $(USR_LOCAL_BIN)/
@@ -17,8 +18,8 @@ install:
 
 	mkdir -p $(HTDOCS)/pricechart
 	mkdir -p $(HTDOCS)/pricechart/svg
-	cp -R html/* $(HTDOCS)/pricechart/
-	chown -R www $(HTDOCS)/pricechart
+	cp -R $(HTML) $(HTDOCS)/pricechart/
+	chown -R www:daemon $(HTDOCS)/pricechart
 
 uninstall:
 	# rm /etc/rc.d/pc_fcgi

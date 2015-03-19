@@ -8,6 +8,7 @@ use Getopt::Std;
 use File::Copy;
 use PriceChart;
 use Template;
+use URI::Escape;
 
 
 my %args;
@@ -18,42 +19,113 @@ $| = 1 if ($args{v});
 my $cfg = get_config();
 my $dbh = get_dbh($cfg->{"http"}, undef, $args{v});
 
-my $work_dir =  $cfg->{"http"}{"chroot"} . $cfg->{"http"}{"htdocs"};
-print "info: work dir: $work_dir\n" if ($args{v});
+my $work_dir =  $cfg->{http}{chroot} . $cfg->{http}{htdocs};
+print "info: working dir: $work_dir\n" if ($args{v});
 
 my $config = {
 	INTERPOLATE => 1,
 	POST_CHOMP => 1,
 	EVAL_PERL => 1,
-	INCLUDE_PATH => $work_dir,
+	INCLUDE_PATH => "$work_dir/tt",
 	OUTPUT_PATH => $work_dir
 };
-my $template = Template->new($config);
+my $template = Template->new($config)
+	|| die Template->error() . "\n";
 
-my $query = "select count(distinct manufacturer) from products";
-my ($m) = $dbh->selectrow_array($query);
+# xmkdir $cfg->{http} . "/manufacturers";
+my $sql = "select distinct manufacturer from products";
+# my $manuf_sth = $dbh->prepare($sql);
+# $manuf_sth->execute();
+# while (my ($manufacturer) = $manuf_sth->fetchrow_array()) {
+my $manufacturers = $dbh->selectall_arrayref($sql);
+my @manufacturer_list;
+for my $manufacturer (@$manufacturers) {
+	$manufacturer = $manufacturer->[0];
+	my $manuf_lc = lc($manufacturer);
 
-$query = "select count(part_num) from products";
-my ($p) = $dbh->selectrow_array($query);
+	$sql = "select part_num, manufacturer, description from products where manufacturer = ?";
+	my $part_nums = $dbh->selectall_arrayref($sql, undef, $manufacturer);
+	printf("info: manufacturers/$manuf_lc.html: %i products\n",
+		scalar @$part_nums) if ($args{v});
 
-$query = "select count(distinct vendor) from prices";
-my ($v) = $dbh->selectrow_array($query);
+	my $vars = {
+		name => $manufacturer,
+		products => $part_nums,
+	};
+	$template->process("chart_list.tt", $vars,
+		"manufacturers/$manuf_lc.html"); # error checking!
+
+	push @manufacturer_list, [$manufacturer, $manuf_lc];
+}
+
+# manufacturers.html
+my $vars = {
+	name => "Manufacturers",
+	name_lc => "manufacturers",
+	num_manufacturers => scalar @manufacturer_list,
+	manufacturers => \@manufacturer_list,
+};
+print "info: manufacturers.html\n";
+$template->process("link_list.tt", $vars, "manufacturers.html")
+	|| die "template: " . $template->error() . "\n";
+
+
+# vendors/*.html
+$sql = "select distinct vendor from prices";
+my $vendors = $dbh->selectall_arrayref($sql);
+my @vendor_list;
+for my $vendor (@$vendors) {
+	$vendor = $vendor->[0];
+	my $vendor_lc = lc($vendor);
+
+	$sql = "select distinct part_num from prices where vendor = ?";
+	my $part_nums = $dbh->selectall_arrayref($sql, undef, $vendor);
+	printf("info: vendors/$vendor_lc.html: %i products\n",
+		scalar @$part_nums) if ($args{v});
+
+	my $vars = {
+		name => $vendor,
+		products => $part_nums,
+	};
+	$template->process("chart_list.tt", $vars,
+		"vendors/$vendor_lc.html"); # error checking!
+
+	push @vendor_list, [$vendor, uri_escape($vendor_lc)];
+}
+
+# vendors.html
+$vars = {
+	name => "Vendors",
+	name_lc => "vendors",
+	num_manufacturers => scalar @$vendors,
+	manufacturers => \@vendor_list,
+};
+print "info: vendors.html\n";
+$template->process("link_list.tt", $vars, "vendors.html")
+	|| die "template: " . $template->error() . "\n";
+
+# index.html
+$sql = "select count(part_num) from products";
+my ($p) = $dbh->selectrow_array($sql);
+
+$sql = "select count(distinct vendor) from prices";
+my ($v) = $dbh->selectrow_array($sql);
 
 my $time = time - (7 * 24 * 60 * 60);
-$query = "select description from products where first_seen > $time";
-my $new_products = $dbh->selectall_arrayref($query);
+$sql = "select description from products where first_seen > $time";
+my $new_products = $dbh->selectall_arrayref($sql);
 
 my $n = @$new_products;
-print "info: $m manufacturers, $p products ($n new), $v vendors\n" if ($args{v});
-my $vars = {
+# print "info: manufacturers, $p products ($n new), $v vendors\n" if ($args{v});
+$vars = {
 	num_vendors => $v,
-	num_manufacturers => $m,
+	num_manufacturers => scalar @$manufacturers,
 	num_products => $p,
 	num_new => $n,
-	new_products => $new_products
+	new_products => $new_products,
 };
 
-$template->process("index.tt2", $vars, "index.html")
+$template->process("index.tt", $vars, "index.html")
 	|| die "template: " . $template->error() . "\n";
 
 $dbh->disconnect();
