@@ -4,7 +4,7 @@ use DBI;
 use Exporter;
 
 @ISA = ("Exporter");
-@EXPORT = qw(get_config get_dom get_log get_dbh trunc_line new_ua);
+@EXPORT = qw(get_config get_dom get_log get_dbh trunc_line new_ua xmkdir);
 
 
 sub get_config
@@ -146,6 +146,17 @@ sub trunc_line
 
 	my $chopped = substr($line, 0, $len);
 	return $chopped . "...";
+}
+
+sub xmkdir
+{
+	my $dir = shift;
+	my $verbose = shift;
+
+	unless (-d $dir) {
+		print "info: mkdiring $dir\n" if ($verbose);
+		mkdir $dir or die "couldn't mkdir $dir: $!";
+	}
 }
 
 1;
