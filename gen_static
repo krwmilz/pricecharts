@@ -53,7 +53,6 @@ $sql = "select description from products where first_seen > $time";
 my $new_products = $dbh->selectall_arrayref($sql);
 
 my $n = @$new_products;
-print "info: $m manufacturers, $p products ($n new), $v vendors\n" if ($args{v});
 my $vars = {
 	num_vendors => $v,
 	num_manufacturers => $m,
@@ -61,10 +60,10 @@ my $vars = {
 	num_new => $n,
 	new_products => $new_products,
 };
-
 $template->process("index.tt", $vars, "index.html")
 	|| die "template: " . $template->error() . "\n";
 
+print "info: $m manufacturers, $p products ($n new), $v vendors\n" if ($args{v});
 $dbh->disconnect();
 
 # generate a page of links to pages of products
