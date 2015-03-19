@@ -16,13 +16,11 @@ getopts("av", \%args);
 $| = 1 if ($args{v});
 
 my $cfg = get_config();
-my $dbh = get_dbh($cfg->{"http"}, undef, $args{v});
+my $dbh = get_dbh($cfg->{http}, undef, $args{v});
 
-my $svg_dir = $cfg->{"http"}{"chroot"} . $cfg->{"http"}{"htdocs"} . "/svg";
-print "info: rendering svgs to $svg_dir\n" if ($args{v});
-unless (-d $svg_dir) {
-	mkdir $svg_dir or die "can't mkdir $svg_dir: $!";
-}
+my $svg_dir = $cfg->{http}{chroot} . $cfg->{http}{htdocs} . "/svg";
+xmkdir($svg_dir, $args{v});
+print "info: svg output is $svg_dir\n" if ($args{v});
 
 my ($left, $width, $right, $top, $height, $bottom) = (30, 900, 70, 20, 160, 20);
 my $total_width = $right + $width + $left;
