@@ -55,7 +55,7 @@ sub get_dbh
 	my $db_dir = shift || $cfg->{"chroot"} . $cfg->{"db_dir"};
 	my $verbose = shift || undef;
 
-	mkdir $db_dir;
+	xmkdir($db_dir, $verbose);
 	print "info: get_dbh: opening $db_dir/pricechart.db\n" if ($verbose);
 	my $dbh = DBI->connect(
 		"dbi:SQLite:dbname=$db_dir/pricechart.db",
@@ -111,10 +111,9 @@ sub get_log
 	my $log_path = shift || return undef;
 	my $verbose = shift || 0;
 
-	unless (-d substr($log_path, 0, rindex($log_path, '/'))) {
-		mkdir $log_path or die "couldn't mkdir $log_path: $!" ;
-	}
-	print "info: get_log: opening $log_path\n" if ($args{v});
+	# if $log_path has a / in it, make sure the path to it is made
+	xmkdir(substr($log_path, 0, rindex($log_path, '/')));
+	print "info: get_log: open'ing $log_path in append mode\n" if ($args{v});
 	open my $log, ">>", $log_path or die "can't open $log_path: $!";
 
 	if ($verbose) {
