@@ -179,7 +179,7 @@ while (my ($brand, $part_num, $description) = $parts_sth->fetchrow_array()) {
 
 		unless (-d "$svg_dir/$needed_dirs") {
 			print "info: mkdiring $svg_dir/$needed_dirs\n" if ($args{v});
-			mkdir -p "$svg_dir/$needed_dirs" or die "$!";
+			mkdir "$svg_dir/$needed_dirs" or die "$!";
 		}
 	}
 	open my $svg_fh, ">", "$svg_dir/$part_num.svg" or die $!;
