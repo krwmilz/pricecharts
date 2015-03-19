@@ -44,11 +44,11 @@ $sql = "select manufacturer, part_num, description from products";
 my $parts_sth = $dbh->prepare($sql);
 
 $parts_sth->execute();
-print "info: generating svg's  ";
+print "info: generating svg's  " if ($args{v});
 my ($raw_total, $rendered_total, $points, $series) = (0, 0, 0, 0);
 while (my ($brand, $part_num, $description) = $parts_sth->fetchrow_array()) {
 	$raw_total++;
-	spin();
+	spin() if ($args{v});
 
 	# make sure we have at least one price to work with
 	$sql = "select min(date), max(date), min(price), max(price) " .
@@ -170,9 +170,12 @@ while (my ($brand, $part_num, $description) = $parts_sth->fetchrow_array()) {
 
 	$rendered_total++;
 }
-print "\n";
-printf "info: %i svg's rendered (%i skipped), %i series (%i points)\n",
-	$rendered_total, $raw_total - $rendered_total, $series, $points;
+
+if ($args{v}) {
+	print "\n";
+	printf "info: %i svg's rendered (%i skipped), %i series (%i points)\n",
+		$rendered_total, $raw_total - $rendered_total, $series, $points;
+}
 
 $dbh->disconnect();
 
