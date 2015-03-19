@@ -154,7 +154,7 @@ sub xmkdir
 	my $verbose = shift;
 
 	unless (-d $dir) {
-		print "info: mkdiring $dir\n" if ($verbose);
+		print "info: mkdir'ing $dir\n" if ($verbose);
 		mkdir $dir or die "couldn't mkdir $dir: $!";
 	}
 }
