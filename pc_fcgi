@@ -54,7 +54,7 @@ openlog("pc_fcgi", LOG_PID, LOG_DAEMON);
 
 my $socket_file = $http_cfg{"socket_file"};
 if (-e $socket_file) {
-	my $msg = "socket file $socket_file exists\n";
+	my $msg = "socket file $socket_file exists, not starting\n";
 	print "error: $msg\n" if ($args{v});
 	syslog(LOG_ERR, $msg);
 	exit;
@@ -64,9 +64,8 @@ if (-e $socket_file) {
 print "info: opening $socket_file\n" if ($args{v});
 my $socket = FCGI::OpenSocket($socket_file, 1024);
 
-my $db_dir = $http_cfg{"db_dir"};
-print "info: opening $db_dir/pricechart.db\n" if ($args{v});
-my $dbh = get_dbh($cfg->{"http"}, $db_dir, $args{v});
+print "info: opening $http_cfg{db_dir}/pricechart.db\n" if ($args{v});
+my $dbh = get_dbh($cfg->{"http"}, $http_cfg{db_dir}, $args{v});
 
 my $request = FCGI::Request(\*STDIN, \*STDOUT, \*STDERR, \%ENV, $socket,
 	FCGI::FAIL_ACCEPT_ON_INTR);
