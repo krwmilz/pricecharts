@@ -3,7 +3,7 @@ PERL_LIBDATA=/usr/local/libdata/perl5/site_perl
 HTDOCS=/var/www/htdocs
 
 DEV_BIN=/home/kyle/src/pricechart
-BINS=price_scraper product_scraper gen_index pc_fcgi gen_svg
+BINS=gen_static gen_svg pc_fcgi price_scraper product_scraper
 # WARNING stupid idiom used below if adding > 1 item to LIBS!!
 LIBS=PriceChart.pm
 HTML=tt logo pricechart.css
