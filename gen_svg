@@ -11,7 +11,7 @@ use PriceChart;
 
 
 my %args;
-getopts("av", \%args);
+getopts("nv", \%args);
 
 $| = 1 if ($args{v});
 
@@ -57,18 +57,20 @@ while (my ($brand, $part_num, $description) = $parts_sth->fetchrow_array()) {
 
 	# avoid division by zero
 	my ($domain, $range) = ($x_max - $x_min, $y_max - $y_min);
-	next if ($domain == 0 || $range == 0);
+	$domain = (24 * 60 * 60) if ($domain < (24 * 60 * 60));
+	$range = 20 if ($range < 20);
 
 	# clamp the total size of this thing with viewBox
 	my $svg = SVG->new(viewBox => "0 0 $total_width $total_height");
 	my ($x_scale, $y_scale) = ($width / $domain, $height / $range);
 
-	# render each series
+	# render each vendor as a different series
 	$vendor_sth->execute($part_num);
 	while (my ($vendor) = $vendor_sth->fetchrow_array()) {
 		my (@xs, @ys);
 		my $line_color = "#000";
 
+		# gather all points in the series
 		$point_sth->execute($part_num, $vendor);
 		while (my ($date, $price, $color) = $point_sth->fetchrow_array) {
 			# transform and clamp real world coordinates
@@ -76,7 +78,10 @@ while (my ($brand, $part_num, $description) = $parts_sth->fetchrow_array()) {
 			push @ys, ($price - $y_min) * $y_scale + $top;
 
 			# small filled in circles to indicate data points
-			$svg->circle(
+			my $tag = $svg->anchor(
+				-href => $cfg->{vendors}{$vendor}{search_url} . $part_num,
+				target => "new_window"
+			)->circle(
 				cx => $xs[-1], cy => $ys[-1],
 				r => 2,
 				style => {
@@ -92,12 +97,11 @@ while (my ($brand, $part_num, $description) = $parts_sth->fetchrow_array()) {
 			-closed => "false"
 		);
 
+		# polyline sucks, spline would look nicer
 		my $tag = $svg->anchor(
 			-href => $cfg->{vendors}{$vendor}{search_url} . $part_num,
 			target => "new_window"
 		);
-
-		# polyline sucks, spline would look nicer
 		$tag->polyline(
 			%$points, id => $vendor,
 			style => {
@@ -120,6 +124,9 @@ while (my ($brand, $part_num, $description) = $parts_sth->fetchrow_array()) {
 
 	# prices along the side
 	my $num_labels = 5;
+	if ($range <= 20) {
+		$num_labels = 2;
+	}
 	for (0..$num_labels) {
 		my $price = $y_max - $range * $_ / $num_labels;
 		my $y = $top + $height * $_ / $num_labels;
@@ -160,6 +167,8 @@ while (my ($brand, $part_num, $description) = $parts_sth->fetchrow_array()) {
 			"stroke-width" => 1,
 		);
 	}
+
+	next if ($args{n});
 
 	# giant hack, if the part number has / in it, make some directories
 	if ($part_num =~ /\//) {
