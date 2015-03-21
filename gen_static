@@ -34,8 +34,8 @@ my $template = Template->new($config)
 	|| die Template->error() . "\n";
 
 # manufacturers.html, manufacturers/*
-my $manufacturers_sql = "select distinct manufacturer from products";
-my $parts_sql = "select part_num, lower(manufacturer), description from products where manufacturer = ?";
+my $manufacturers_sql = "select distinct lower(manufacturer) from products";
+my $parts_sql = "select part_num, lower(manufacturer), description from products where lower(manufacturer) = ?";
 my $m = gen_link_page($manufacturers_sql, $parts_sql, "manufacturers", "Manufacturers");
 
 # retailers.html, retailers/*
