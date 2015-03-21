@@ -22,14 +22,12 @@ my $svg_dir = $cfg->{http}{chroot} . $cfg->{http}{htdocs} . "/svg";
 xmkdir($svg_dir, $args{v});
 print "info: svg output is $svg_dir\n" if ($args{v});
 
-my ($left, $width, $right, $top, $height, $bottom) = (30, 900, 70, 20, 160, 20);
-my $total_width = $right + $width + $left;
-my $total_height = $top + $height + $bottom;
+my ($left, $center, $right, $top, $middle, $bottom) = (30, 900, 70, 20, 160, 20);
+my $width = $right + $center + $left;
+my $height = $top + $middle + $bottom;
 
-if ($args{v}) {
-	print  "info: left, width, right, total  = $left, $width, $right, $total_width\n";
-	print  "info: top, height, bottom, total = $top, $height, $bottom, $total_height\n";
-}
+print "info: r, c, l, w = $right, $center, $left, $width\n" if ($args{v});
+print "info: b, m, t, h = $bottom, $middle, $top, $height\n" if ($args{v});
 
 my $sql = "select date, price, color from prices where " .
 	"part_num = ? and vendor = ? order by date";
@@ -61,8 +59,8 @@ while (my ($brand, $part_num, $description) = $parts_sth->fetchrow_array()) {
 	$range = 20 if ($range < 20);
 
 	# clamp the total size of this thing with viewBox
-	my $svg = SVG->new(viewBox => "0 0 $total_width $total_height");
-	my ($x_scale, $y_scale) = ($width / $domain, $height / $range);
+	my $svg = SVG->new(viewBox => "0 0 $width $height");
+	my ($x_scale, $y_scale) = ($center / $domain, $middle / $range);
 
 	# render each retailer as a different series
 	$retailer_sth->execute($part_num);
@@ -129,17 +127,17 @@ while (my ($brand, $part_num, $description) = $parts_sth->fetchrow_array()) {
 	}
 	for (0..$num_labels) {
 		my $price = $y_max - $range * $_ / $num_labels;
-		my $y = $top + $height * $_ / $num_labels;
+		my $y = $top + $middle * $_ / $num_labels;
 
 		$svg->text(
-			id => $_, x => $left + $width + 20, y => $y,
+			id => $_, x => $left + $center + 20, y => $y,
 			style => "font-size: 14px; fill: #666",
 			"text-anchor" => "start"
 		)->cdata("\$$price");
 
 		$svg->line(
 			id => "line_$_", x1 => $left, y1 => $y,
-			x2 => $total_width - $right, y2 => $y,
+			x2 => $width - $right, y2 => $y,
 			fill => "#CCC", stroke => "#CCC",
 			"stroke-width" => 1,
 		);
@@ -149,19 +147,19 @@ while (my ($brand, $part_num, $description) = $parts_sth->fetchrow_array()) {
 	for (0..$num_labels) {
 		my $time = $x_min + $_ * $domain / $num_labels;
 		my $date = strftime "%b %e %Y", localtime($time);
-		my $x = $left + $_ / $num_labels * $width;
+		my $x = $left + $_ / $num_labels * $center;
 
 		$svg->text(
 			id => "time_$time",
-			x => $x, y => $total_height,
+			x => $x, y => $height,
 			style => "font-size: 12px; fill: #666",
 			"text-anchor" => "middle"
 		)->cdata($date);
 
 		$svg->line(
 			id => "date_marker_$_",
-			x1 => $x, y1 => $top + $height,
-			x2 => $x, y2 => $top + $height + 5,
+			x1 => $x, y1 => $top + $middle,
+			x2 => $x, y2 => $top + $middle + 5,
 			fill => "#CCC",
 			stroke => "#CCC",
 			"stroke-width" => 1,
