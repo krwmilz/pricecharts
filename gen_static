@@ -38,10 +38,10 @@ my $manufacturers_sql = "select distinct manufacturer from products";
 my $parts_sql = "select part_num, lower(manufacturer), description from products where manufacturer = ?";
 my $m = gen_link_page($manufacturers_sql, $parts_sql, "manufacturers", "Manufacturers");
 
-# vendors.html, vendors/*
-my $vendor_sql = "select distinct vendor from prices";
+# retailers.html, retailers/*
+my $retailers_sql = "select distinct vendor from prices";
 $parts_sql = "select distinct part_num from prices where vendor = ?";
-my $v = gen_link_page($vendor_sql, $parts_sql, "vendors", "Retailers");
+my $v = gen_link_page($retailers_sql, $parts_sql, "retailers", "Retailers");
 
 # products.html, products/*
 my $product_sql = "select part_num from products";
@@ -56,7 +56,7 @@ my $new_products = $dbh->selectall_arrayref($sql);
 # index.html
 my $n = @$new_products;
 my $vars = {
-	num_vendors => $v,
+	num_retailers => $v,
 	num_manufacturers => $m,
 	num_products => $p,
 	num_new => $n,
@@ -65,7 +65,7 @@ my $vars = {
 $template->process("index.tt", $vars, "index.html")
 	|| die "template: " . $template->error() . "\n";
 
-print "info: $m manufacturers, $p products ($n new), $v vendors\n" if ($args{v});
+print "info: $m manufacturers, $p products ($n new), $v retailers\n" if ($args{v});
 $dbh->disconnect();
 
 # generate a page of links to pages of products

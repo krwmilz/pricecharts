@@ -36,7 +36,7 @@ my $sql = "select date, price, color from prices where " .
 my $point_sth = $dbh->prepare($sql);
 
 $sql = "select distinct vendor from prices where part_num = ?";
-my $vendor_sth = $dbh->prepare($sql);
+my $retailer_sth = $dbh->prepare($sql);
 
 $sql = "select manufacturer, part_num, description from products";
 my $parts_sth = $dbh->prepare($sql);
@@ -64,14 +64,14 @@ while (my ($brand, $part_num, $description) = $parts_sth->fetchrow_array()) {
 	my $svg = SVG->new(viewBox => "0 0 $total_width $total_height");
 	my ($x_scale, $y_scale) = ($width / $domain, $height / $range);
 
-	# render each vendor as a different series
-	$vendor_sth->execute($part_num);
-	while (my ($vendor) = $vendor_sth->fetchrow_array()) {
+	# render each retailer as a different series
+	$retailer_sth->execute($part_num);
+	while (my ($retailer) = $retailer_sth->fetchrow_array()) {
 		my (@xs, @ys);
 		my $line_color = "#000";
 
 		# gather all points in the series
-		$point_sth->execute($part_num, $vendor);
+		$point_sth->execute($part_num, $retailer);
 		while (my ($date, $price, $color) = $point_sth->fetchrow_array) {
 			# transform and clamp real world coordinates
 			push @xs, ($date - $x_min) * $x_scale + $left;
@@ -79,7 +79,7 @@ while (my ($brand, $part_num, $description) = $parts_sth->fetchrow_array()) {
 
 			# small filled in circles to indicate data points
 			my $tag = $svg->anchor(
-				-href => $cfg->{vendors}{$vendor}{search_url} . $part_num,
+				-href => $cfg->{retailers}{$retailer}{search_url} . $part_num,
 				target => "new_window"
 			)->circle(
 				cx => $xs[-1], cy => $ys[-1],
@@ -99,11 +99,11 @@ while (my ($brand, $part_num, $description) = $parts_sth->fetchrow_array()) {
 
 		# polyline sucks, spline would look nicer
 		my $tag = $svg->anchor(
-			-href => $cfg->{vendors}{$vendor}{search_url} . $part_num,
+			-href => $cfg->{retailers}{$retailer}{search_url} . $part_num,
 			target => "new_window"
 		);
 		$tag->polyline(
-			%$points, id => $vendor,
+			%$points, id => $retailer,
 			style => {
 				"fill-opacity" => 0, fill => "#$line_color",
 				stroke => "#$line_color", "stroke-width" => 2,

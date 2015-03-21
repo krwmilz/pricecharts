@@ -10,7 +10,7 @@ use Exporter;
 sub get_config
 {
 	my $parser = Config::Grammar->new({
-		_sections => ["general", "http", "vendors"],
+		_sections => ["general", "http", "retailers"],
 		general => {
 			_vars => [
 				'user_agent',
@@ -29,7 +29,7 @@ sub get_config
 				"logs",
 			],
 		},
-		vendors => {
+		retailers => {
 			_sections => ["/[A-Za-z ]+/"],
 			"/[A-Za-z ]+/" => {
 				_vars => [

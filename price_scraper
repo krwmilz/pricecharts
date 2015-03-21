@@ -66,8 +66,8 @@ my $products_sth = $dbh->prepare($sql);
 
 my $timestamp = strftime("%F %T> ", localtime);
 my ($start, @status, $i) = (time, "", -1);
-for my $vendor (sort keys %{$cfg->{"vendors"}}) {
-	my %props =	%{$cfg->{"vendors"}{$vendor}};
+for my $retailer (sort keys %{$cfg->{retailers}}) {
+	my %props =	%{$cfg->{retailers}{$retailer}};
 	# this could probably be done smarter
 	my $url =	$props{"search_url"};
 	my $color =	$props{"color"};
@@ -75,7 +75,7 @@ for my $vendor (sort keys %{$cfg->{"vendors"}}) {
 	my $sale_tag =	$props{"price_sale"};
 	my $desc_tag =  $props{"title"};
 
-	my $vendor_start = time;
+	my $retailer_start = time;
 	$status[++$i] = " ";
 
 	# for products with short part numbers, also search manufacturer
@@ -86,13 +86,13 @@ for my $vendor (sort keys %{$cfg->{"vendors"}}) {
 		$search = uri_escape($part_num);
 	}
 
-	# get a page of search results from a vendor
+	# get a page of search results from a retailer
 	my $search_results = get_dom($url . $search, $ua, $args{v}, $log);
 	next unless defined $search_results;
 
 	# search search_results for particular html tags that should be prices
-	my $price_r = get_valid_price($price_tag, $search_results, $vendor);
-	my $price_s = get_valid_price($sale_tag,  $search_results, $vendor);
+	my $price_r = get_valid_price($price_tag, $search_results, $retailer);
+	my $price_s = get_valid_price($sale_tag,  $search_results, $retailer);
 	next unless ($price_r || $price_s);
 
 	# choose the lowest that exists
@@ -108,20 +108,20 @@ for my $vendor (sort keys %{$cfg->{"vendors"}}) {
 		$desc =~ s/^\s+//;
 		$desc =~ s/\s+$//;
 		if ($desc ne "" && $args{v}) {
-			my $desc_s = trunc_line($desc, length($vendor) + 8);
-			print "info: $vendor: $desc_s\n";
+			my $desc_s = trunc_line($desc, length($retailer) + 8);
+			print "info: $retailer: $desc_s\n";
 		}
 	}
 
 	# everything looks good
-	$status[$i] = substr($vendor, 0, 1);
+	$status[$i] = substr($retailer, 0, 1);
 
 	next if ($args{n});
-	$prices_sth->execute($start, $part_num, $vendor, $color,
-		$price, time - $vendor_start, $desc);
+	$prices_sth->execute($start, $part_num, $retailer, $color,
+		$price, time - $retailer_start, $desc);
 	$products_sth->execute($start, $part_num);
 
-	print "info: $vendor: db: inserted \$$price\n" if ($args{v});
+	print "info: $retailer: db: inserted \$$price\n" if ($args{v});
 }
 
 printf $log "%s %-10s %-20s [%s] (%i s)\n", $timestamp, $manufacturer,
@@ -138,15 +138,15 @@ sub get_valid_price
 {
 	my $dom_tag = shift || return undef;
 	my $search_results = shift;
-	my $vendor = shift;
+	my $retailer = shift;
 
 	# break the search_results page down into individual results
 	my @search_prices = $search_results->find($dom_tag)->text_array();
 	my $num_prices = @search_prices;
 	return undef if ($num_prices == 0);
 
-	print "info: $vendor: $dom_tag: $num_prices elements\n" if ($args{v});
-	my $hdr = "$vendor: $dom_tag" . "[0]";
+	print "info: $retailer: $dom_tag: $num_prices elements\n" if ($args{v});
+	my $hdr = "$retailer: $dom_tag" . "[0]";
 
 	# do a fuzzy search for digit combinations that look like a price
 	# XXX: uses the first found price in the page
