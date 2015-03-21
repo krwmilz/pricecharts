@@ -5,8 +5,11 @@
 		<p> Welcome to <em>Price</em>Chart, a price comparison
 		service for consumer electronics.
 		Currently <b>[% num_products %]</b> products from
-		<b>[% num_manufacturers %]</b> manufacturers are tracked across
-		<b>[% num_retailers %]</b> retailers.</p>
+		<b>[% num_manufacturers %]</b>
+		<a href="/manufacturers.html">manufacturers</a>
+		are tracked across <b>[% num_retailers %]</b>
+		<a href="/retailers.html"> retailers</a>
+		.</p>
 
 		<p> To start, try searching for a product or manufacturer in the
 		search box at the top right. </p>
