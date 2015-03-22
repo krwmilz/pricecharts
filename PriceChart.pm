@@ -13,14 +13,16 @@ sub get_config
 		_sections => ["general", "http", "retailers"],
 		general => {
 			_vars => [
-				'user_agent',
-				'email',
-				'smtp',
+				"agent",
+				"email",
+				"smtp",
+				# XXX: add simple regex validation here
+				"addrs"
 			],
 		},
 		http => {
 			_vars => [
-				"socket_file",
+				"socket",
 				"uid",
 				"gid",
 				"chroot",
@@ -33,9 +35,9 @@ sub get_config
 			_sections => ["/[A-Za-z ]+/"],
 			"/[A-Za-z ]+/" => {
 				_vars => [
-					"search_url",
-					"price_regular",
-					"price_sale",
+					"url",
+					"reg_tag",
+					"sale_tag",
 					"color",
 					"title"
 				]
@@ -95,7 +97,7 @@ sub new_ua
 	$ua->default_header("Accept-Encoding" => scalar HTTP::Message::decodable());
 	$ua->default_header("Accept-Charset" => "utf-8");
 	$ua->default_header("Accept-Language" => "en-US");
-	$ua->default_header("User-Agent" => $cfg->{"user_agent"});
+	$ua->default_header("User-Agent" => $cfg->{agent});
 
 	my $headers = $ua->default_headers;
 	for (sort keys %$headers) {
