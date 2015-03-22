@@ -56,7 +56,8 @@ print $log "--------------- ------- ------- ------ --- --------\n";
 my %product_map = (
 	"televisions" => "Televisions",
 	"laptops" => "LaptopsNotebooks",
-	"hard drives" => "HardDrives"
+	"hard drives" => "HardDrives",
+	"memory" => "Memory"
 );
 while (my ($type, $name) = each %product_map) {
 	mem_exp_scrape_class($type, $name);
