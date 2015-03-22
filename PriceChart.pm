@@ -91,8 +91,19 @@ sub new_ua
 {
 	my $cfg = shift;
 	my $verbose = shift || 0;
+	my $ua;
 
-	my $ua = LWP::UserAgent->new();
+	# it's optional to list ip addresses to scrape on
+	if ($cfg->{addresses}) {
+		my @addresses = split(" ", $cfg->{addresses});
+		my $addr = $addresses[rand @addresses];
+		print "info: new_ua: using $addr, $addr_total total\n" if ($verbose);
+		$ua = LWP::UserAgent->new(local_address => );
+	}
+	else {
+		$ua = LWP::UserAgent->new();
+	}
+
 	$ua->default_header("Accept" => "*/*");
 	$ua->default_header("Accept-Encoding" => scalar HTTP::Message::decodable());
 	$ua->default_header("Accept-Charset" => "utf-8");
