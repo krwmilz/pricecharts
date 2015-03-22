@@ -1,0 +1,12 @@
+[% WRAPPER wrapper.tt %]
+	<h1>[% part_num %]</h1>
+	<div class="product">
+		Manufacturer: [% manufacturer %]<br>
+		Description: [% description %]<br>
+		First Seen: [% first_seen %]<br>
+		Last Seen: [% last_seen %]<br>
+		Type: [% type %]<br>
+		<object data="/svg/[% part_num %].svg" type="image/svg+xml">
+		</object>
+	</div>
+[% END %]

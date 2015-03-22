@@ -44,13 +44,22 @@ $parts_sql = "select distinct part_num from prices where vendor = ?";
 my $v = gen_link_page($retailers_sql, $parts_sql, "retailers", "Retailers");
 
 # products.html, products/*
-my $product_sql = "select part_num from products";
-$parts_sql = "select part_num, lower(manufacturer), description from products where part_num = ?";
-my $p = gen_link_page($product_sql, $parts_sql, "products", "Products");
+xmkdir "$work_dir/products";
+my $sql = "select * from products";
+my $products = $dbh->selectall_hashref($sql, "part_num");
+for my $part_num (keys %$products) {
+	my $part_num_lc = lc($part_num);
+
+	# xmkdir("$work_dir/products/$result_lc.html", $args{v});
+	$template->process("product.tt", $products->{$part_num},
+		"products/$part_num_lc.html") or print $template->error() . "\n";
+}
+my $p = scalar keys %$products;
+print "info: products/ generated $p pages\n" if ($args{v});
 
 # get a list of products added within the last week
 my $time = time - (7 * 24 * 60 * 60);
-my $sql = "select manufacturer, part_num, lower(part_num) from products where first_seen > $time";
+$sql = "select manufacturer, part_num, lower(part_num) from products where first_seen > $time";
 my $new_products = $dbh->selectall_arrayref($sql);
 
 # index.html
