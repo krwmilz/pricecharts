@@ -1,14 +1,14 @@
 [% WRAPPER wrapper.tt %]
 	<div class="column">
-		<h1>[% name %] List ([% num_manufacturers %])</h1>
+		<h1>[% name %] List ([% num %])</h1>
 		<ul>
-			[% FOREACH manufacturer IN manufacturers %]
-			<li><a href="/[% name_lc %]/[% manufacturer.1 %].html">
-				<img alt="[% manufacturer.0 %]" class="logo"
-					src="/logo/[% manufacturer.1 %].svg">
+		[% FOREACH manufacturer IN manufacturers %]
+			<li><a href="/[% dir_prefix %]/[% manufacturer.0 %].html">
+				<img alt="[% manufacturer.1 %]" class="logo"
+					src="/logo/[% manufacturer.0 %].svg">
 				</img>
 			</a>
-			[% END %]
+		[% END %]
 		</ul>
 	</div>
 [% END %]

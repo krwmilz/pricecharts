@@ -1,13 +1,14 @@
 [% WRAPPER wrapper.tt %]
-	<h1><img alt="[% name_lc %]" class="logo" src="/logo/[% name_lc %].svg"></img>
+	<h1><img alt="[% name %]" class="logo" src="/logo/[% name_lc %].svg"></img>
 		([% num_products %] total)</h1>
-	[% FOREACH part_num IN products %]
-		<div class="product">
-			<img alt="[% part_num.1 %]" class="logo_small" src="/logo/[% part_num.1 %].svg"></img>
-			[% part_num.2 %]<br>
-			[% part_num.0 %]<br>
-			<object data="/svg/[% part_num.0 %].svg" type="image/svg+xml">
-			</object>
-		</div>
+	[% FOREACH part IN products.keys.sort %]
+	<hr>
+	<div class="product">
+		<img alt="[% products.$part.manufacturer %]" class="logo_small"
+			src="/logo/[% products.$part.manufacturer_lc %].svg"></img>
+		[% products.$part.description %] ([% part %])<br>
+		<object data="/svg/[% part %].svg" type="image/svg+xml">
+		</object>
+	</div>
 	[% END %]
 [% END %]
