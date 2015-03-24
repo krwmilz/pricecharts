@@ -24,16 +24,15 @@ print "info: working dir: $work_dir\n" if ($args{v});
 
 # rock a new template
 my $config = {
-	INTERPOLATE => 1,
-	POST_CHOMP => 1,
-	EVAL_PERL => 1,
-	INCLUDE_PATH => "$work_dir/tt",
-	OUTPUT_PATH => $work_dir
+	INTERPOLATE => 1, POST_CHOMP => 1, EVAL_PERL => 1,
+	INCLUDE_PATH => "$work_dir/tt", OUTPUT_PATH => $work_dir
 };
 my $template = Template->new($config)
 	|| die Template->error() . "\n";
 
+#
 # manufacturers/*
+#
 xmkdir "$work_dir/manufacturers";
 
 my $sql = "select distinct lower(manufacturer), manufacturer from products";
@@ -50,17 +49,17 @@ for (@$manufacturers) {
 	$total += scalar keys %$products;
 
 	my $vars = {
-		name => $manufacturer,
-		name_lc => $manufacturer_lc,
-		num_products => scalar keys %$products,
-		products => $products,
+		name => $manufacturer, name_lc => $manufacturer_lc,
+		num_products => scalar keys %$products, products => $products,
 	};
 	$template->process("chart_list.tt", $vars,
 		"manufacturers/$manufacturer_lc.html")
 		or die "error: template: " . $template->error() . "\n";
 }
 
+#
 # manufacturers.html
+#
 my $vars = {
 	name => "Manufacturers", dir_prefix => "manufacturers",
 	num => $m, manufacturers => $manufacturers,
@@ -69,7 +68,9 @@ print "info: gen manufacturers.html\n" if ($args{v});
 $template->process("link_list.tt", $vars, "manufacturers.html")
 	or die "error: template: " . $template->error() . "\n";
 
+#
 # retailers/*
+#
 xmkdir "$work_dir/retailers";
 
 $sql = "select distinct lower(vendor), vendor from prices";
@@ -85,17 +86,17 @@ for (@$retailers) {
 	$total += scalar keys %$part_nums;
 
 	my $vars = {
-		name => $retailer,
-		name_lc => $retailer_lc,
-		num_products => scalar keys %$part_nums,
-		products => $part_nums,
+		name => $retailer, name_lc => $retailer_lc,
+		num_products => scalar keys %$part_nums, products => $part_nums,
 	};
 
 	$template->process("chart_list.tt", $vars, "retailers/$retailer_lc.html")
 		or die "error: template: " . $template->error() . "\n";
 }
 
+#
 # retailers.html
+#
 $vars = {
 	name => "Retailers", dir_prefix => "retailers",
 	num => scalar @$retailers, manufacturers => $retailers,
@@ -104,7 +105,9 @@ print "info: gen retailers.html\n" if ($args{v});
 $template->process("link_list.tt", $vars, "retailers.html")
 	or die "error: template: " . $template->error() . "\n";
 
+#
 # products/*
+#
 xmkdir "$work_dir/products";
 my $products = $dbh->selectall_hashref("select * from products", "part_num");
 
@@ -125,7 +128,9 @@ my $time = time - (7 * 24 * 60 * 60);
 $sql = "select manufacturer, part_num, lower(part_num) from products where first_seen > $time";
 my $new_products = $dbh->selectall_arrayref($sql);
 
+#
 # index.html
+#
 $vars = {
 	num_retailers => $v, num_manufacturers => $m, num_products => $p,
 	num_new => scalar @$new_products, new_products => $new_products,
