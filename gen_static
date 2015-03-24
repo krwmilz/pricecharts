@@ -35,8 +35,12 @@ my $template = Template->new($config)
 
 # manufacturers/*
 xmkdir "$work_dir/manufacturers";
+
 my $sql = "select distinct lower(manufacturer), manufacturer from products";
 my ($manufacturers, $total) = ($dbh->selectall_arrayref($sql), 0);
+
+my $m = scalar @$manufacturers;
+print "info: gen manufacturers/ ($m pages total)\n" if ($args{v});
 for (@$manufacturers) {
 	my ($manufacturer_lc, $manufacturer) = @$_;
 
@@ -52,27 +56,27 @@ for (@$manufacturers) {
 		products => $products,
 	};
 	$template->process("chart_list.tt", $vars,
-		"manufacturers/$manufacturer_lc.html") or die $template->error() . "\n";
+		"manufacturers/$manufacturer_lc.html")
+		or die "error: template: " . $template->error() . "\n";
 }
-my $m = scalar @$manufacturers;
-print "info: manufacturers: generated $m pages with $total products\n" if ($args{v});
 
 # manufacturers.html
 my $vars = {
-	name => "Manufacturers",
-	dir_prefix => "manufacturers",
-	num => $m,
-	manufacturers => $manufacturers,
+	name => "Manufacturers", dir_prefix => "manufacturers",
+	num => $m, manufacturers => $manufacturers,
 };
-print "info: manufacturers: generating .html\n" if ($args{v});
+print "info: gen manufacturers.html\n" if ($args{v});
 $template->process("link_list.tt", $vars, "manufacturers.html")
-	|| die "template: " . $template->error() . "\n";
+	or die "error: template: " . $template->error() . "\n";
 
 # retailers/*
 xmkdir "$work_dir/retailers";
+
 $sql = "select distinct lower(vendor), vendor from prices";
-print "info: generating retailers/ " if ($args{v});
 my ($retailers, $total) = ($dbh->selectall_arrayref($sql), 0);
+
+my $v = scalar @$retailers;
+print "info: gen retailers/ ($v pages total)\n" if ($args{v});
 for (@$retailers) {
 	my ($retailer_lc, $retailer) = @$_;
 
@@ -88,36 +92,33 @@ for (@$retailers) {
 	};
 
 	$template->process("chart_list.tt", $vars, "retailers/$retailer_lc.html")
-		or die $template->error() . "\n";
+		or die "error: template: " . $template->error() . "\n";
 }
-my $v = scalar @$retailers;
-print "$v pages with $total products\n" if ($args{v});
 
 # retailers.html
 $vars = {
-	name => "Retailers",
-	dir_prefix => "retailers",
-	num => scalar @$retailers,
-	manufacturers => $retailers,
+	name => "Retailers", dir_prefix => "retailers",
+	num => scalar @$retailers, manufacturers => $retailers,
 };
-print "info: generating retailers.html\n" if ($args{v});
+print "info: gen retailers.html\n" if ($args{v});
 $template->process("link_list.tt", $vars, "retailers.html")
-	|| die "template: " . $template->error() . "\n";
+	or die "error: template: " . $template->error() . "\n";
 
 # products/*
 xmkdir "$work_dir/products";
-print "info: generating products/ " if ($args{v});
 my $products = $dbh->selectall_hashref("select * from products", "part_num");
+
+my $p = scalar keys %$products;
+print "info: gen products/ ($p pages total)\n" if ($args{v});
 for my $part_num (keys %$products) {
 	my $part_num_lc = lc($part_num);
 	$products->{$part_num}{manufacturer_lc} = lc($products->{$part_num}{manufacturer});
 
 	# xmkdir("$work_dir/products/$result_lc.html", $args{v});
 	$template->process("product.tt", $products->{$part_num},
-		"products/$part_num_lc.html") or print $template->error() . "\n";
+		"products/$part_num_lc.html")
+		or die "error: template: " . $template->error() . "\n";
 }
-my $p = scalar keys %$products;
-print "processed $p pages\n" if ($args{v});
 
 # get a list of products added within the last week
 my $time = time - (7 * 24 * 60 * 60);
@@ -126,14 +127,11 @@ my $new_products = $dbh->selectall_arrayref($sql);
 
 # index.html
 $vars = {
-	num_retailers => $v,
-	num_manufacturers => $m,
-	num_products => $p,
-	num_new => scalar @$new_products,
-	new_products => $new_products,
+	num_retailers => $v, num_manufacturers => $m, num_products => $p,
+	num_new => scalar @$new_products, new_products => $new_products,
 };
-print "info: generating index.html\n";
+print "info: gen index.html\n";
 $template->process("index.tt", $vars, "index.html")
-	|| die "template: " . $template->error() . "\n";
+	or die "error: template: " . $template->error() . "\n";
 
 $dbh->disconnect();
