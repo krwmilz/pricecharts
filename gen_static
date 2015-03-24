@@ -33,29 +33,91 @@ my $config = {
 my $template = Template->new($config)
 	|| die Template->error() . "\n";
 
-# manufacturers.html, manufacturers/*
-my $manufacturers_sql = "select distinct lower(manufacturer) from products";
-my $parts_sql = "select part_num, lower(manufacturer), description from products where lower(manufacturer) = ?";
-my $m = gen_link_page($manufacturers_sql, $parts_sql, "manufacturers", "Manufacturers");
+# manufacturers/*
+xmkdir "$work_dir/manufacturers";
+my $sql = "select distinct lower(manufacturer), manufacturer from products";
+my ($manufacturers, $total) = ($dbh->selectall_arrayref($sql), 0);
+for (@$manufacturers) {
+	my ($manufacturer_lc, $manufacturer) = @$_;
 
-# retailers.html, retailers/*
-my $retailers_sql = "select distinct vendor from prices";
-$parts_sql = "select distinct part_num from prices where vendor = ?";
-my $v = gen_link_page($retailers_sql, $parts_sql, "retailers", "Retailers");
+	$sql = "select part_num, manufacturer, description, lower(manufacturer) " .
+		"as manufacturer_lc from products where lower(manufacturer) = ?";
+	my $products = $dbh->selectall_hashref($sql, "part_num", undef, $manufacturer_lc);
+	$total += scalar keys %$products;
 
-# products.html, products/*
+	my $vars = {
+		name => $manufacturer,
+		name_lc => $manufacturer_lc,
+		num_products => scalar keys %$products,
+		products => $products,
+	};
+	$template->process("chart_list.tt", $vars,
+		"manufacturers/$manufacturer_lc.html") or die $template->error() . "\n";
+}
+my $m = scalar @$manufacturers;
+print "info: manufacturers: generated $m pages with $total products\n" if ($args{v});
+
+# manufacturers.html
+my $vars = {
+	name => "Manufacturers",
+	dir_prefix => "manufacturers",
+	num => $m,
+	manufacturers => $manufacturers,
+};
+print "info: manufacturers: generating .html\n" if ($args{v});
+$template->process("link_list.tt", $vars, "manufacturers.html")
+	|| die "template: " . $template->error() . "\n";
+
+# retailers/*
+xmkdir "$work_dir/retailers";
+$sql = "select distinct lower(vendor), vendor from prices";
+print "info: generating retailers/ " if ($args{v});
+my ($retailers, $total) = ($dbh->selectall_arrayref($sql), 0);
+for (@$retailers) {
+	my ($retailer_lc, $retailer) = @$_;
+
+	my $parts_sql = "select distinct part_num from prices where vendor = ?";
+	my $part_nums = $dbh->selectall_hashref($parts_sql, "part_num", undef, $retailer);
+	$total += scalar keys %$part_nums;
+
+	my $vars = {
+		name => $retailer,
+		name_lc => $retailer_lc,
+		num_products => scalar keys %$part_nums,
+		products => $part_nums,
+	};
+
+	$template->process("chart_list.tt", $vars, "retailers/$retailer_lc.html")
+		or die $template->error() . "\n";
+}
+my $v = scalar @$retailers;
+print "$v pages with $total products\n" if ($args{v});
+
+# retailers.html
+$vars = {
+	name => "Retailers",
+	dir_prefix => "retailers",
+	num => scalar @$retailers,
+	manufacturers => $retailers,
+};
+print "info: generating retailers.html\n" if ($args{v});
+$template->process("link_list.tt", $vars, "retailers.html")
+	|| die "template: " . $template->error() . "\n";
+
+# products/*
 xmkdir "$work_dir/products";
-my $sql = "select * from products";
-my $products = $dbh->selectall_hashref($sql, "part_num");
+print "info: generating products/ " if ($args{v});
+my $products = $dbh->selectall_hashref("select * from products", "part_num");
 for my $part_num (keys %$products) {
 	my $part_num_lc = lc($part_num);
+	$products->{$part_num}{manufacturer_lc} = lc($products->{$part_num}{manufacturer});
 
 	# xmkdir("$work_dir/products/$result_lc.html", $args{v});
 	$template->process("product.tt", $products->{$part_num},
 		"products/$part_num_lc.html") or print $template->error() . "\n";
 }
 my $p = scalar keys %$products;
-print "info: products/ generated $p pages\n" if ($args{v});
+print "processed $p pages\n" if ($args{v});
 
 # get a list of products added within the last week
 my $time = time - (7 * 24 * 60 * 60);
@@ -63,61 +125,15 @@ $sql = "select manufacturer, part_num, lower(part_num) from products where first
 my $new_products = $dbh->selectall_arrayref($sql);
 
 # index.html
-my $n = @$new_products;
-my $vars = {
+$vars = {
 	num_retailers => $v,
 	num_manufacturers => $m,
 	num_products => $p,
-	num_new => $n,
+	num_new => scalar @$new_products,
 	new_products => $new_products,
 };
+print "info: generating index.html\n";
 $template->process("index.tt", $vars, "index.html")
 	|| die "template: " . $template->error() . "\n";
 
-print "info: $m manufacturers, $p products ($n new), $v retailers\n" if ($args{v});
 $dbh->disconnect();
-
-# generate a page of links to pages of products
-sub gen_link_page
-{
-	my $type_sql = shift;
-	my $parts_sql = shift;
-	my $dir_prefix = shift;
-	my $case_normal = shift;
-
-	xmkdir "$work_dir/$dir_prefix";
-
-	my $results = $dbh->selectall_arrayref($type_sql);
-	my @manicured_list;
-	for my $result (@$results) {
-		$result = $result->[0];
-		my $result_lc = lc($result);
-
-		my $part_nums = $dbh->selectall_arrayref($parts_sql, undef, $result);
-		printf("info: $dir_prefix/$result_lc.html:\t%i products\n",
-			scalar @$part_nums) if ($args{v});
-
-		my $vars = {
-			name => $result,
-			name_lc => $result_lc,
-			num_products => scalar @$part_nums,
-			products => $part_nums,
-		};
-		$template->process("chart_list.tt", $vars,
-			"$dir_prefix/$result_lc.html"); # error checking!
-
-		push @manicured_list, [$result, $result_lc];
-	}
-
-	my $vars = {
-		name => $case_normal,
-		name_lc => $dir_prefix,
-		num_manufacturers => scalar @manicured_list,
-		manufacturers => \@manicured_list,
-	};
-	print "info: $dir_prefix.html\n" if ($args{v});
-	$template->process("link_list.tt", $vars, "$dir_prefix.html")
-		|| die "template: " . $template->error() . "\n";
-
-	return scalar @manicured_list;
-}
