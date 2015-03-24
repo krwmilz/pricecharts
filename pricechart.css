@@ -36,9 +36,8 @@ p {
 }
 
 .product {
-	border: 1px solid black;
-	padding: 10px;
-	margin: 10px;
+	margin-bottom: 25px;
+	margin-top: 25px;
 }
 
 @media (max-width: 640px) {
