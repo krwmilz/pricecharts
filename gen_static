@@ -8,6 +8,7 @@ use Getopt::Std;
 use File::Copy;
 use PriceChart;
 use Template;
+use Time::Piece;
 use URI::Escape;
 
 
@@ -28,115 +29,121 @@ my $config = {
 	INCLUDE_PATH => "$work_dir/tt", OUTPUT_PATH => $work_dir
 };
 my $template = Template->new($config)
-	|| die Template->error() . "\n";
+	|| die "template: . " . Template->error() . "\n";
 
 #
 # manufacturers/*
 #
 xmkdir "$work_dir/manufacturers";
 
-my $sql = "select distinct lower(manufacturer), manufacturer from products";
-my ($manufacturers, $total) = ($dbh->selectall_arrayref($sql), 0);
+my $sql = "select distinct manufacturer from products";
+my $manufacturers = $dbh->selectcol_arrayref($sql);
 
 my $m = scalar @$manufacturers;
 print "info: gen manufacturers/ ($m pages total)\n" if ($args{v});
-for (@$manufacturers) {
-	my ($manufacturer_lc, $manufacturer) = @$_;
+for my $manufacturer (@$manufacturers) {
+	my $manufacturer_lc = lc($manufacturer);
 
-	$sql = "select part_num, manufacturer, description, lower(manufacturer) " .
-		"as manufacturer_lc from products where lower(manufacturer) = ?";
-	my $products = $dbh->selectall_hashref($sql, "part_num", undef, $manufacturer_lc);
-	$total += scalar keys %$products;
+	$sql = "select part_num, manufacturer, description from products " .
+		"where lower(manufacturer) = ?";
+	my $products = $dbh->selectall_arrayref($sql, undef, $manufacturer_lc);
 
 	my $vars = {
-		name => $manufacturer, name_lc => $manufacturer_lc,
-		num_products => scalar keys %$products, products => $products,
+		name => $manufacturer, num => scalar @$products,
+		products => $products,
 	};
 	$template->process("chart_list.tt", $vars,
 		"manufacturers/$manufacturer_lc.html")
-		or die "error: template: " . $template->error() . "\n";
+		or die "template: " . $template->error() . "\n";
 }
 
 #
 # manufacturers.html
 #
-my $vars = {
-	name => "Manufacturers", dir_prefix => "manufacturers",
-	num => $m, manufacturers => $manufacturers,
-};
 print "info: gen manufacturers.html\n" if ($args{v});
+
+my $vars = { name => "Manufacturers", num => $m, links => $manufacturers };
 $template->process("link_list.tt", $vars, "manufacturers.html")
-	or die "error: template: " . $template->error() . "\n";
+	or die "template: " . $template->error() . "\n";
 
 #
 # retailers/*
 #
 xmkdir "$work_dir/retailers";
 
-$sql = "select distinct lower(vendor), vendor from prices";
-my ($retailers, $total) = ($dbh->selectall_arrayref($sql), 0);
+$sql = "select distinct vendor from prices";
+my $retailers = $dbh->selectcol_arrayref($sql);
 
 my $v = scalar @$retailers;
 print "info: gen retailers/ ($v pages total)\n" if ($args{v});
-for (@$retailers) {
-	my ($retailer_lc, $retailer) = @$_;
+for my $retailer (@$retailers) {
+	my $retailer_lc = lc($retailer);
 
-	my $parts_sql = "select distinct part_num from prices where vendor = ?";
-	my $part_nums = $dbh->selectall_hashref($parts_sql, "part_num", undef, $retailer);
-	$total += scalar keys %$part_nums;
+	$sql = "select distinct part_num from prices where vendor = ?";
+	my $parts = $dbh->selectcol_arrayref($sql, undef, $retailer);
+
+	# XXX: i think foreign keys would make this data directly fetchable
+	$sql = "select manufacturer, description from products where part_num = ?";
+	my @part_nums;
+	for my $part (@$parts) {
+		my $other_info = $dbh->selectrow_arrayref($sql, undef, $part);
+		push @part_nums, [$part, @$other_info];
+	}
 
 	my $vars = {
-		name => $retailer, name_lc => $retailer_lc,
-		num_products => scalar keys %$part_nums, products => $part_nums,
+		name => $retailer, num => scalar @part_nums,
+		products => \@part_nums,
 	};
 
 	$template->process("chart_list.tt", $vars, "retailers/$retailer_lc.html")
-		or die "error: template: " . $template->error() . "\n";
+		or die "template: " . $template->error() . "\n";
 }
 
 #
 # retailers.html
 #
-$vars = {
-	name => "Retailers", dir_prefix => "retailers",
-	num => scalar @$retailers, manufacturers => $retailers,
-};
 print "info: gen retailers.html\n" if ($args{v});
+
+$vars = { name => "Retailers", num => $v, links => $retailers };
 $template->process("link_list.tt", $vars, "retailers.html")
-	or die "error: template: " . $template->error() . "\n";
+	or die "template: " . $template->error() . "\n";
 
 #
 # products/*
 #
 xmkdir "$work_dir/products";
-my $products = $dbh->selectall_hashref("select * from products", "part_num");
+
+$sql = "select * from products";
+my $products = $dbh->selectall_hashref($sql, "part_num");
 
 my $p = scalar keys %$products;
 print "info: gen products/ ($p pages total)\n" if ($args{v});
 for my $part_num (keys %$products) {
 	my $part_num_lc = lc($part_num);
-	$products->{$part_num}{manufacturer_lc} = lc($products->{$part_num}{manufacturer});
+
+	$sql = "select distinct title, vendor from prices where part_num = ?";
+	my $descriptions = $dbh->selectall_arrayref($sql, undef, $part_num);
+	$products->{$part_num}{descriptions} = $descriptions;
 
 	# xmkdir("$work_dir/products/$result_lc.html", $args{v});
 	$template->process("product.tt", $products->{$part_num},
 		"products/$part_num_lc.html")
-		or die "error: template: " . $template->error() . "\n";
+		or die "template: " . $template->error() . "\n";
 }
 
 # get a list of products added within the last week
 my $time = time - (7 * 24 * 60 * 60);
-$sql = "select manufacturer, part_num, lower(part_num) from products where first_seen > $time";
-my $new_products = $dbh->selectall_arrayref($sql);
+$sql = "select manufacturer, part_num from products where first_seen > $time";
+my $news = $dbh->selectall_arrayref($sql);
 
 #
 # index.html
 #
 $vars = {
-	num_retailers => $v, num_manufacturers => $m, num_products => $p,
-	num_new => scalar @$new_products, new_products => $new_products,
+	nret => $v, nmanuf => $m, nprod => $p, nnew => scalar @$news, news => $news,
 };
 print "info: gen index.html\n";
 $template->process("index.tt", $vars, "index.html")
-	or die "error: template: " . $template->error() . "\n";
+	or die "template: " . $template->error() . "\n";
 
 $dbh->disconnect();

@@ -4,12 +4,11 @@
 
 		<p> Welcome to <em>Price</em>Chart, a price comparison
 		service for consumer electronics.
-		Currently <b>[% num_products %]</b> products from
-		<b>[% num_manufacturers %]</b>
+		Currently <b>[% nprod %]</b> products from
+		<b>[% nmanuf %]</b>
 		<a href="/manufacturers.html">manufacturers</a>
-		are tracked across <b>[% num_retailers %]</b>
-		<a href="/retailers.html"> retailers</a>
-		.</p>
+		are tracked across <b>[% nret %]</b>
+		<a href="/retailers.html">retailers</a>.</p>
 
 		<p> To start, try searching for a product or manufacturer in the
 		search box at the top right. </p>
@@ -39,11 +38,18 @@
 	</div>
 
 	<div class="column">
-		<h1>New Products ([% num_new %])</h1>
+		<h1>New Products ([% nnew %])</h1>
 		<ul>
-			[% FOREACH new_product IN new_products %]
-			<li><a href="/products/[% new_product.2 %].html">
-					[% new_product.0 %] [% new_product.1 %]</a>
+			[% FOREACH new IN news %]
+			[% PERL %]
+				my $part_num = $stash->get("new.1");
+				$stash->set("part_lc", lc($part_num));
+				my $manufacturer = $stash->get("new.0");
+				$stash->set("manuf_lc", lc($manufacturer));
+			[% END %]
+			<li><img class="logo_small" alt="[% new.0 %]"
+				src="/logo/[% manuf_lc %].svg"></img>
+			<a href="/products/[% part_lc %].html">[% new.1 %]</a>
 			[% END %]
 		</ul>
 	</div>
