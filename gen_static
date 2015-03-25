@@ -132,15 +132,18 @@ for my $part_num (keys %$products) {
 }
 
 # get a list of products added within the last week
-my $time = time - (7 * 24 * 60 * 60);
-$sql = "select manufacturer, part_num from products where first_seen > $time";
-my $news = $dbh->selectall_arrayref($sql);
+$sql = "select manufacturer, part_num from products where first_seen > ?";
+my $news = $dbh->selectall_arrayref($sql, undef, time - (7 * 24 * 60 * 60));
+
+$sql = "select manufacturer, part_num from products where last_seen > ?";
+my $upds = $dbh->selectall_arrayref($sql, undef, time - (2 * 60 * 60));
 
 #
 # index.html
 #
 $vars = {
-	nret => $v, nmanuf => $m, nprod => $p, nnew => scalar @$news, news => $news,
+	nret => $v, nmanuf => $m, nprod => $p, nnew => scalar @$news,
+	news => $news, nupd => scalar @$upds, upds => $upds
 };
 print "info: gen index.html\n";
 $template->process("index.tt", $vars, "index.html")

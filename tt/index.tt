@@ -53,4 +53,21 @@
 			[% END %]
 		</ul>
 	</div>
+
+	<div class="column">
+		<h1>Recently Updated ([% nupd %])</h1>
+		<ul>
+			[% FOREACH upd IN upds %]
+			[% PERL %]
+				my $part_num = $stash->get("upd.1");
+				$stash->set("part_lc", lc($part_num));
+				my $manufacturer = $stash->get("upd.0");
+				$stash->set("manuf_lc", lc($manufacturer));
+			[% END %]
+			<li><img class="logo_small" alt="[% upd.0 %]"
+				src="/logo/[% manuf_lc %].svg"></img>
+			<a href="/products/[% part_lc %].html">[% upd.1 %]</a>
+			[% END %]
+		</ul>
+	</div>
 [% END %]
