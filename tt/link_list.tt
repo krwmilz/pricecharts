@@ -1,11 +1,21 @@
 [% WRAPPER wrapper.tt %]
+[% PERL %]
+	# all url references are lower case
+	my $dir_prefix = lc($stash->get("name"));
+	$stash->set("dir_prefix", $dir_prefix);
+[% END %]
 	<div class="column">
 		<h1>[% name %] List ([% num %])</h1>
 		<ul>
-		[% FOREACH manufacturer IN manufacturers %]
-			<li><a href="/[% dir_prefix %]/[% manufacturer.0 %].html">
-				<img alt="[% manufacturer.1 %]" class="logo"
-					src="/logo/[% manufacturer.0 %].svg">
+		[% FOREACH link IN links %]
+		[% PERL %]
+			# all url references are lower case
+			my $link_lc = lc $stash->get("link");
+			$stash->set("link_lc", $link_lc);
+		[% END %]
+			<li><a href="/[% dir_prefix %]/[% link_lc %].html">
+				<img alt="[% link %]" class="logo"
+					src="/logo/[% link_lc %].svg">
 				</img>
 			</a>
 		[% END %]

@@ -53,8 +53,8 @@ p {
 }
 
 .logo_small {
-	height: 2em;
+	height: 1em;
 	float: left;
 	/* some logos fit their exact dimensions, avoid awkward spacing */
-	margin-right: 20px;
+	margin-right: 10px;
 }
