@@ -15,21 +15,10 @@
 	<div class="product">
 		<table>
 			<tr><td>Manufacturer:</td><td>[% manufacturer %]</td></tr>
-
-			<tr><td>Description(s):</td>
-			<td><ul>
-			[% FOREACH description IN descriptions %]
-				<li>[% description.1 %]: [% description.0 %]
-			[% END %]
-			</ul></td></tr>
-
+			<tr><td>Description:</td><td>[% description %]</td></tr>
 			<tr><td>Type:</td><td>[% type %]</td></tr>
-
-			<tr><td>First Seen:</td>
-			<td>[% first_seen_proc %]</td></tr>
-
-			<tr><td>Last Seen:</td>
-			<td>[% last_seen_proc %]</td></tr>
+			<tr><td>First Seen:</td><td>[% first_seen_proc %]</td></tr>
+			<tr><td>Last Seen:</td><td>[% last_seen_proc %]</td></tr>
 		</table>
 		<object data="/svg/[% part_num %].svg" type="image/svg+xml">
 		</object>

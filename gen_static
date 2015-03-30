@@ -44,9 +44,12 @@ print "info: gen manufacturers/ ($m pages total)\n" if ($args{v});
 for my $manufacturer (@$manufacturers) {
 	my $manufacturer_lc = lc($manufacturer);
 
-	$sql = "select part_num, manufacturer, description from products " .
-		"where lower(manufacturer) = ?";
+	$sql = "select manufacturer, part_num from products where " .
+		"lower(manufacturer) = ?";
 	my $products = $dbh->selectall_arrayref($sql, undef, $manufacturer_lc);
+	while (my $i = each (@$products)) {
+		$products->[$i][2] = get_description($products->[$i][0], $products->[$i][1]);
+	}
 
 	my $vars = {
 		name => $manufacturer, num => scalar @$products,
@@ -71,7 +74,7 @@ $template->process("link_list.tt", $vars, "manufacturers.html")
 #
 xmkdir "$work_dir/retailers";
 
-$sql = "select distinct vendor from prices";
+$sql = "select distinct retailer from prices";
 my $retailers = $dbh->selectcol_arrayref($sql);
 
 my $v = scalar @$retailers;
@@ -79,20 +82,15 @@ print "info: gen retailers/ ($v pages total)\n" if ($args{v});
 for my $retailer (@$retailers) {
 	my $retailer_lc = lc($retailer);
 
-	$sql = "select distinct part_num from prices where vendor = ?";
-	my $parts = $dbh->selectcol_arrayref($sql, undef, $retailer);
-
-	# XXX: i think foreign keys would make this data directly fetchable
-	$sql = "select manufacturer, description from products where part_num = ?";
-	my @part_nums;
-	for my $part (@$parts) {
-		my $other_info = $dbh->selectrow_arrayref($sql, undef, $part);
-		push @part_nums, [$part, @$other_info];
+	$sql = "select manufacturer, part_num from prices where retailer = ?";
+	my $products = $dbh->selectall_arrayref($sql, undef, $retailer);
+	while (my $i = each (@$products)) {
+		$products->[$i][2] = get_description($products->[$i][0], $products->[$i][1]);
 	}
 
 	my $vars = {
-		name => $retailer, num => scalar @part_nums,
-		products => \@part_nums,
+		name => $retailer, num => scalar @$products,
+		products => $products,
 	};
 
 	$template->process("chart_list.tt", $vars, "retailers/$retailer_lc.html")
@@ -118,17 +116,13 @@ my $products = $dbh->selectall_hashref($sql, "part_num");
 
 my $p = scalar keys %$products;
 print "info: gen products/ ($p pages total)\n" if ($args{v});
-for my $part_num (keys %$products) {
+while (my ($part_num, $row) = each %$products) {
 	my $part_num_lc = lc($part_num);
-
-	$sql = "select distinct title, vendor from prices where part_num = ?";
-	my $descriptions = $dbh->selectall_arrayref($sql, undef, $part_num);
-	$products->{$part_num}{descriptions} = $descriptions;
+	$row->{description} = get_description($row->{manufacturer}, $row->{part_num});
 
 	# xmkdir("$work_dir/products/$result_lc.html", $args{v});
-	$template->process("product.tt", $products->{$part_num},
-		"products/$part_num_lc.html")
-		or die "template: " . $template->error() . "\n";
+	$template->process("product.tt", $row, "products/$part_num_lc.html")
+		|| die "template: " . $template->error() . "\n";
 }
 
 # get a list of products added within the last week
@@ -150,3 +144,18 @@ $template->process("index.tt", $vars, "index.html")
 	or die "template: " . $template->error() . "\n";
 
 $dbh->disconnect();
+
+sub get_description
+{
+	my $manufacturer = shift;
+	my $part_num = shift;
+
+	my $sql = "select description from descriptions where " .
+		"manufacturer = ? and part_num = ? order by date";
+	my $descriptions = $dbh->selectcol_arrayref($sql, undef, $manufacturer,
+		$part_num);
+
+	# for now just return the first one ever scraped
+	# XXX: leaving as is for cool future improvements (string interpolation!)
+	return $descriptions->[0];
+}

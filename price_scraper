@@ -44,25 +44,40 @@ if ($args{p} && $args{m}) {
 }
 exit unless (defined $part_num);
 
+$dbh->do(qq{
+	create table if not exists retailers(
+		name text not null primary key,
+		color text not null,
+		url text not null)
+}) or die $DBI::errstr;
+
 $dbh->do("create table if not exists prices(" .
 	"date int not null, " .
+	"manufacturer text not null, " .
 	"part_num text not null, " .
-	"vendor text not null, " .
+	"retailer text not null, " .
 	"price int not null, " .
-	"color text not null, " .
 	"duration int, " .
-	"title text, " .
-	"primary key(date, part_num, vendor, price))"
+	"primary key(date, part_num, retailer, price), " .
+	"foreign key(manufacturer, part_num) references products(manufacturer, part_num), " .
+	"foreign key(retailer) references retailers(name))"
 ) or die $DBI::errstr;
 
 print "info: scraping $manufacturer $part_num\n" if ($args{v});
 
-$sql = "insert into prices(date, part_num, vendor, color, price, duration, title) " .
-	"values (?, ?, ?, ?, ?, ?, ?)";
+$sql = "insert into prices(date, manufacturer, part_num, retailer, price, duration) " .
+	"values (?, ?, ?, ?, ?, ?)";
 my $prices_sth = $dbh->prepare($sql);
 
 $sql = "update products set last_seen = ? where part_num = ?";
 my $products_sth = $dbh->prepare($sql);
+
+$sql = "insert or replace into retailers(name, color, url) values (?, ?, ?)";
+my $retailer_sth = $dbh->prepare($sql);
+
+$sql = "insert or replace into descriptions(manufacturer, part_num, retailer, ".
+	"description, date) values (?, ?, ?, ?, ?)";
+my $descriptions_sth = $dbh->prepare($sql);
 
 my $timestamp = strftime("%F %T> ", localtime);
 my ($start, @status, $i) = (time, "", -1);
@@ -117,9 +132,11 @@ for my $retailer (sort keys %{$cfg->{retailers}}) {
 	$status[$i] = substr($retailer, 0, 1);
 
 	next if ($args{n});
-	$prices_sth->execute($start, $part_num, $retailer, $color,
-		$price, time - $retailer_start, $desc);
+	$retailer_sth->execute($retailer, $color, $url);
+	$prices_sth->execute($start, $manufacturer, $part_num, $retailer, $price,
+		time - $retailer_start);
 	$products_sth->execute($start, $part_num);
+	$descriptions_sth->execute($manufacturer, $part_num, $retailer, $desc, time);
 
 	print "info: $retailer: db: inserted \$$price\n" if ($args{v});
 }

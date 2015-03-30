@@ -3,22 +3,29 @@
 	my $name_lc = lc($stash->get("name"));
 	$stash->set("name_lc", $name_lc);
 [% END %]
-	<h1><img alt="[% name %]" class="logo" src="/logo/[% name_lc %].svg"></img>
+	<h1><img alt="[% name %]" class="logo_small" src="/logo/[% name_lc %].svg"></img>
 		([% num %] total)</h1>
 	[% FOREACH product IN products %]
 	[% PERL %]
-		my $part_num = $stash->get("product.0");
-		$stash->set("part_lc", lc($part_num));
-		my $manufacturer = $stash->get("product.1");
+		my $manufacturer = $stash->get("product.0");
 		$stash->set("manufacturer_lc", lc($manufacturer));
+		my $part_num = $stash->get("product.1");
+		$stash->set("part_lc", lc($part_num));
 	[% END %]
 	<hr>
 	<div class="product">
-		<img alt="[% product.1 %]" class="logo_small"
-			src="/logo/[% manufacturer_lc %].svg"></img>
+		<!-- make the manufacturer logo into a link -->
+		<a href="/manufacturers/[% manufacturer_lc %].html">
+			<img alt="[% product.0 %]" class="logo_small"
+			src="/logo/[% manufacturer_lc %].svg"></img></a>
+
+		<!-- display the description -->
 		[% product.2 %]
-		<a href="/products/[% part_lc %].html">([% product.0 %])</a><br>
-		<object data="/svg/[% product.0 %].svg" type="image/svg+xml">
+		<!-- inline link to the products page, in parenthesis  -->
+		<a href="/products/[% part_lc %].html">([% product.1 %])</a><br>
+
+		<!-- show the chart -->
+		<object data="/svg/[% part_lc %].svg" type="image/svg+xml">
 		</object>
 	</div>
 	[% END %]

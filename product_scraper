@@ -28,19 +28,35 @@ my $log = get_log($tmp_file, $args{v});
 srand;
 
 $dbh->do("create table if not exists products(" .
-	"part_num text not null primary key, " .
-	"manufacturer text, " .
-	"description text, " .
+	"manufacturer text not null, " .
+	"part_num text not null, " .
+	"retailer text not null, " .
 	"type text, " .
 	"first_seen int, " . 
 	"last_seen int, " .
-	"last_scraped int)") or die $DBI::errstr;
+	"last_scraped int, " .
+	"primary key(manufacturer, part_num))"
+) or die $DBI::errstr;
+
+$dbh->do(qq{create table if not exists descriptions(
+	manufacturer text not null,
+	part_num text not null,
+	retailer text not null,
+	description text not null,
+	date int not null,
+	primary key(manufacturer, part_num, retailer, description),
+	foreign key(manufacturer, part_num) references products(manufacturer, part_num))
+}) or die $DBI::errstr;
 
 # $dbh->do("create table if not exists scrapes");
 
-my $sql = "insert into products(part_num, manufacturer, description, type, " .
+my $sql = "insert into products(part_num, manufacturer, retailer, type, " .
 	"first_seen, last_seen, last_scraped) values (?, ?, ?, ?, ?, ?, ?)";
 my $insert_sth = $dbh->prepare($sql);
+
+$sql = "insert or replace into descriptions(manufacturer, part_num, retailer, ".
+	"description, date) values (?, ?, ?, ?, ?)";
+my $descriptions_sth = $dbh->prepare($sql);
 
 # also update description, manufacturer?
 $sql = "update products set last_seen = ? where part_num = ?";
@@ -54,10 +70,10 @@ print $log "type                 ok percent errors new duration\n";
 print $log "--------------- ------- ------- ------ --- --------\n";
 
 my %product_map = (
-	"televisions" => "Televisions",
-	"laptops" => "LaptopsNotebooks",
-	"hard drives" => "HardDrives",
-	"memory" => "Memory"
+	"Television" => "Televisions",
+	"Laptop" => "LaptopsNotebooks",
+	"Hard Drives" => "HardDrives",
+	"Memory" => "Memory"
 );
 while (my ($type, $name) = each %product_map) {
 	mem_exp_scrape_class($type, $name);
@@ -103,6 +119,8 @@ sub mem_exp_scrape_class
 			next;
 		}
 
+		$descriptions_sth->execute($brand, $part_num, "Memory Express", $desc, time);
+
 		# extraction looks good, insert or update the database
 		$sql = "select * from products where part_num = ?";
 		if ($dbh->selectrow_arrayref($sql, undef, $part_num)) {
@@ -112,7 +130,7 @@ sub mem_exp_scrape_class
 			$old++;
 		}
 		else {
-			$insert_sth->execute($part_num, $brand, $desc, $type,
+			$insert_sth->execute($part_num, $brand, "Memory Express", $type,
 				time, time, 0) or die $dbh->errstr();
 			print "$thumb_hdr: inserted into db\n" if ($args{v});
 			$new++;
