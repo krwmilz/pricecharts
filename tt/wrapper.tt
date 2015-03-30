@@ -7,21 +7,23 @@
 	<link rel="stylesheet" type="text/css" href="/pricechart.css" />
 </head>
 <body>
-	<a id="title" href="/"><em>Price</em><b>Chart</b></a>
+	<div>
+	<a href="/"><em>Price</em><b>Chart</b></a>
 	<a href="/manufacturers.html">Manufacturers</a>
 	<a href="/retailers.html">Retailers</a>
 	<form method="get" action="/search.html">
 		<fieldset>
 			<input type="text" name="q" />
-			<input type="submit" value="Search">
+			<input type="submit" value="Find">
 		</fieldset>
 	</form>
+	</div>
 	<hr class="clear_both">
 
 	[% content %]
 
-	<hr class="clear_both">
-	<!--div id="footer">
+	<!--hr class="clear_both">
+	<div id="footer">
 		<a href="mailto:not_real@getaddrinfo.net">Feedback/Donate</a>
 	</div-->
 </body>
