@@ -57,7 +57,7 @@ for my $manufacturer (@$manufacturers) {
 	};
 	$template->process("chart_list.tt", $vars,
 		"manufacturers/$manufacturer_lc.html")
-		or die "template: " . $template->error() . "\n";
+		|| die "template: " . $template->error() . "\n";
 }
 
 #
@@ -67,7 +67,7 @@ print "info: gen manufacturers.html\n" if ($args{v});
 
 my $vars = { name => "Manufacturers", num => $m, links => $manufacturers };
 $template->process("link_list.tt", $vars, "manufacturers.html")
-	or die "template: " . $template->error() . "\n";
+	|| die "template: " . $template->error() . "\n";
 
 #
 # retailers/*
@@ -94,7 +94,7 @@ for my $retailer (@$retailers) {
 	};
 
 	$template->process("chart_list.tt", $vars, "retailers/$retailer_lc.html")
-		or die "template: " . $template->error() . "\n";
+		|| die "template: " . $template->error() . "\n";
 }
 
 #
@@ -104,7 +104,7 @@ print "info: gen retailers.html\n" if ($args{v});
 
 $vars = { name => "Retailers", num => $v, links => $retailers };
 $template->process("link_list.tt", $vars, "retailers.html")
-	or die "template: " . $template->error() . "\n";
+	|| die "template: " . $template->error() . "\n";
 
 #
 # products/*
@@ -141,7 +141,7 @@ $vars = {
 };
 print "info: gen index.html\n";
 $template->process("index.tt", $vars, "index.html")
-	or die "template: " . $template->error() . "\n";
+	|| die "template: " . $template->error() . "\n";
 
 $dbh->disconnect();
 

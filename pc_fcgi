@@ -99,7 +99,8 @@ while ($request->Accept() >= 0) {
 		results => $products
 	};
 
-	$template->process("search.tt", $vars) or print "template: " . $template->error();
+	$template->process("search.tt", $vars)
+		|| print "template: " . $template->error();
 }
 syslog(LOG_INFO, "shutdown");
 closelog();
