@@ -84,11 +84,11 @@ my ($start, @status, $i) = (time, "", -1);
 for my $retailer (sort keys %{$cfg->{retailers}}) {
 	my %props =	%{$cfg->{retailers}{$retailer}};
 	# this could probably be done smarter
-	my $url =	$props{"url"};
-	my $color =	$props{"color"};
-	my $price_tag =	$props{"reg_tag"};
-	my $sale_tag =	$props{"sale_tag"};
-	my $desc_tag =  $props{"title"};
+	my $url =	$props{url};
+	my $color =	$props{color};
+	my $price_tag =	$props{reg_tag};
+	my $sale_tag =	$props{sale_tag};
+	my $desc_tag =  $props{title};
 
 	my $retailer_start = time;
 	$status[++$i] = " ";
