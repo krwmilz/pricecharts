@@ -20,153 +20,185 @@ my $dbh = get_dbh($cfg->{http}, undef, $args{v});
 
 my $svg_dir = $cfg->{http}{chroot} . $cfg->{http}{htdocs} . "/svg";
 xmkdir($svg_dir, $args{v});
-print "info: svg output is $svg_dir\n" if ($args{v});
 
-my ($left, $center, $right, $top, $middle, $bottom) = (30, 900, 70, 20, 160, 20);
+# we don't output svg's when -n is given
+print "info: svg output dir is $svg_dir\n" if ($args{v} && !$args{n});
+
+my ($left, $center, $right, $top, $middle, $bottom) = (10, 935, 55, 10, 150, 20);
 my $width = $right + $center + $left;
 my $height = $top + $middle + $bottom;
 
 print "info: r, c, l, w = $right, $center, $left, $width\n" if ($args{v});
 print "info: b, m, t, h = $bottom, $middle, $top, $height\n" if ($args{v});
 
-my $sql = "select date, price, color from prices where " .
-	"part_num = ? and vendor = ? order by date";
-my $point_sth = $dbh->prepare($sql);
-
-$sql = "select distinct vendor from prices where part_num = ?";
-my $retailer_sth = $dbh->prepare($sql);
-
-$sql = "select manufacturer, part_num, description from products";
+my $sql = "select manufacturer, part_num from products";
 my $parts_sth = $dbh->prepare($sql);
 
+$sql = "select distinct retailer from prices where part_num = ? and manufacturer = ?";
+my $retailer_sth = $dbh->prepare($sql);
+
+$sql = "select date, price from prices where " .
+	"part_num = ? and retailer = ? order by date";
+my $point_sth = $dbh->prepare($sql);
+
 $parts_sth->execute();
-print "info: generating svg's  " if ($args{v});
+print "info: generating  " if ($args{v});
 my ($raw_total, $rendered_total, $points, $series) = (0, 0, 0, 0);
-while (my ($brand, $part_num, $description) = $parts_sth->fetchrow_array()) {
+while (my ($manufacturer, $part_num) = $parts_sth->fetchrow_array()) {
 	$raw_total++;
 	spin() if ($args{v});
 
-	# make sure we have at least one price to work with
-	$sql = "select min(date), max(date), min(price), max(price) " .
-		"from prices where part_num = ?";
-	my ($x_min, $x_max, $y_min, $y_max) =
-		$dbh->selectrow_array($sql, undef, $part_num);
+	# make sure we have at least two prices to work with
+	$sql = "select min(date), max(date), min(price), max(price), " .
+		"count(date), count(price) from prices where part_num = ?" .
+		"and manufacturer = ?";
+	my ($x_min, $x_max, $y_min, $y_max, $nx, $ny) =
+		$dbh->selectrow_array($sql, undef, $part_num, $manufacturer);
 	next unless (defined $x_min);
 
-	# avoid division by zero
+	$y_max = ceil($y_max / 10) * 10;
+	$y_min = floor($y_min / 10) * 10;
+
 	my ($domain, $range) = ($x_max - $x_min, $y_max - $y_min);
-	$domain = (24 * 60 * 60) if ($domain < (24 * 60 * 60));
+	$domain = 24 * 60 * 60 if ($domain <= 0);
 	$range = 20 if ($range < 20);
 
 	# clamp the total size of this thing with viewBox
 	my $svg = SVG->new(viewBox => "0 0 $width $height");
+	$svg->style(type => "text/css", -href => "/pricechart.css");
 	my ($x_scale, $y_scale) = ($center / $domain, $middle / $range);
 
-	# render each retailer as a different series
-	$retailer_sth->execute($part_num);
-	while (my ($retailer) = $retailer_sth->fetchrow_array()) {
-		my (@xs, @ys);
-		my $line_color = "#000";
-
-		# gather all points in the series
-		$point_sth->execute($part_num, $retailer);
-		while (my ($date, $price, $color) = $point_sth->fetchrow_array) {
-			# transform and clamp real world coordinates
-			push @xs, ($date - $x_min) * $x_scale + $left;
-			push @ys, ($price - $y_min) * $y_scale + $top;
-
-			# small filled in circles to indicate data points
-			my $tag = $svg->anchor(
-				-href => $cfg->{retailers}{$retailer}{search_url} . $part_num,
-				target => "new_window"
-			)->circle(
-				cx => $xs[-1], cy => $ys[-1],
-				r => 2,
-				style => {
-					"fill" => "#$color",
-					"stroke" => "#$color"
-				}
-			);
-			$line_color = $color;
-			$points++;
-		}
-		my $points = $svg->get_path(
-			x => \@xs, y => \@ys, -type => "polyline",
-			-closed => "false"
-		);
-
-		# polyline sucks, spline would look nicer
-		my $tag = $svg->anchor(
-			-href => $cfg->{retailers}{$retailer}{search_url} . $part_num,
-			target => "new_window"
-		);
-		$tag->polyline(
-			%$points, id => $retailer,
-			style => {
-				"fill-opacity" => 0, fill => "#$line_color",
-				stroke => "#$line_color", "stroke-width" => 2,
-			}
-		);
-		$series++;
-	}
-
-	# when graph is loaded make a sliding motion show the graph lines
-	my $mask = $svg->rectangle(
-		x => 0, y => 0, width => 1000, height => 250, rx => 0, ry => 0,
-		id => "mask", fill => "#FFF"
-	);
-	$mask->animate(
-		attributeName => "x", values => "0;1000", dur => "0.8s",
-		fill => "freeze", -method => ""
-	);
-
-	# prices along the side
+	# make price labels along right side and lines across chart
 	my $num_labels = 5;
-	if ($range <= 20) {
-		$num_labels = 2;
-	}
-	for (0..$num_labels) {
-		my $price = $y_max - $range * $_ / $num_labels;
-		my $y = $top + $middle * $_ / $num_labels;
+	for (1..$num_labels) {
+		my $price = sprintf("%.2f", $y_max - $range * $_ / $num_labels);
+		my $y = $top + $middle * ($_ - 1) / ($num_labels - 1);
 
 		$svg->text(
-			id => $_, x => $left + $center + 20, y => $y,
-			style => "font-size: 14px; fill: #666",
-			"text-anchor" => "start"
+			id => "price_$_", x => $left + $center + 5, y => $y + 3,
+			class => "chart_price", "text-anchor" => "start"
 		)->cdata("\$$price");
 
 		$svg->line(
 			id => "line_$_", x1 => $left, y1 => $y,
 			x2 => $width - $right, y2 => $y,
-			fill => "#CCC", stroke => "#CCC",
-			"stroke-width" => 1,
+			class => "chart_rulers",
 		);
 	}
 
-	# dates along the bottom
-	for (0..$num_labels) {
+	# make dates along the bottom
+	if ($domain == 0) {
+		$num_labels = 1;
+	}
+	for (1..$num_labels) {
 		my $time = $x_min + $_ * $domain / $num_labels;
 		my $date = strftime "%b %e %Y", localtime($time);
-		my $x = $left + $_ / $num_labels * $center;
+		my $x = $left + ($_ - 1) / ($num_labels - 1) * $center;
 
+		# make the dates not hang off the ends of the chart
+		my $text_anchor = "middle";
+		$text_anchor = "start" if ($_ == 1);
+		$text_anchor = "end" if ($_ == $num_labels);
+
+		# print the dates along the x axis
 		$svg->text(
-			id => "time_$time",
-			x => $x, y => $height,
-			style => "font-size: 12px; fill: #666",
-			"text-anchor" => "middle"
+			id => "date_$time", x => $x, y => $height,
+			class => "chart_date", "text-anchor" => $text_anchor
 		)->cdata($date);
 
+		# print the little tick marks down from the x axis
+		my $x_axis = $top + $middle;
 		$svg->line(
-			id => "date_marker_$_",
-			x1 => $x, y1 => $top + $middle,
-			x2 => $x, y2 => $top + $middle + 5,
-			fill => "#CCC",
-			stroke => "#CCC",
-			"stroke-width" => 1,
+			id => "date_marker_$_", x1 => $x, y1 => $x_axis,
+			x2 => $x, y2 => $x_axis + 5, class => "chart_rulers",
 		);
 	}
 
+	# render each retailer as a different series
+	$retailer_sth->execute($part_num, $manufacturer);
+	while (my ($retailer) = $retailer_sth->fetchrow_array()) {
+		my (@xs, @ys);
+		my ($last_y, $last_price) = ("#000", 0, 0);
+
+		my $retailer_id = lc($retailer);
+		$retailer_id =~ s/ /_/;
+
+		$sql = "select url, color from retailers where name = ?";
+		my ($url, $color) = $dbh->selectrow_array($sql, undef, $retailer);
+
+		# xlink:href's don't like raw ampersands
+		$url =~ s/&/&amp;/g;
+
+		# gather all points in the retailers series
+		$point_sth->execute($part_num, $retailer);
+		while (my ($date, $price) = $point_sth->fetchrow_array) {
+			# transform and clamp real world coordinates
+			push @xs, ($date - $x_min) * $x_scale + $left;
+			push @ys, $height - $bottom - ($price - $y_min) * $y_scale;
+
+			# small filled in circles to indicate data points
+			$svg->anchor(
+				-href => $url . $part_num,
+				target => "new_window"
+			)->circle(
+				cx => $xs[-1], cy => $ys[-1], r => 2,
+				style => { "fill" => "#$color",
+					"stroke" => "#$color" }
+			);
+
+			$last_y = $ys[-1];
+			$last_price = $price;
+			$points++;
+		}
+
+		# helper to get svg style coordinates easily
+		my $points = $svg->get_path(x => \@xs, y => \@ys, -type => "path");
+
+		# path sucks, spline would look nicer
+		$svg->anchor(-href => $url . $part_num,
+			target => "new_window"
+		)->path(
+			%$points, id => "path_$retailer_id",
+			class => "chart_series",
+			style => { fill => "#$color", stroke => "#$color" }
+		);
+
+		# prepare the definition for a textPath
+		my $id = "text_path_$retailer_id";
+		$svg->defs()->path(
+			%$points, id => $id,
+		);
+
+		# show retailer name along the start of the path
+		$svg->text(class => "chart_series_text", fill => "#$color"
+		)->tag("textPath", "xlink:href" => "#$id")->tag("tspan", "dy" => "-5",
+		)->cdata($retailer);
+
+		# really, you only care about the latest price difference
+		# $svg->text(
+		# 	id => "price_for_$retailer_id", x => $left + $center + 5,
+		# 	y => $last_y + 5,
+		# 	style => "font-size: 12px; fill: #000",
+		# 	"text-anchor" => "start"
+		# )->cdata("\$$last_price");
+
+		$series++;
+	}
+
+	# when graph is loaded make a sliding motion show the graph lines
+	# my $mask = $svg->rectangle(
+	# 	x => 0, y => 0, width => 1000, height => 250, rx => 0, ry => 0,
+	# 	id => "mask", fill => "#FFF"
+	# );
+	# $mask->animate(
+	# 	attributeName => "x", values => "0;1000", dur => "0.2s",
+	# 	fill => "freeze", -method => ""
+	# );
+
 	next if ($args{n});
+
+	# all links lower case
+	$part_num = lc($part_num);
 
 	# giant hack, if the part number has / in it, make some directories
 	if ($part_num =~ /\//) {
@@ -175,7 +207,13 @@ while (my ($brand, $part_num, $description) = $parts_sth->fetchrow_array()) {
 	}
 	open my $svg_fh, ">", "$svg_dir/$part_num.svg" or
 		die "couldn't open $svg_dir/$part_num: $!";
-	print $svg_fh $svg->xmlify;
+
+	# XXX: not sure how to add this programatically, hack around for now
+	my @buf = split("\n", $svg->xmlify);
+	my $css_include = "<?xml-stylesheet href=\"/pricechart.css\" type=\"text/css\"?>";
+	splice (@buf, 1, 0, ($css_include));
+
+	print $svg_fh "$_\n" for (@buf);
 	close $svg_fh;
 
 	$rendered_total++;

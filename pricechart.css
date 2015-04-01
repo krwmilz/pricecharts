@@ -50,3 +50,35 @@ p {
 	height: 1em;
 	vertical-align: middle;
 }
+
+/* horizontal rulers, plus date ticks */
+.chart_rulers {
+	stroke: #DDD;
+	stroke-width: 1;
+}
+
+/* x axis labels */
+.chart_date {
+	font-size: 0.75em;
+	fill: #666;
+}
+
+/* y axis labels */
+.chart_price {
+	font-size: 0.80em;
+	fill: black;
+}
+
+/* retailer date series */
+.chart_series {
+	fill-opacity: 0;
+	stroke-width: 2;
+}
+
+.chart_series:hover {
+	stroke-width: 4;
+}
+
+.chart_series_text {
+	font-size: 0.5em;
+}
