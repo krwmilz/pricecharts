@@ -72,7 +72,7 @@ print $log "--------------- ------- ------- ------ --- --------\n";
 my %product_map = (
 	"Television" => "Televisions",
 	"Laptop" => "LaptopsNotebooks",
-	"Hard Drives" => "HardDrives",
+	"Hard Drive" => "HardDrives",
 	"Memory" => "Memory"
 );
 while (my ($type, $name) = each %product_map) {
