@@ -5,7 +5,7 @@
 	$stash->set("dir_prefix", $dir_prefix);
 [% END %]
 	<div class="column">
-		<h1>[% name %] List ([% num %])</h1>
+		<h1>[% name %] ([% num %])</h1>
 		<ul>
 		[% FOREACH link IN links %]
 		[% PERL %]

@@ -2,15 +2,18 @@
 [% PERL %]
 	my $manuf = $stash->get("manufacturer");
 	$stash->set("manufacturer_lc", lc($manuf));
+	my $part_num = $stash->get("part_num");
+	$stash->set("part_num_lc", lc($part_num));
 
 	my $time_str = scalar localtime($stash->get('first_seen'));
 	$stash->set("first_seen_proc", $time_str);
+	# drop the exact time on this somehow
 	$time_str = scalar localtime($stash->get('last_seen'));
 	$stash->set("last_seen_proc", $time_str);
 [% END %]
 	<h1><a href="/manufacturers/[% manufacturer_lc %].html">
 		<img class="logo_small" alt="[% manufacturer %]"
-		src="/logo/[% manufacturer_lc %].svg"></img></a>
+		src="/logo/[% manufacturer_lc %].svg"/></a>
 		[% part_num %]</h1>
 	<div class="product">
 		<table>
@@ -20,7 +23,7 @@
 			<tr><td>First Seen:</td><td>[% first_seen_proc %]</td></tr>
 			<tr><td>Last Seen:</td><td>[% last_seen_proc %]</td></tr>
 		</table>
-		<object data="/svg/[% part_num %].svg" type="image/svg+xml">
+		<object data="/svg/[% part_num_lc %].svg" type="image/svg+xml">
 		</object>
 	</div>
 [% END %]
