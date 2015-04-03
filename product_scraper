@@ -108,9 +108,12 @@ sub mem_exp_scrape_class
 	my $total = scalar @$thumbnails;
 	print "$info_hdr: $total total\n" if ($args{v});
 
+	# randomize the combined results so we don't linearly visit them
+	my @rand_thumbnails = sort { rand > .5 } @$thumbnails;
+
 	# extract and store part number, brand, and description
 	my ($new, $old, $err, $start, $i) = (0, 0, 0, time, 0);
-	for my $thumbnail_html (@$thumbnails) {
+	for my $thumbnail_html (@rand_thumbnails) {
 		$i++;
 		my $thumb_hdr = "$info_hdr: $i/$total";
 
