@@ -107,6 +107,43 @@ $template->process("link_list.tt", $vars, "retailers.html")
 	|| die "template: " . $template->error() . "\n";
 
 #
+# product_types/*
+#
+xmkdir("$work_dir/product_types");
+
+$sql = "select distinct type from products";
+my $product_types = $dbh->selectcol_arrayref($sql);
+
+my $t = scalar @$product_types;
+print "info: gen product_types/ ($t types total)\n" if ($args{v});
+for my $type (@$product_types) {
+	my $type_lc = lc($type);
+
+	$sql = "select manufacturer, part_num from products where type = ?";
+	my $products = $dbh->selectall_arrayref($sql, undef, $type);
+	while (my $i = each (@$products)) {
+		$products->[$i][2] = get_description($products->[$i][0], $products->[$i][1]);
+	}
+
+	my $vars = {
+		name => $type, num => scalar @$products,
+		products => $products,
+	};
+
+	$template->process("chart_list.tt", $vars, "product_types/$type_lc.html")
+		|| die "template: " . $template->error() . "\n";
+}
+
+#
+# product_types.html
+#
+print "info: gen product_types.html\n" if ($args{v});
+
+$vars = { name => "Product_Types", num => $t, links => $product_types };
+$template->process("link_list.tt", $vars, "product_types.html")
+	|| die "template: " . $template->error() . "\n";
+
+#
 # products/*
 #
 xmkdir "$work_dir/products";
