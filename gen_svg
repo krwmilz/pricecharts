@@ -24,7 +24,7 @@ xmkdir($svg_dir, $args{v});
 # we don't output svg's when -n is given
 print "info: svg output dir is $svg_dir\n" if ($args{v} && !$args{n});
 
-my ($left, $center, $right, $top, $middle, $bottom) = (10, 935, 55, 10, 150, 20);
+my ($left, $center, $right, $top, $middle, $bottom) = (10, 945, 45, 10, 150, 20);
 my $width = $right + $center + $left;
 my $height = $top + $middle + $bottom;
 
@@ -49,10 +49,9 @@ while (my ($manufacturer, $part_num) = $parts_sth->fetchrow_array()) {
 	spin() if ($args{v});
 
 	# make sure we have at least two prices to work with
-	$sql = "select min(date), max(date), min(price), max(price), " .
-		"count(date), count(price) from prices where part_num = ?" .
-		"and manufacturer = ?";
-	my ($x_min, $x_max, $y_min, $y_max, $nx, $ny) =
+	$sql = "select min(date), max(date), min(price), max(price) " .
+		"from prices where part_num = ? and manufacturer = ?";
+	my ($x_min, $x_max, $y_min, $y_max) =
 		$dbh->selectrow_array($sql, undef, $part_num, $manufacturer);
 	next unless (defined $x_min);
 
@@ -68,10 +67,13 @@ while (my ($manufacturer, $part_num) = $parts_sth->fetchrow_array()) {
 	$svg->style(type => "text/css", -href => "/pricechart.css");
 	my ($x_scale, $y_scale) = ($center / $domain, $middle / $range);
 
+	# $svg->rect(x => 0, y => 0, width => $width, height => $height,
+	# 	class => "chart_bg");
+
 	# make price labels along right side and lines across chart
 	my $num_labels = 5;
 	for (1..$num_labels) {
-		my $price = sprintf("%.2f", $y_max - $range * $_ / $num_labels);
+		my $price = ceil($y_max - $range * $_ / $num_labels);
 		my $y = $top + $middle * ($_ - 1) / ($num_labels - 1);
 
 		$svg->text(
@@ -114,7 +116,7 @@ while (my ($manufacturer, $part_num) = $parts_sth->fetchrow_array()) {
 		);
 	}
 
-	# render each retailer as a different series
+	# each series on the chart represents a retailers prices
 	$retailer_sth->execute($part_num, $manufacturer);
 	while (my ($retailer) = $retailer_sth->fetchrow_array()) {
 		my (@xs, @ys);
@@ -129,7 +131,7 @@ while (my ($manufacturer, $part_num) = $parts_sth->fetchrow_array()) {
 		# xlink:href's don't like raw ampersands
 		$url =~ s/&/&amp;/g;
 
-		# gather all points in the retailers series
+		# get all prices that we've scraped per product per retailer
 		$point_sth->execute($part_num, $retailer);
 		while (my ($date, $price) = $point_sth->fetchrow_array) {
 			# transform and clamp real world coordinates
@@ -151,7 +153,7 @@ while (my ($manufacturer, $part_num) = $parts_sth->fetchrow_array()) {
 			$points++;
 		}
 
-		# helper to get svg style coordinates easily
+		# helper to get svg path coordinates easily
 		my $points = $svg->get_path(x => \@xs, y => \@ys, -type => "path");
 
 		# path sucks, spline would look nicer
@@ -163,7 +165,7 @@ while (my ($manufacturer, $part_num) = $parts_sth->fetchrow_array()) {
 			style => { fill => "#$color", stroke => "#$color" }
 		);
 
-		# prepare the definition for a textPath
+		# prepare the for the textPath definition
 		my $id = "text_path_$retailer_id";
 		$svg->defs()->path(
 			%$points, id => $id,
