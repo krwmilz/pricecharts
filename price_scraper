@@ -141,7 +141,7 @@ for my $retailer (sort keys %{$cfg->{retailers}}) {
 	print "info: $retailer: db: inserted \$$price\n" if ($args{v});
 }
 
-printf $log "%s %-10s %-10s %-20s [%s] (%i s)\n", $timestamp, $type,
+printf $log "%s %-12s %-10s %-20s [%s] (%i s)\n", $timestamp, $type,
 	$manufacturer, $part_num, join("", @status), time - $start;
 
 $log->close();
