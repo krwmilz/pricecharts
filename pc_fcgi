@@ -63,9 +63,7 @@ if (-e $http_cfg{socket}) {
 print "info: opening $http_cfg{socket}\n" if ($args{v});
 my $socket = FCGI::OpenSocket($http_cfg{socket}, 1024);
 
-print "info: opening $http_cfg{db_dir}/pricechart.db\n" if ($args{v});
 my $dbh = get_dbh($cfg->{"http"}, $http_cfg{db_dir}, $args{v});
-
 my $request = FCGI::Request(\*STDIN, \*STDOUT, \*STDERR, \%ENV, $socket,
 	FCGI::FAIL_ACCEPT_ON_INTR);
 
@@ -73,9 +71,9 @@ print "info: making template, include_path = $http_cfg{htdocs}\n" if ($args{v});
 my $config = { INCLUDE_PATH => "$http_cfg{htdocs}/tt" };
 my $template = Template->new($config) || die $Template::ERROR . "\n";
 
-# db query we take input from the user for
-my $sql = "select part_num, manufacturer, description from products " .
-	"where description like ? or part_num like ? or manufacturer like ?";
+# try hard here not to use EVAL_PERL in the template
+my $sql = "select manufacturer, part_num, lower(part_num) from products " .
+	"where part_num like ? or manufacturer like ?";
 my $search_sth = $dbh->prepare($sql);
 
 # intercept signals to shut down cleanly
@@ -90,12 +88,12 @@ while ($request->Accept() >= 0) {
 	# incoming query string is http mangled
 	$input = uri_unescape($input);
 
-	$search_sth->execute("%$input%", "%$input%", "%$input%");
+	# fuzzy search on manufacturer and part number
+	$search_sth->execute("%$input%", "%$input%");
 	my $products = $search_sth->fetchall_arrayref();
 
 	my $vars = {
-		query => $input,
-		num_results => scalar @$products,
+		query => $input, num_results => scalar @$products,
 		results => $products
 	};
 
