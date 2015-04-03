@@ -94,11 +94,11 @@ sub new_ua
 	my $ua;
 
 	# it's optional to list ip addresses to scrape on
-	if ($cfg->{addresses}) {
-		my @addresses = split(" ", $cfg->{addresses});
+	if ($cfg->{addrs}) {
+		my @addresses = split(" ", $cfg->{addrs});
 		my $addr = $addresses[rand @addresses];
-		print "info: new_ua: using $addr, $addr_total total\n" if ($verbose);
-		$ua = LWP::UserAgent->new(local_address => );
+		print "info: new_ua: using ip $addr\n" if ($verbose);
+		$ua = LWP::UserAgent->new(local_address => $addr);
 	}
 	else {
 		$ua = LWP::UserAgent->new();
