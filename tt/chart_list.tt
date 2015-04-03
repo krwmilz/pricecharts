@@ -22,7 +22,7 @@
 		<!-- display the description -->
 		[% product.2 %]
 		<!-- inline link to the products page, in parenthesis  -->
-		<a href="/products/[% part_lc %].html">([% product.1 %])</a><br>
+		(<a href="/products/[% manufacturer_lc %]/[% part_lc %].html">[% product.1 %]</a>)<br>
 
 		<!-- show the chart -->
 		<object data="/svg/[% part_lc %].svg" type="image/svg+xml">

@@ -36,36 +36,39 @@ my $template = Template->new($config)
 #
 xmkdir "$work_dir/manufacturers";
 
-my $sql = "select distinct manufacturer from products";
+my $sql = "select distinct lower(manufacturer) from products";
 my $manufacturers = $dbh->selectcol_arrayref($sql);
 
-my $m = scalar @$manufacturers;
-print "info: gen manufacturers/ ($m pages total)\n" if ($args{v});
+my ($num_manuf, $manufacturer_indexed) = (scalar @$manufacturers, 0);
+print "info: gen manufacturers/ " if ($args{v});
 for my $manufacturer (@$manufacturers) {
-	my $manufacturer_lc = lc($manufacturer);
+	# merge manufacturers that are spelled the same except for casing
+	$sql = "select manufacturer from products where lower(manufacturer) = ?";
+	my ($manufacturer_cased) = $dbh->selectrow_array($sql, undef, $manufacturer);
 
 	$sql = "select manufacturer, part_num from products where " .
 		"lower(manufacturer) = ?";
-	my $products = $dbh->selectall_arrayref($sql, undef, $manufacturer_lc);
-	while (my $i = each (@$products)) {
-		$products->[$i][2] = get_description($products->[$i][0], $products->[$i][1]);
-	}
+	my $products = $dbh->selectall_arrayref($sql, undef, $manufacturer);
+	$_->[2] = get_description($_->[0], $_->[1]) for (@$products);
 
 	my $vars = {
-		name => $manufacturer, num => scalar @$products,
+		name => $manufacturer_cased, num => scalar @$products,
 		products => $products,
 	};
 	$template->process("chart_list.tt", $vars,
-		"manufacturers/$manufacturer_lc.html")
+		"manufacturers/$manufacturer.html")
 		|| die "template: " . $template->error() . "\n";
+
+	$manufacturer_indexed += @$products;
 }
+print "$num_manuf pages, $manufacturer_indexed indexed\n" if ($args{v});
 
 #
 # manufacturers.html
 #
 print "info: gen manufacturers.html\n" if ($args{v});
 
-my $vars = { name => "Manufacturers", num => $m, links => $manufacturers };
+my $vars = { name => "Manufacturers", num => $num_manuf, links => $manufacturers };
 $template->process("link_list.tt", $vars, "manufacturers.html")
 	|| die "template: " . $template->error() . "\n";
 
@@ -77,32 +80,32 @@ xmkdir "$work_dir/retailers";
 $sql = "select distinct retailer from prices";
 my $retailers = $dbh->selectcol_arrayref($sql);
 
-my $v = scalar @$retailers;
-print "info: gen retailers/ ($v pages total)\n" if ($args{v});
+my ($num_retailers, $retailer_indexed) = (scalar @$retailers, 0);
+print "info: gen retailers/ " if ($args{v});
 for my $retailer (@$retailers) {
 	my $retailer_lc = lc($retailer);
 
-	$sql = "select manufacturer, part_num from prices where retailer = ?";
+	$sql = "select distinct manufacturer, part_num from prices where retailer = ?";
 	my $products = $dbh->selectall_arrayref($sql, undef, $retailer);
-	while (my $i = each (@$products)) {
-		$products->[$i][2] = get_description($products->[$i][0], $products->[$i][1]);
-	}
+	$_->[2] = get_description($_->[0], $_->[1]) for (@$products);
 
 	my $vars = {
 		name => $retailer, num => scalar @$products,
 		products => $products,
 	};
-
 	$template->process("chart_list.tt", $vars, "retailers/$retailer_lc.html")
 		|| die "template: " . $template->error() . "\n";
+
+	$retailer_indexed += scalar @$products;
 }
+print "$num_retailers pages, $retailer_indexed indexed\n" if ($args{v});
 
 #
 # retailers.html
 #
 print "info: gen retailers.html\n" if ($args{v});
 
-$vars = { name => "Retailers", num => $v, links => $retailers };
+$vars = { name => "Retailers", num => $num_retailers, links => $retailers };
 $template->process("link_list.tt", $vars, "retailers.html")
 	|| die "template: " . $template->error() . "\n";
 
@@ -114,32 +117,32 @@ xmkdir("$work_dir/product_types");
 $sql = "select distinct type from products";
 my $product_types = $dbh->selectcol_arrayref($sql);
 
-my $t = scalar @$product_types;
-print "info: gen product_types/ ($t types total)\n" if ($args{v});
+my ($num_types, $type_indexed) = (scalar @$product_types, 0);
+print "info: gen product_types/ " if ($args{v});
 for my $type (@$product_types) {
 	my $type_lc = lc($type);
 
 	$sql = "select manufacturer, part_num from products where type = ?";
 	my $products = $dbh->selectall_arrayref($sql, undef, $type);
-	while (my $i = each (@$products)) {
-		$products->[$i][2] = get_description($products->[$i][0], $products->[$i][1]);
-	}
+	$_->[2] = get_description($_->[0], $_->[1]) for (@$products);
 
 	my $vars = {
 		name => $type, num => scalar @$products,
 		products => $products,
 	};
-
 	$template->process("chart_list.tt", $vars, "product_types/$type_lc.html")
 		|| die "template: " . $template->error() . "\n";
+
+	$type_indexed += scalar @$products;
 }
+print "$num_types pages, $type_indexed indexed\n" if ($args{v});
 
 #
 # product_types.html
 #
 print "info: gen product_types.html\n" if ($args{v});
 
-$vars = { name => "Product_Types", num => $t, links => $product_types };
+$vars = { name => "Product_Types", num => $num_types, links => $product_types };
 $template->process("link_list.tt", $vars, "product_types.html")
 	|| die "template: " . $template->error() . "\n";
 
@@ -151,14 +154,18 @@ xmkdir "$work_dir/products";
 $sql = "select * from products";
 my $products = $dbh->selectall_hashref($sql, "part_num");
 
-my $p = scalar keys %$products;
-print "info: gen products/ ($p pages total)\n" if ($args{v});
+my $num_products = scalar keys %$products;
+print "info: gen products/ $num_products pages\n" if ($args{v});
 while (my ($part_num, $row) = each %$products) {
 	my $part_num_lc = lc($part_num);
-	$row->{description} = get_description($row->{manufacturer}, $row->{part_num});
+	my $manufacturer_lc = lc($row->{manufacturer});
 
-	# xmkdir("$work_dir/products/$result_lc.html", $args{v});
-	$template->process("product.tt", $row, "products/$part_num_lc.html")
+	$row->{description} =
+		get_description($row->{manufacturer}, $row->{part_num});
+
+	# template makes directories if needed
+	$template->process("product.tt", $row,
+		"products/$manufacturer_lc/$part_num_lc.html")
 		|| die "template: " . $template->error() . "\n";
 }
 
@@ -173,8 +180,8 @@ my $upds = $dbh->selectall_arrayref($sql, undef, time - (2 * 60 * 60));
 # index.html
 #
 $vars = {
-	nret => $v, nmanuf => $m, nprod => $p, nnew => scalar @$news,
-	news => $news, nupd => scalar @$upds, upds => $upds
+	nret => $num_retailers, nmanuf => $num_manuf, nprod => $num_products,
+	nnew => scalar @$news, news => $news, nupd => scalar @$upds, upds => $upds
 };
 print "info: gen index.html\n" if ($args{v});
 $template->process("index.tt", $vars, "index.html")

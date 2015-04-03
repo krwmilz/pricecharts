@@ -48,7 +48,7 @@
 			[% END %]
 			<li><img class="logo_small" alt="[% new.0 %]"
 				src="/logo/[% manuf_lc %].svg"></img>
-			<a href="/products/[% part_lc %].html">[% new.1 %]</a>
+			<a href="/products/[% manuf_lc %]/[% part_lc %].html">[% new.1 %]</a>
 			[% END %]
 		</ul>
 	</div>
@@ -65,7 +65,7 @@
 			[% END %]
 			<li><img class="logo_small" alt="[% upd.0 %]"
 				src="/logo/[% manuf_lc %].svg"></img>
-			<a href="/products/[% part_lc %].html">[% upd.1 %]</a>
+			<a href="/products/[% manuf_lc %]/[% part_lc %].html">[% upd.1 %]</a>
 			[% END %]
 		</ul>
 	</div>
