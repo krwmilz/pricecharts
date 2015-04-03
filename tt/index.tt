@@ -46,7 +46,7 @@
 				my $manufacturer = $stash->get("new.0");
 				$stash->set("manuf_lc", lc($manufacturer));
 			[% END %]
-			<li><img class="logo_list" alt="[% new.0 %]"
+			<li><img class="logo_small" alt="[% new.0 %]"
 				src="/logo/[% manuf_lc %].svg"></img>
 			<a href="/products/[% part_lc %].html">[% new.1 %]</a>
 			[% END %]

@@ -19,7 +19,6 @@ p {
 	width: 40%;
 	padding-left: 5%;
 	padding-right: 5%;
-
 	float: left;
 }
 
@@ -37,18 +36,24 @@ p {
 }
 
 .logo {
+	vertical-align: middle;
+	padding: 5px;
+}
+
+.manufacturers {
 	height: 3em;
+	vertical-align: middle;
+	padding: 5px;
+}
+
+.retailers {
+	height: 4em;
 	vertical-align: middle;
 	padding: 5px;
 }
 
 .logo_small {
 	height: 1em;
-}
-
-.logo_list {
-	height: 1em;
-	vertical-align: middle;
 }
 
 /* horizontal rulers, plus date ticks */

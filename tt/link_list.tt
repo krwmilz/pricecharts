@@ -14,9 +14,8 @@
 			$stash->set("link_lc", $link_lc);
 		[% END %]
 			<li><a href="/[% dir_prefix %]/[% link_lc %].html">
-				<img alt="[% link %]" class="logo"
-					src="/logo/[% link_lc %].svg">
-				</img>
+				<img alt="[% link %]" class="[% dir_prefix %]"
+					src="/logo/[% link_lc %].svg" />
 			</a>
 		[% END %]
 		</ul>

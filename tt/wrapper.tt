@@ -8,15 +8,16 @@
 </head>
 <body>
 	<div>
-	<a href="/"><em>Price</em><b>Chart</b></a>
-	<a href="/manufacturers.html">Manufacturers</a>
-	<a href="/retailers.html">Retailers</a>
 	<form method="get" action="/search.html">
 		<fieldset>
 			<input type="text" name="q" />
 			<input type="submit" value="Find">
 		</fieldset>
 	</form>
+	<a href="/"><em>Price</em><b>Chart</b></a>
+	<a href="/manufacturers.html">Manufacturers</a>
+	<a href="/retailers.html">Retailers</a>
+	<a href="/product_types.html">Product Types</a>
 	</div>
 	<hr class="clear_both">
 
