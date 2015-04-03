@@ -27,25 +27,28 @@ my $tmp_file = "/tmp/product_scraper.txt";
 my $log = get_log($tmp_file, $args{v});
 srand;
 
-$dbh->do("create table if not exists products(" .
-	"manufacturer text not null, " .
-	"part_num text not null, " .
-	"retailer text not null, " .
-	"type text, " .
-	"first_seen int, " . 
-	"last_seen int, " .
-	"last_scraped int, " .
-	"primary key(manufacturer, part_num))"
-) or die $DBI::errstr;
+$dbh->do(qq{
+	create table if not exists products(
+		manufacturer text not null,
+		part_num text not null,
+		retailer text not null,
+		type text,
+		first_seen int,
+		last_seen int,
+		last_scraped int,
+		primary key(manufacturer, part_num))
+}) or die $DBI::errstr;
 
-$dbh->do(qq{create table if not exists descriptions(
-	manufacturer text not null,
-	part_num text not null,
-	retailer text not null,
-	description text not null,
-	date int not null,
-	primary key(manufacturer, part_num, retailer, description),
-	foreign key(manufacturer, part_num) references products(manufacturer, part_num))
+$dbh->do(qq{
+	create table if not exists descriptions(
+		manufacturer text not null,
+		part_num text not null,
+		retailer text not null,
+		description text not null,
+		date int not null,
+		primary key(manufacturer, part_num, retailer, description),
+		foreign key(manufacturer, part_num) references
+			products(manufacturer, part_num))
 }) or die $DBI::errstr;
 
 # $dbh->do("create table if not exists scrapes");
