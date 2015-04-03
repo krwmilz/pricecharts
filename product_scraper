@@ -144,7 +144,7 @@ sub mem_exp_scrape_class
 
 	my $ok = $new + $old;
 	my $time_str = sprintf("%dh %dm %ds", (gmtime(time - $start))[2, 1, 0]);
-	print $log sprintf("%-15s %7s %6.1f%% %6i %3i %s\n", $type,
+	print $log sprintf("%-15s %7s %6.1f%% %6i %3i %s\n", lc($type),
 		"$ok/$total", $ok * 100.0 / $total, $err, $new, $time_str);
 }
 
