@@ -16,7 +16,7 @@ use URI::Escape;
 
 
 my %args;
-getopts("m:np:v", \%args);
+getopts("nv", \%args);
 
 $| = 1 if ($args{v});
 
@@ -30,19 +30,18 @@ my $log = get_log($log_path, $args{v});
 # allow products to go out of stock. if we haven't seen them for > 30 days
 # chances are retailers aren't carrying them anymore
 my $cutoff = time - (30 * 24 * 60 * 60);
-my $sql = "select part_num, manufacturer from products " .
+my $sql = "select part_num, manufacturer, type from products " .
 	"where last_seen > $cutoff order by last_scraped asc";
-my ($part_num, $manufacturer) = $dbh->selectrow_array($sql);
+my ($part_num, $manufacturer, $type) = $dbh->selectrow_array($sql);
+
+unless (defined $part_num && defined $manufacturer) {
+	print "error: no parts have been seen in the last $cutoff s";
+	exit 1;
+}
 
 # prevent races with other scrapers, claim ownership as soon as possible
-$dbh->do("update products set last_scraped = ? where part_num = ?",
-	undef, time, $part_num);
-
-if ($args{p} && $args{m}) {
-	$part_num = $args{p};
-	$manufacturer = $args{m};
-}
-exit unless (defined $part_num);
+$dbh->do("update products set last_scraped = ? where part_num = ? and manufacturer = ?",
+	undef, time, $part_num, $manufacturer);
 
 $dbh->do(qq{
 	create table if not exists retailers(
@@ -51,17 +50,18 @@ $dbh->do(qq{
 		url text not null)
 }) or die $DBI::errstr;
 
-$dbh->do("create table if not exists prices(" .
-	"date int not null, " .
-	"manufacturer text not null, " .
-	"part_num text not null, " .
-	"retailer text not null, " .
-	"price int not null, " .
-	"duration int, " .
-	"primary key(date, part_num, retailer, price), " .
-	"foreign key(manufacturer, part_num) references products(manufacturer, part_num), " .
-	"foreign key(retailer) references retailers(name))"
-) or die $DBI::errstr;
+$dbh->do(qq{
+	create table if not exists prices(
+	date int not null,
+	manufacturer text not null,
+	part_num text not null,
+	retailer text not null,
+	price int not null,
+	duration int,
+	primary key(date, part_num, retailer, price),
+	foreign key(manufacturer, part_num) references products(manufacturer, part_num),
+	foreign key(retailer) references retailers(name))
+}) or die $DBI::errstr;
 
 print "info: scraping $manufacturer $part_num\n" if ($args{v});
 
@@ -69,7 +69,7 @@ $sql = "insert into prices(date, manufacturer, part_num, retailer, price, durati
 	"values (?, ?, ?, ?, ?, ?)";
 my $prices_sth = $dbh->prepare($sql);
 
-$sql = "update products set last_seen = ? where part_num = ?";
+$sql = "update products set last_seen = ? where part_num = ? and manufacturer = ?";
 my $products_sth = $dbh->prepare($sql);
 
 $sql = "insert or replace into retailers(name, color, url) values (?, ?, ?)";
@@ -135,18 +135,20 @@ for my $retailer (sort keys %{$cfg->{retailers}}) {
 	$retailer_sth->execute($retailer, $color, $url);
 	$prices_sth->execute($start, $manufacturer, $part_num, $retailer, $price,
 		time - $retailer_start);
-	$products_sth->execute($start, $part_num);
+	$products_sth->execute($start, $part_num, $manufacturer);
 	$descriptions_sth->execute($manufacturer, $part_num, $retailer, $desc, time);
 
 	print "info: $retailer: db: inserted \$$price\n" if ($args{v});
 }
 
-printf $log "%s %-10s %-20s [%s] (%i s)\n", $timestamp, $manufacturer,
-	$part_num, join("", @status), time - $start;
+printf $log "%s %-10s %-10s %-20s [%s] (%i s)\n", $timestamp, $type,
+	$manufacturer, $part_num, join("", @status), time - $start;
 
 $log->close();
+$retailer_sth = undef;
 $prices_sth = undef;
 $products_sth = undef;
+$descriptions_sth = undef;
 $dbh->disconnect();
 
 exit 0;
