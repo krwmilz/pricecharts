@@ -76,7 +76,9 @@ my %product_map = (
 	"Television" => "Televisions",
 	"Laptop" => "LaptopsNotebooks",
 	"Hard Drive" => "HardDrives",
-	"Memory" => "Memory"
+	"Memory" => "Memory",
+	"Video Card" => "VideoCards",
+	"Processor" => "Processors"
 );
 while (my ($type, $name) = each %product_map) {
 	mem_exp_scrape_class($type, $name);
