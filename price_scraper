@@ -69,7 +69,8 @@ $sql = "insert into prices(date, manufacturer, part_num, retailer, price, durati
 	"values (?, ?, ?, ?, ?, ?)";
 my $prices_sth = $dbh->prepare($sql);
 
-$sql = "update products set last_seen = ? where part_num = ? and manufacturer = ?";
+$sql = "update products set last_seen = ?, svg_stale = 1 " .
+	"where part_num = ? and manufacturer = ?";
 my $products_sth = $dbh->prepare($sql);
 
 $sql = "insert or replace into retailers(name, color, url) values (?, ?, ?)";

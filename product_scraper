@@ -27,6 +27,11 @@ my $tmp_file = "/tmp/product_scraper.txt";
 my $log = get_log($tmp_file, $args{v});
 srand;
 
+# use this to add the new column svg_stale
+# $dbh->do("alter table products add column svg_stale int not null default 1");
+# $dbh->disconnect();
+# exit;
+
 $dbh->do(qq{
 	create table if not exists products(
 		manufacturer text not null,
@@ -36,6 +41,7 @@ $dbh->do(qq{
 		first_seen int,
 		last_seen int,
 		last_scraped int,
+		svg_stale int default 1,
 		primary key(manufacturer, part_num))
 }) or die $DBI::errstr;
 

@@ -31,7 +31,7 @@ my $height = $top + $middle + $bottom;
 print "info: r, c, l, w = $right, $center, $left, $width\n" if ($args{v});
 print "info: b, m, t, h = $bottom, $middle, $top, $height\n" if ($args{v});
 
-my $sql = "select manufacturer, part_num from products";
+my $sql = "select manufacturer, part_num from products where svg_stale = 1";
 my $parts_sth = $dbh->prepare($sql);
 
 $sql = "select distinct retailer from prices where part_num = ? and manufacturer = ?";
@@ -40,6 +40,9 @@ my $retailer_sth = $dbh->prepare($sql);
 $sql = "select date, price from prices where " .
 	"part_num = ? and retailer = ? order by date";
 my $point_sth = $dbh->prepare($sql);
+
+$sql = "update products set svg_stale = 0 where manufacturer = ? and part_num = ?";
+my $success_sth = $dbh->prepare($sql);
 
 $parts_sth->execute();
 print "info: generating  " if ($args{v});
@@ -198,6 +201,9 @@ while (my ($manufacturer, $part_num) = $parts_sth->fetchrow_array()) {
 	# );
 
 	next if ($args{n});
+
+	# must be before lower casing of $part_num
+	$success_sth->execute($manufacturer, $part_num);
 
 	# all links lower case
 	$part_num = lc($part_num);
