@@ -176,7 +176,7 @@ $vars = {
 	nret => $v, nmanuf => $m, nprod => $p, nnew => scalar @$news,
 	news => $news, nupd => scalar @$upds, upds => $upds
 };
-print "info: gen index.html\n";
+print "info: gen index.html\n" if ($args{v});
 $template->process("index.tt", $vars, "index.html")
 	|| die "template: " . $template->error() . "\n";
 
