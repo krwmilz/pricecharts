@@ -11,7 +11,7 @@ use PriceChart;
 
 
 my %args;
-getopts("nv", \%args);
+getopts("anv", \%args);
 
 $| = 1 if ($args{v});
 
@@ -31,7 +31,8 @@ my $height = $top + $middle + $bottom;
 print "info: r, c, l, w = $right, $center, $left, $width\n" if ($args{v});
 print "info: b, m, t, h = $bottom, $middle, $top, $height\n" if ($args{v});
 
-my $sql = "select manufacturer, part_num from products where svg_stale = 1";
+my $where_clause = $args{a} ? "" : "where svg_stale = 1";
+my $sql = "select manufacturer, part_num from products $where_clause";
 my $parts_sth = $dbh->prepare($sql);
 
 $sql = "select distinct retailer from prices where part_num = ? and manufacturer = ?";
@@ -202,10 +203,8 @@ while (my ($manufacturer, $part_num) = $parts_sth->fetchrow_array()) {
 
 	next if ($args{n});
 
-	# must be before lower casing of $part_num
-	$success_sth->execute($manufacturer, $part_num);
-
 	# all links lower case
+	my $part_num_cased = $part_num;
 	$part_num = lc($part_num);
 
 	# giant hack, if the part number has / in it, make some directories
@@ -219,11 +218,14 @@ while (my ($manufacturer, $part_num) = $parts_sth->fetchrow_array()) {
 	# XXX: not sure how to add this programatically, hack around for now
 	my @buf = split("\n", $svg->xmlify);
 	my $css_include = "<?xml-stylesheet href=\"/pricechart.css\" type=\"text/css\"?>";
+	# must be the second line
 	splice (@buf, 1, 0, ($css_include));
 
 	print $svg_fh "$_\n" for (@buf);
 	close $svg_fh;
 
+	# we outputted something to a file, consider this a success
+	$success_sth->execute($manufacturer, $part_num_cased);
 	$rendered_total++;
 }
 
