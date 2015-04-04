@@ -34,8 +34,6 @@ my $template = Template->new($config)
 #
 # manufacturers/*
 #
-xmkdir "$work_dir/manufacturers";
-
 my $sql = "select distinct lower(manufacturer) from products";
 my $manufacturers = $dbh->selectcol_arrayref($sql);
 
@@ -75,8 +73,6 @@ $template->process("link_list.tt", $vars, "manufacturers.html")
 #
 # retailers/*
 #
-xmkdir "$work_dir/retailers";
-
 $sql = "select distinct retailer from prices";
 my $retailers = $dbh->selectcol_arrayref($sql);
 
@@ -96,7 +92,7 @@ for my $retailer (@$retailers) {
 	$template->process("chart_list.tt", $vars, "retailers/$retailer_lc.html")
 		|| die "template: " . $template->error() . "\n";
 
-	$retailer_indexed += scalar @$products;
+	$retailer_indexed += @$products;
 }
 print "$num_retailers pages, $retailer_indexed indexed\n" if ($args{v});
 
@@ -112,8 +108,6 @@ $template->process("link_list.tt", $vars, "retailers.html")
 #
 # product_types/*
 #
-xmkdir("$work_dir/product_types");
-
 $sql = "select distinct type from products";
 my $product_types = $dbh->selectcol_arrayref($sql);
 
@@ -133,7 +127,7 @@ for my $type (@$product_types) {
 	$template->process("chart_list.tt", $vars, "product_types/$type_lc.html")
 		|| die "template: " . $template->error() . "\n";
 
-	$type_indexed += scalar @$products;
+	$type_indexed += @$products;
 }
 print "$num_types pages, $type_indexed indexed\n" if ($args{v});
 
@@ -149,8 +143,6 @@ $template->process("link_list.tt", $vars, "product_types.html")
 #
 # products/*
 #
-xmkdir "$work_dir/products";
-
 $sql = "select * from products";
 my $products = $dbh->selectall_hashref($sql, "part_num");
 
