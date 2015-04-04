@@ -44,7 +44,8 @@ for my $manufacturer (@$manufacturers) {
 	$sql = "select manufacturer from products where lower(manufacturer) = ?";
 	my ($manufacturer_cased) = $dbh->selectrow_array($sql, undef, $manufacturer);
 
-	$sql = "select manufacturer, part_num from products where " .
+	# must have at least one price
+	$sql = "select distinct manufacturer, part_num from prices where " .
 		"lower(manufacturer) = ?";
 	my $products = $dbh->selectall_arrayref($sql, undef, $manufacturer);
 	$_->[2] = get_description($_->[0], $_->[1]) for (@$products);
@@ -81,6 +82,7 @@ print "info: gen retailers/ " if ($args{v});
 for my $retailer (@$retailers) {
 	my $retailer_lc = lc($retailer);
 
+	# must have at least one price
 	$sql = "select distinct manufacturer, part_num from prices where retailer = ?";
 	my $products = $dbh->selectall_arrayref($sql, undef, $retailer);
 	$_->[2] = get_description($_->[0], $_->[1]) for (@$products);
