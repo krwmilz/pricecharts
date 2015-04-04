@@ -21,7 +21,7 @@ my $dbh = get_dbh($cfg->{http}, undef, $args{v});
 my $svg_dir = $cfg->{http}{chroot} . $cfg->{http}{htdocs} . "/svg";
 
 # we don't output svg's when -n is given
-print "info: svg output dir is $svg_dir\n" if ($args{v} && !$args{n});
+print "info: output dir is $svg_dir\n" if ($args{v} && !$args{n});
 
 my ($left, $center, $right, $top, $middle, $bottom) = (10, 945, 45, 10, 150, 20);
 my $width = $right + $center + $left;
@@ -223,14 +223,14 @@ while (my ($manufacturer, $part_num) = $parts_sth->fetchrow_array()) {
 	print $svg_fh "$_\n" for (@buf);
 	close $svg_fh;
 
-	# we outputted something to a file, consider this a success
+	# we outputted something to a file, set stale to 0
 	$success_sth->execute($manufacturer, $part_num_cased);
 	$rendered_total++;
 }
 
 if ($args{v}) {
 	print "\n";
-	printf "info: %i svg's rendered (%i skipped), %i series (%i points)\n",
+	printf "info: %i rendered (%i skipped), %i series (%i points)\n",
 		$rendered_total, $raw_total - $rendered_total, $series, $points;
 }
 
