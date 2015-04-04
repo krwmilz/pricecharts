@@ -23,12 +23,12 @@ my $svg_dir = $cfg->{http}{chroot} . $cfg->{http}{htdocs} . "/svg";
 # we don't output svg's when -n is given
 print "info: output dir is $svg_dir\n" if ($args{v} && !$args{n});
 
-my ($left, $center, $right, $top, $middle, $bottom) = (10, 945, 45, 10, 150, 20);
+my ($left, $center, $right, $top, $middle, $bottom) = (10, 945, 45, 15, 150, 25);
 my $width = $right + $center + $left;
 my $height = $top + $middle + $bottom;
 
-print "info: r, c, l, w = $right, $center, $left, $width\n" if ($args{v});
-print "info: b, m, t, h = $bottom, $middle, $top, $height\n" if ($args{v});
+print "info: l, c, r, w = $left, $center, $right, $width\n" if ($args{v});
+print "info: t, m, b, h = $top, $middle, $bottom, $height\n" if ($args{v});
 
 my $where_clause = $args{a} ? "" : "where svg_stale = 1";
 my $sql = "select manufacturer, part_num from products $where_clause";
@@ -67,11 +67,9 @@ while (my ($manufacturer, $part_num) = $parts_sth->fetchrow_array()) {
 
 	# clamp the total size of this thing with viewBox
 	my $svg = SVG->new(viewBox => "0 0 $width $height");
-	$svg->style(type => "text/css", -href => "/pricechart.css");
+	# $svg->style(type => "text/css", -href => "/pricechart.css");
+	my $defs = $svg->defs();
 	my ($x_scale, $y_scale) = ($center / $domain, $middle / $range);
-
-	# $svg->rect(x => 0, y => 0, width => $width, height => $height,
-	# 	class => "chart_bg");
 
 	# make price labels along right side and lines across chart
 	my $num_labels = 5;
@@ -85,9 +83,8 @@ while (my ($manufacturer, $part_num) = $parts_sth->fetchrow_array()) {
 		)->cdata("\$$price");
 
 		$svg->line(
-			id => "line_$_", x1 => $left, y1 => $y,
-			x2 => $width - $right, y2 => $y,
-			class => "chart_rulers",
+			id => "horizontal_line_$_", x1 => $left, y1 => $y,
+			x2 => $width - $right, y2 => $y, class => "chart_rulers"
 		);
 	}
 
@@ -107,7 +104,7 @@ while (my ($manufacturer, $part_num) = $parts_sth->fetchrow_array()) {
 
 		# print the dates along the x axis
 		$svg->text(
-			id => "date_$time", x => $x, y => $height,
+			id => "date_$_", x => $x, y => $height - 5,
 			class => "chart_date", "text-anchor" => $text_anchor
 		)->cdata($date);
 
@@ -134,21 +131,25 @@ while (my ($manufacturer, $part_num) = $parts_sth->fetchrow_array()) {
 		# xlink:href's don't like raw ampersands
 		$url =~ s/&/&amp;/g;
 
+		# define a retailers data point, this can be referenced later
+		$defs->circle(id => "data_point_$retailer", cx => 0, cy => 0,
+			r => 2, style => "fill: #$color; stroke: #$color"
+		);
+
+		# all of the data points can be grouped under 1 anchor
+		my $anchor = $svg->anchor(-href => $url . $part_num,
+			target => "new_window");
+
 		# get all prices that we've scraped per product per retailer
 		$point_sth->execute($part_num, $retailer);
 		while (my ($date, $price) = $point_sth->fetchrow_array) {
 			# transform and clamp real world coordinates
-			push @xs, ($date - $x_min) * $x_scale + $left;
-			push @ys, $height - $bottom - ($price - $y_min) * $y_scale;
+			push @xs, sprintf "%.2f", ($date - $x_min) * $x_scale + $left;
+			push @ys, sprintf "%.2f", $height - $bottom - ($price - $y_min) * $y_scale;
 
 			# small filled in circles to indicate data points
-			$svg->anchor(
-				-href => $url . $part_num,
-				target => "new_window"
-			)->circle(
-				cx => $xs[-1], cy => $ys[-1], r => 2,
-				style => { "fill" => "#$color",
-					"stroke" => "#$color" }
+			$anchor->tag("use", -href => "#data_point_$retailer",
+				x => $xs[-1], y => $ys[-1]
 			);
 
 			$last_y = $ys[-1];
@@ -158,26 +159,18 @@ while (my ($manufacturer, $part_num) = $parts_sth->fetchrow_array()) {
 
 		# helper to get svg path coordinates easily
 		my $points = $svg->get_path(x => \@xs, y => \@ys, -type => "path");
+		$defs->path(%$points, id => "path_$retailer_id");
 
 		# path sucks, spline would look nicer
-		$svg->anchor(-href => $url . $part_num,
-			target => "new_window"
-		)->path(
-			%$points, id => "path_$retailer_id",
-			class => "chart_series",
+		$anchor->use(
+			-href => "#path_$retailer_id", class => "chart_series",
 			style => { fill => "#$color", stroke => "#$color" }
-		);
-
-		# prepare the for the textPath definition
-		my $id = "text_path_$retailer_id";
-		$svg->defs()->path(
-			%$points, id => $id,
 		);
 
 		# show retailer name along the start of the path
 		$svg->text(class => "chart_series_text", fill => "#$color"
-		)->tag("textPath", "xlink:href" => "#$id")->tag("tspan", "dy" => "-5",
-		)->cdata($retailer);
+		)->tag("textPath", -href => "#path_$retailer_id"
+		)->tag("tspan", "dy" => "-5")->cdata($retailer);
 
 		# really, you only care about the latest price difference
 		# $svg->text(
