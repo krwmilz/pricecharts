@@ -81,6 +81,7 @@ $SIG{INT} =  \&child_sig;
 $SIG{TERM} = \&child_sig;
 
 syslog(LOG_INFO, "startup");
+my $requests_total = 0;
 while ($request->Accept() >= 0) {
 	print "Content-Type: text/html\r\n\r\n";
 	my (undef, $input) = split("=", $ENV{QUERY_STRING});
@@ -99,8 +100,9 @@ while ($request->Accept() >= 0) {
 
 	$template->process("search.tt", $vars)
 		|| print "template: " . $template->error();
+	$requests_total++;
 }
-syslog(LOG_INFO, "shutdown");
+syslog(LOG_INFO, "shutdown, $requests_total total requests served");
 closelog();
 
 $search_sth = undef;
