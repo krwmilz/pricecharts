@@ -9,7 +9,11 @@
 	
 	[% FOREACH part_num IN results %]
 	<div class="product">
-		<b>[% part_num.0 %]</b> [% part_num.1 %]<br>
+		<a href="/manufacturers/[% part_num.3 %].html">
+			<img alt="[% part_num.0 %]" class="logo_small"
+			src="/logo/[% part_num.3 %].svg"/></a>
+
+		[% part_num.1 %]<br>
 
 		<object data="/svg/[% part_num.2 %].svg" type="image/svg+xml">
 		</object>
