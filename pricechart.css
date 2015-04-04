@@ -58,19 +58,19 @@ p {
 
 /* horizontal rulers, plus date ticks */
 .chart_rulers {
-	stroke: #DDD;
+	stroke: #BBB;
 	stroke-width: 1;
 }
 
 /* x axis labels */
 .chart_date {
-	font-size: 0.75em;
-	fill: #666;
+	font-size: 0.6em;
+	fill: black;
 }
 
 /* y axis labels */
 .chart_price {
-	font-size: 0.80em;
+	font-size: 0.7em;
 	fill: black;
 }
 
@@ -81,7 +81,7 @@ p {
 }
 
 .chart_series:hover {
-	stroke-width: 4;
+	stroke-width: 3;
 }
 
 .chart_series_text {
