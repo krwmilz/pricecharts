@@ -119,8 +119,8 @@ for my $retailer (sort keys %{$cfg->{retailers}}) {
 
 	my $desc = "";
 	if ($desc_tag) {
-		# scrape description
-		$desc = $search_results->find($desc_tag)->text();
+		# scrape description, use first one found on page
+		($desc) = $search_results->find($desc_tag)->text_array();
 		$desc =~ s/^\s+//;
 		$desc =~ s/\s+$//;
 		if ($desc ne "" && $args{v}) {
