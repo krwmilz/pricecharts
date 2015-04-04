@@ -35,11 +35,13 @@ my $template = Template->new($config)
 # manufacturers/*
 #
 my $sql = "select distinct lower(manufacturer) from products";
-my $manufacturers = $dbh->selectcol_arrayref($sql);
+my $manufacturers = $dbh->selectall_arrayref($sql);
 
 my ($num_manuf, $manufacturer_indexed) = (scalar @$manufacturers, 0);
 print "info: gen manufacturers/ " if ($args{v});
-for my $manufacturer (@$manufacturers) {
+for (@$manufacturers) {
+	my ($manufacturer) = @$_;
+
 	# merge manufacturers that are spelled the same except for casing
 	$sql = "select manufacturer from products where lower(manufacturer) = ?";
 	my ($manufacturer_cased) = $dbh->selectrow_array($sql, undef, $manufacturer);
@@ -59,6 +61,7 @@ for my $manufacturer (@$manufacturers) {
 		|| die "template: " . $template->error() . "\n";
 
 	$manufacturer_indexed += @$products;
+	$_->[1] = scalar @$products;
 }
 print "$num_manuf pages, $manufacturer_indexed indexed\n" if ($args{v});
 
@@ -67,7 +70,9 @@ print "$num_manuf pages, $manufacturer_indexed indexed\n" if ($args{v});
 #
 print "info: gen manufacturers.html\n" if ($args{v});
 
-my $vars = { name => "Manufacturers", num => $num_manuf, links => $manufacturers };
+# sort by total number of products
+my @manuf_sorted = sort {$b->[1] <=> $a->[1]} @$manufacturers;
+my $vars = { name => "Manufacturers", num => $num_manuf, links => \@manuf_sorted };
 $template->process("link_list.tt", $vars, "manufacturers.html")
 	|| die "template: " . $template->error() . "\n";
 
@@ -75,11 +80,12 @@ $template->process("link_list.tt", $vars, "manufacturers.html")
 # retailers/*
 #
 $sql = "select distinct retailer from prices";
-my $retailers = $dbh->selectcol_arrayref($sql);
+my $retailers = $dbh->selectall_arrayref($sql);
 
 my ($num_retailers, $retailer_indexed) = (scalar @$retailers, 0);
 print "info: gen retailers/ " if ($args{v});
-for my $retailer (@$retailers) {
+for (@$retailers) {
+	my ($retailer) = @$_;
 	my $retailer_lc = lc($retailer);
 
 	# must have at least one price
@@ -95,6 +101,7 @@ for my $retailer (@$retailers) {
 		|| die "template: " . $template->error() . "\n";
 
 	$retailer_indexed += @$products;
+	$_->[1] = scalar @$products;
 }
 print "$num_retailers pages, $retailer_indexed indexed\n" if ($args{v});
 
@@ -103,7 +110,8 @@ print "$num_retailers pages, $retailer_indexed indexed\n" if ($args{v});
 #
 print "info: gen retailers.html\n" if ($args{v});
 
-$vars = { name => "Retailers", num => $num_retailers, links => $retailers };
+my @retailers_sorted = sort {$b->[1] <=> $a->[1]} @$retailers;
+$vars = { name => "Retailers", num => $num_retailers, links => \@retailers_sorted };
 $template->process("link_list.tt", $vars, "retailers.html")
 	|| die "template: " . $template->error() . "\n";
 
@@ -111,11 +119,12 @@ $template->process("link_list.tt", $vars, "retailers.html")
 # product_types/*
 #
 $sql = "select distinct type from products";
-my $product_types = $dbh->selectcol_arrayref($sql);
+my $product_types = $dbh->selectall_arrayref($sql);
 
 my ($num_types, $type_indexed) = (scalar @$product_types, 0);
 print "info: gen product_types/ " if ($args{v});
-for my $type (@$product_types) {
+for (@$product_types) {
+	my ($type) = @$_;
 	my $type_lc = lc($type);
 
 	$sql = "select manufacturer, part_num from products where type = ?";
@@ -130,6 +139,7 @@ for my $type (@$product_types) {
 		|| die "template: " . $template->error() . "\n";
 
 	$type_indexed += @$products;
+	$_->[1] = scalar @$products;
 }
 print "$num_types pages, $type_indexed indexed\n" if ($args{v});
 
@@ -138,7 +148,8 @@ print "$num_types pages, $type_indexed indexed\n" if ($args{v});
 #
 print "info: gen product_types.html\n" if ($args{v});
 
-$vars = { name => "Product_Types", num => $num_types, links => $product_types };
+my @types_sorted = sort {$b->[1] <=> $a->[1]} @$product_types;
+$vars = { name => "Product_Types", num => $num_types, links => \@types_sorted };
 $template->process("link_list.tt", $vars, "product_types.html")
 	|| die "template: " . $template->error() . "\n";
 

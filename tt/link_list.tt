@@ -10,13 +10,13 @@
 		[% FOREACH link IN links %]
 		[% PERL %]
 			# all url references are lower case
-			my $link_lc = lc $stash->get("link");
+			my $link_lc = lc $stash->get("link.0");
 			$stash->set("link_lc", $link_lc);
 		[% END %]
 			<li><a href="/[% dir_prefix %]/[% link_lc %].html">
-				<img alt="[% link %]" class="[% dir_prefix %]"
-					src="/logo/[% link_lc %].svg" />
-			</a>
+				<img alt="[% link.0 %]" class="[% dir_prefix %]"
+					src="/logo/[% link_lc %].svg" /></a>
+			([% link.1 %] products)
 		[% END %]
 		</ul>
 	</div>
