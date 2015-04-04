@@ -252,7 +252,8 @@ sub mem_exp_scrape_thumbnail
 	if ($brand eq "") {
 		# and sometimes shows up inside the tag attributes
 		$brand = $dom->find(".ProductBrand")->html();
-		($brand) = ($brand =~ m/Brand: ([A-Za-z]+)/);
+		# XXX: revisit this regex, it should be less strict
+		($brand) = ($brand =~ m/Brand: ([0-9A-Za-z\. ]+)/);
 	}
 	if (!defined $brand || $brand eq "") {
 		print $log "$error_hdr: .ProductBrand not found, html was:\n";
