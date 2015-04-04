@@ -117,6 +117,7 @@ for my $retailer (sort keys %{$cfg->{retailers}}) {
 	$price = $price_s if ($price_s);
 	$price = min($price_r, $price_s) if ($price_r && $price_s);
 
+	# opportunistically scrape descriptions
 	my $desc = "";
 	if ($desc_tag) {
 		# scrape description, use first one found on page
@@ -137,7 +138,8 @@ for my $retailer (sort keys %{$cfg->{retailers}}) {
 	$prices_sth->execute($start, $manufacturer, $part_num, $retailer, $price,
 		time - $retailer_start);
 	$products_sth->execute($start, $part_num, $manufacturer);
-	$descriptions_sth->execute($manufacturer, $part_num, $retailer, $desc, time);
+	$descriptions_sth->execute($manufacturer, $part_num, $retailer,
+		$desc, time) if ($desc ne "");
 
 	print "info: $retailer: db: inserted \$$price\n" if ($args{v});
 }
