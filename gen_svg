@@ -23,7 +23,7 @@ my $svg_dir = $cfg->{http}{chroot} . $cfg->{http}{htdocs} . "/svg";
 # we don't output svg's when -n is given
 print "info: output dir is $svg_dir\n" if ($args{v} && !$args{n});
 
-my ($left, $center, $right, $top, $middle, $bottom) = (10, 945, 45, 15, 150, 25);
+my ($left, $center, $right, $top, $middle, $bottom) = (10, 950, 40, 15, 150, 20);
 my $width = $right + $center + $left;
 my $height = $top + $middle + $bottom;
 
@@ -122,7 +122,6 @@ while (my ($manufacturer, $part_num) = $parts_sth->fetchrow_array()) {
 	$retailer_sth->execute($part_num, $manufacturer);
 	while (my ($retailer) = $retailer_sth->fetchrow_array()) {
 		my (@xs, @ys);
-		my ($last_y, $last_price) = ("#000", 0, 0);
 
 		my $retailer_id = lc($retailer);
 		$retailer_id =~ s/ /_/;
@@ -135,12 +134,8 @@ while (my ($manufacturer, $part_num) = $parts_sth->fetchrow_array()) {
 
 		# define a retailers data point, this can be referenced later
 		$defs->circle(id => "data_point_$retailer", cx => 0, cy => 0,
-			r => 2, style => "fill: #$color; stroke: #$color"
+			r => 2, style => "stroke: #$color; fill: white; stroke-width: 2",
 		);
-
-		# all of the data points can be grouped under 1 anchor
-		my $anchor = $svg->anchor(-href => $url . $part_num,
-			target => "new_window");
 
 		# get all prices that we've scraped per product per retailer
 		$point_sth->execute($part_num, $retailer);
@@ -149,38 +144,34 @@ while (my ($manufacturer, $part_num) = $parts_sth->fetchrow_array()) {
 			push @xs, sprintf "%.2f", ($date - $x_min) * $x_scale + $left;
 			push @ys, sprintf "%.2f", $height - $bottom - ($price - $y_min) * $y_scale;
 
-			# small filled in circles to indicate data points
-			$anchor->tag("use", -href => "#data_point_$retailer",
-				x => $xs[-1], y => $ys[-1]
-			);
-
-			$last_y = $ys[-1];
-			$last_price = $price;
 			$points++;
 		}
 
-		# helper to get svg path coordinates easily
+		# path sucks, spline would look nicer
 		my $points = $svg->get_path(x => \@xs, y => \@ys, -type => "path");
 		$defs->path(%$points, id => "path_$retailer_id");
 
-		# path sucks, spline would look nicer
+		# all of the data points can be grouped under 1 anchor
+		my $anchor = $svg->anchor(-href => $url . $part_num,
+			target => "new_window");
+
+		# draw path first
 		$anchor->use(
 			-href => "#path_$retailer_id", class => "chart_series",
 			style => { fill => "#$color", stroke => "#$color" }
 		);
 
+		# then draw individual data points
+		while (my $i = each @xs) {
+			$anchor->use(-href => "#data_point_$retailer",
+				x => $xs[$i], y => $ys[$i]
+			);
+		}
+
 		# show retailer name along the start of the path
 		$svg->text(class => "chart_series_text", fill => "#$color"
 		)->tag("textPath", -href => "#path_$retailer_id"
 		)->tag("tspan", "dy" => "-5")->cdata($retailer);
-
-		# really, you only care about the latest price difference
-		# $svg->text(
-		# 	id => "price_for_$retailer_id", x => $left + $center + 5,
-		# 	y => $last_y + 5,
-		# 	style => "font-size: 12px; fill: #000",
-		# 	"text-anchor" => "start"
-		# )->cdata("\$$last_price");
 
 		$series++;
 	}
