@@ -58,8 +58,8 @@ while (my ($manufacturer, $part_num) = $parts_sth->fetchrow_array()) {
 		$dbh->selectrow_array($sql, undef, $part_num, $manufacturer);
 	next unless (defined $x_min);
 
-	$y_max = ceil($y_max / 10) * 10;
-	$y_min = floor($y_min / 10) * 10;
+	$y_max = ceil($y_max / 100) * 100;
+	$y_min = floor($y_min / 100) * 100;
 
 	my ($domain, $range) = ($x_max - $x_min, $y_max - $y_min);
 	$domain = 24 * 60 * 60 if ($domain <= 0);
@@ -74,8 +74,9 @@ while (my ($manufacturer, $part_num) = $parts_sth->fetchrow_array()) {
 	# make price labels along right side and lines across chart
 	my $num_labels = 5;
 	for (1..$num_labels) {
-		my $price = ceil($y_max - $range * $_ / $num_labels);
-		my $y = $top + $middle * ($_ - 1) / ($num_labels - 1);
+		my $step = ($_ - 1) / ($num_labels - 1);
+		my $price = ceil($y_max - $range * $step);
+		my $y = $top + $middle * $step;
 
 		$svg->text(
 			id => "price_$_", x => $left + $center + 5, y => $y + 3,
@@ -93,9 +94,10 @@ while (my ($manufacturer, $part_num) = $parts_sth->fetchrow_array()) {
 		$num_labels = 1;
 	}
 	for (1..$num_labels) {
-		my $time = $x_min + $_ * $domain / $num_labels;
+		my $step = ($_ - 1) / ($num_labels - 1);
+		my $time = $x_min + $domain * $step;
 		my $date = strftime "%b %e %Y", localtime($time);
-		my $x = $left + ($_ - 1) / ($num_labels - 1) * $center;
+		my $x = $left + $center * $step;
 
 		# make the dates not hang off the ends of the chart
 		my $text_anchor = "middle";
