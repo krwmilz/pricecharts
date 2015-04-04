@@ -19,7 +19,6 @@ my $cfg = get_config();
 my $dbh = get_dbh($cfg->{http}, undef, $args{v});
 
 my $svg_dir = $cfg->{http}{chroot} . $cfg->{http}{htdocs} . "/svg";
-xmkdir($svg_dir, $args{v});
 
 # we don't output svg's when -n is given
 print "info: svg output dir is $svg_dir\n" if ($args{v} && !$args{n});
@@ -210,7 +209,7 @@ while (my ($manufacturer, $part_num) = $parts_sth->fetchrow_array()) {
 	# giant hack, if the part number has / in it, make some directories
 	if ($part_num =~ /\//) {
 		my $needed_dirs = substr($part_num, 0, rindex($part_num, '/'));
-		xmkdir("$svg_dir/$needed_dirs", $args{v});
+		make_path("$svg_dir/$needed_dirs", { verbose => $args{v} });
 	}
 	open my $svg_fh, ">", "$svg_dir/$part_num.svg" or
 		die "couldn't open $svg_dir/$part_num: $!";
