@@ -72,8 +72,8 @@ my $config = { INCLUDE_PATH => "$http_cfg{htdocs}/tt" };
 my $template = Template->new($config) || die $Template::ERROR . "\n";
 
 # try hard here not to use EVAL_PERL in the template
-my $sql = "select manufacturer, part_num, lower(part_num), lower(manufacturer) ".
-	"from products where part_num like ? or manufacturer like ?";
+my $sql = "select distinct manufacturer, part_num, lower(part_num), lower(manufacturer) ".
+	"from prices where part_num like ? or manufacturer like ?";
 my $search_sth = $dbh->prepare($sql);
 
 # intercept signals to shut down cleanly
