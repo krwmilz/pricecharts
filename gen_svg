@@ -129,11 +129,6 @@ while (my ($manufacturer, $part_num) = $parts_sth->fetchrow_array()) {
 		# xlink:href's don't like raw ampersands
 		$url =~ s/&/&amp;/g;
 
-		# define a retailers data point, this can be referenced later
-		$defs->circle(id => "data_point_$retailer", cx => 0, cy => 0,
-			r => 2, style => "stroke: #$color; fill: white; stroke-width: 2",
-		);
-
 		# get all prices that we've scraped per product per retailer
 		$point_sth->execute($part_num, $retailer);
 		while (my ($date, $price) = $point_sth->fetchrow_array) {
@@ -152,12 +147,14 @@ while (my ($manufacturer, $part_num) = $parts_sth->fetchrow_array()) {
 			target => "new_window");
 
 		# draw path first
-		$anchor->use(
-			-href => "#path_$retailer_id", class => "chart_series",
-			style => { stroke => "#$color" }
+		$anchor->use(-href => "#path_$retailer_id",
+			class => "chart_series", style => "stroke: #$color"
 		);
 
-		# then draw individual data points
+		# now draw individual data points
+		$defs->circle(id => "data_point_$retailer", cx => 0, cy => 0,
+			r => 2, style => "stroke: #$color; fill: white; stroke-width: 2",
+		);
 		while (my $i = each @xs) {
 			$anchor->use(-href => "#data_point_$retailer",
 				x => $xs[$i], y => $ys[$i]
