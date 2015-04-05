@@ -118,15 +118,18 @@ for my $retailer (sort keys %{$cfg->{retailers}}) {
 	$price = min($price_r, $price_s) if ($price_r && $price_s);
 
 	# opportunistically scrape descriptions
-	my $desc = "";
+	my ($found_descr, $descr);
 	if ($desc_tag) {
 		# scrape description, use first one found on page
-		($desc) = $search_results->find($desc_tag)->text_array();
-		$desc =~ s/^\s+//;
-		$desc =~ s/\s+$//;
-		if ($desc ne "" && $args{v}) {
-			my $desc_s = trunc_line($desc, length($retailer) + 8);
-			print "info: $retailer: $desc_s\n";
+		($descr) = $search_results->find($desc_tag)->text_array();
+		if (defined $descr && $descr ne "") {
+			$descr =~ s/^\s+//;
+			$descr =~ s/\s+$//;
+			$descr =~ s/$manufacturer//;
+			$descr =~ s/$part_num//;
+
+			my $descr_s = trunc_line($descr, length($retailer) + 8);
+			print "info: $retailer: $descr_s\n" if ($args{v});
 		}
 	}
 
@@ -139,7 +142,7 @@ for my $retailer (sort keys %{$cfg->{retailers}}) {
 		time - $retailer_start);
 	$products_sth->execute($start, $part_num, $manufacturer);
 	$descriptions_sth->execute($manufacturer, $part_num, $retailer,
-		$desc, time) if ($desc ne "");
+		$descr, time) if ($found_descr);
 
 	print "info: $retailer: db: inserted \$$price\n" if ($args{v});
 }
