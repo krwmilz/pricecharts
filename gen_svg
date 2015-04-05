@@ -90,14 +90,11 @@ while (my ($manufacturer, $part_num) = $parts_sth->fetchrow_array()) {
 	}
 
 	# make dates along the bottom
-	if ($domain == 0) {
-		$num_labels = 1;
+	if ($domain == 24 * 60 * 60) {
+		$num_labels = 2;
 	}
 	for (1..$num_labels) {
 		my $step = ($_ - 1) / ($num_labels - 1);
-		my $time = $x_min + $domain * $step;
-		my $date = strftime "%b %e %Y", localtime($time);
-		my $x = $left + $center * $step;
 
 		# make the dates not hang off the ends of the chart
 		my $text_anchor = "middle";
@@ -105,15 +102,15 @@ while (my ($manufacturer, $part_num) = $parts_sth->fetchrow_array()) {
 		$text_anchor = "end" if ($_ == $num_labels);
 
 		# print the dates along the x axis
-		$svg->text(
-			id => "date_$_", x => $x, y => $height - 5,
+		my $x = $left + $center * $step;
+		my $time = $x_min + $domain * $step;
+		$svg->text(id => "date_$_", x => $x, y => $height - 5,
 			class => "chart_date", "text-anchor" => $text_anchor
-		)->cdata($date);
+		)->cdata(strftime("%B %e, %Y", localtime($time)));
 
 		# print the little tick marks down from the x axis
 		my $x_axis = $top + $middle;
-		$svg->line(
-			id => "date_marker_$_", x1 => $x, y1 => $x_axis,
+		$svg->line(id => "date_marker_$_", x1 => $x, y1 => $x_axis,
 			x2 => $x, y2 => $x_axis + 5, class => "chart_rulers",
 		);
 	}
@@ -143,7 +140,6 @@ while (my ($manufacturer, $part_num) = $parts_sth->fetchrow_array()) {
 			# transform and clamp real world coordinates
 			push @xs, sprintf "%.2f", ($date - $x_min) * $x_scale + $left;
 			push @ys, sprintf "%.2f", $height - $bottom - ($price - $y_min) * $y_scale;
-
 			$points++;
 		}
 
@@ -158,7 +154,7 @@ while (my ($manufacturer, $part_num) = $parts_sth->fetchrow_array()) {
 		# draw path first
 		$anchor->use(
 			-href => "#path_$retailer_id", class => "chart_series",
-			style => { fill => "#$color", stroke => "#$color" }
+			style => { stroke => "#$color" }
 		);
 
 		# then draw individual data points
