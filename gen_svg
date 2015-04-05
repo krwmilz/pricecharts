@@ -169,7 +169,7 @@ while (my ($manufacturer, $part_num) = $parts_sth->fetchrow_array()) {
 		}
 
 		# show retailer name along the start of the path
-		$svg->text(class => "chart_series_text", fill => "#$color"
+		$anchor->text(class => "chart_series_text", fill => "#$color"
 		)->tag("textPath", -href => "#path_$retailer_id"
 		)->tag("tspan", "dy" => "-5")->cdata($retailer);
 
