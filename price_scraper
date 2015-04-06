@@ -130,6 +130,7 @@ for my $retailer (sort keys %{$cfg->{retailers}}) {
 
 			my $descr_s = trunc_line($descr, length($retailer) + 8);
 			print "info: $retailer: $descr_s\n" if ($args{v});
+			$found_descr = 1;
 		}
 	}
 
@@ -142,7 +143,7 @@ for my $retailer (sort keys %{$cfg->{retailers}}) {
 		time - $retailer_start);
 	$products_sth->execute($start, $part_num, $manufacturer);
 	$descriptions_sth->execute($manufacturer, $part_num, $retailer,
-		$descr, time) if ($found_descr);
+		$descr, time) if (defined $found_descr);
 
 	print "info: $retailer: db: inserted \$$price\n" if ($args{v});
 }
