@@ -100,7 +100,7 @@ sub mem_exp_scrape_class
 {
 	my $type = shift;
 	my $name = shift;
-	my $info_hdr = "info: . " lc($type);
+	my $info_hdr = "info: " . lc($type);
 
 	my $thumbnails = mem_exp_get_thumbnails($name, $info_hdr);
 	return undef unless defined $thumbnails;
