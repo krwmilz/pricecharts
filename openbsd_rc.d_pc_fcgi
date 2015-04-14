@@ -1,6 +1,6 @@
 #!/bin/sh
 
-daemon="/home/kyle/src/pricechart/pc_fcgi"
+daemon="perl /home/kyle/src/pricechart/pc_fcgi"
 
 . /etc/rc.d/rc.subr
 
