@@ -59,7 +59,7 @@ p {
 /* horizontal rulers, plus date ticks */
 .chart_rulers {
 	stroke: #BBB;
-	stroke-width: 1;
+	stroke-width: 0.5;
 }
 
 /* x axis labels */
@@ -77,13 +77,23 @@ p {
 /* retailer date series */
 .chart_series {
 	fill-opacity: 0;
-	stroke-width: 2;
+	stroke-width: 1;
 }
 
 .chart_series:hover {
-	stroke-width: 3;
+	stroke-width: 2;
 }
 
 .chart_series_text {
 	font-size: 0.5em;
+	text-decoration: bold;
+}
+
+.chart_data {
+	fill: white;
+	stroke-width: 1;
+}
+
+.chart_data:hover {
+	stroke-width: 2;
 }

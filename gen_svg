@@ -67,7 +67,6 @@ while (my ($manufacturer, $part_num) = $parts_sth->fetchrow_array()) {
 
 	# clamp the total size of this thing with viewBox
 	my $svg = SVG->new(viewBox => "0 0 $width $height");
-	# $svg->style(type => "text/css", -href => "/pricechart.css");
 	my $defs = $svg->defs();
 	my ($x_scale, $y_scale) = ($center / $domain, $middle / $range);
 
@@ -118,8 +117,6 @@ while (my ($manufacturer, $part_num) = $parts_sth->fetchrow_array()) {
 	# each series on the chart represents a retailers prices
 	$retailer_sth->execute($part_num, $manufacturer);
 	while (my ($retailer) = $retailer_sth->fetchrow_array()) {
-		my (@xs, @ys);
-
 		my $retailer_id = lc($retailer);
 		$retailer_id =~ s/ /_/;
 
@@ -130,19 +127,28 @@ while (my ($manufacturer, $part_num) = $parts_sth->fetchrow_array()) {
 		$url =~ s/&/&amp;/g;
 
 		# get all prices that we've scraped per product per retailer
+		my (@xs, @ys, @pts);
 		$point_sth->execute($part_num, $retailer);
 		while (my ($date, $price) = $point_sth->fetchrow_array) {
 			# transform and clamp real world coordinates
-			push @xs, sprintf "%.2f", ($date - $x_min) * $x_scale + $left;
-			push @ys, sprintf "%.2f", $height - $bottom - ($price - $y_min) * $y_scale;
+			push @xs, sprintf "%.3f", ($date - $x_min) * $x_scale + $left;
+			push @ys, sprintf "%.3f", $height - $bottom - ($price - $y_min) * $y_scale;
+			push @pts, $xs[-1];
+			push @pts, $ys[-1];
 			$points++;
 		}
 
-		# path sucks, spline would look nicer
-		my $points = $svg->get_path(x => \@xs, y => \@ys, -type => "path");
-		$defs->path(%$points, id => "path_$retailer_id");
+		if (@pts < 6) {
+			my $points = $svg->get_path(x => \@xs, y => \@ys, -type => "path");
+			$defs->path(%$points, id => "path_$retailer_id");
+		}
+		else {
+			# catmull rom time
+			my $d = catmullrom_to_bezier(\@pts);
+			$defs->tag("path", "d" => $d, id => "path_$retailer_id");
+		}
 
-		# all of the data points can be grouped under 1 anchor
+		# the line, points, and label can be grouped under one anchor
 		my $anchor = $svg->anchor(-href => $url . $part_num,
 			target => "new_window");
 
@@ -153,7 +159,7 @@ while (my ($manufacturer, $part_num) = $parts_sth->fetchrow_array()) {
 
 		# now draw individual data points
 		$defs->circle(id => "data_point_$retailer", cx => 0, cy => 0,
-			r => 2, style => "stroke: #$color; fill: white; stroke-width: 2",
+			class => "chart_data", r => 2, style => "stroke: #$color;"
 		);
 		while (my $i = each @xs) {
 			$anchor->use(-href => "#data_point_$retailer",
@@ -223,3 +229,94 @@ sub spin
 	print "\b";
 	print $spin_states[++$state % 4];
 }
+
+sub catmullrom_to_bezier
+{
+	my $pts_ref = shift;
+	my @pts = @$pts_ref;
+
+	# catmull-rom to cubic bezier conversion matrix
+	# 0    1    0    0
+	# -1/6 1    1/6  0
+	# 0    1/6  1    -1/6
+	# 0    0    1    0
+
+	my $d = "M" . $pts[0] . ", " . $pts[1] . " ";
+	my $iLen = @pts;
+	for (my $i = 0; $iLen - 2 > $i; $i += 2) {
+		my @p;
+		if ($i == 0) {
+			push @p, {x => $pts[$i], y => $pts[$i + 1]};
+			push @p, {x => $pts[$i], y => $pts[$i + 1]};
+			push @p, {x => $pts[$i + 2], y => $pts[$i + 3]};
+			push @p, {x => $pts[$i + 4], y => $pts[$i + 5]};
+		}
+		elsif ($i == ($iLen - 4)) {
+			push @p, {x => $pts[$i - 2], y => $pts[$i - 1]};
+			push @p, {x => $pts[$i], y => $pts[$i + 1]};
+			push @p, {x => $pts[$i + 2], y => $pts[$i + 3]};
+			push @p, {x => $pts[$i + 2], y => $pts[$i + 3]};
+		}
+		else {
+			push @p, {x => $pts[$i - 2], y => $pts[$i - 1]};
+			push @p, {x => $pts[$i], y => $pts[$i + 1]};
+			push @p, {x => $pts[$i + 2], y => $pts[$i + 3]};
+			push @p, {x => $pts[$i + 4], y => $pts[$i + 5]};
+		}
+
+		#	print Dumper(@p);
+
+		my @bp;
+		push @bp, {x => $p[1]{x}, y => $p[1]{y}};
+		push @bp, {
+			x => ((-$p[0]{x} + 6*$p[1]{x} + $p[2]{x}) / 6),
+			y => ((-$p[0]{y} + 6*$p[1]{y} + $p[2]{y}) / 6)
+		};
+		push @bp, {
+			x => (($p[1]{x} + 6*$p[2]{x} - $p[3]{x}) / 6),
+			y => (($p[1]{y} + 6*$p[2]{y} - $p[3]{y}) / 6)
+		};
+		push @bp, {x => $p[2]{x}, y => $p[2]{y}};
+
+		$d .= "C " . $bp[1]{x} . ", " . $bp[1]{y} . " " .
+			$bp[2]{x} . ", " . $bp[2]{y} . " " .
+			$bp[3]{x} . ", " . $bp[3]{y} . " ";
+	}
+
+	# print $d;
+	return $d;
+}
+
+# function catmullRom2bezier( points ) {
+#        // alert(points)
+# var crp = points.split(/[,\s]/);
+# var d = "";
+# for (var i = 0, iLen = crp.length; iLen - 2 > i; i+=2) {
+# 	var p = [];
+# 	if ( 0 == i ) {
+# 		p.push( {x: parseFloat(crp[ i ]), y: parseFloat(crp[ i + 1 ])} );
+# 		p.push( {x: parseFloat(crp[ i ]), y: parseFloat(crp[ i + 1 ])} );
+# 		p.push( {x: parseFloat(crp[ i + 2 ]), y: parseFloat(crp[ i + 3 ])} );
+# 		p.push( {x: parseFloat(crp[ i + 4 ]), y: parseFloat(crp[ i + 5 ])} );
+# 	} else if ( iLen - 4 == i ) {
+# 		p.push( {x: parseFloat(crp[ i - 2 ]), y: parseFloat(crp[ i - 1 ])} );
+# 		p.push( {x: parseFloat(crp[ i ]), y: parseFloat(crp[ i + 1 ])} );
+# 		p.push( {x: parseFloat(crp[ i + 2 ]), y: parseFloat(crp[ i + 3 ])} );
+# 		p.push( {x: parseFloat(crp[ i + 2 ]), y: parseFloat(crp[ i + 3 ])} );
+# 	} else {
+# 		p.push( {x: parseFloat(crp[ i - 2 ]), y: parseFloat(crp[ i - 1 ])} );
+# 		p.push( {x: parseFloat(crp[ i ]), y: parseFloat(crp[ i + 1 ])} );
+# 		p.push( {x: parseFloat(crp[ i + 2 ]), y: parseFloat(crp[ i + 3 ])} );
+# 		p.push( {x: parseFloat(crp[ i + 4 ]), y: parseFloat(crp[ i + 5 ])} );
+# 	}
+#
+# 	var bp = [];
+# 	bp.push( { x: p[1].x, y: p[1].y } );
+# 	bp.push( { x: ((-p[0].x + 6*p[1].x + p[2].x) / 6), y: ((-p[0].y + 6*p[1].y + p[2].y) / 6)} );
+# 	bp.push( { x: ((p[1].x + 6*p[2].x - p[3].x) / 6), y: ((p[1].y + 6*p[2].y - p[3].y) / 6) } );
+# 	bp.push( { x: p[2].x, y: p[2].y } );
+#
+# 	d += "C" + bp[1].x + "," + bp[1].y + " " + bp[2].x + "," + bp[2].y + " " + bp[3].x + "," + bp[3].y + " ";
+# }
+# return d;
+# }
