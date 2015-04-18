@@ -46,11 +46,11 @@ my $sql_1 = qq{select distinct prices.manufacturer from prices, products where
 	group by prices.manufacturer having count(distinct prices.part_num) > 1};
 
 my $sql_2 = qq{select distinct products.type from prices, products where
-	prices.manufacturer = products.manufacturer and
-	prices.part_num = products.part_num and prices.manufacturer = ?};
+	prices.manufacturer = products.manufacturer and prices.manufacturer = ?
+	and prices.part_num = products.part_num};
 
-my $sql_3 = qq{select distinct manufacturer, part_num
-	from products where type = ? and manufacturer = ?};
+my $sql_3 = qq{select distinct manufacturer, part_num from products
+	where type = ? and manufacturer = ?};
 
 generate_folder($sql_1, $sql_2, $sql_3, "manufacturers", "Manufacturers");
 
@@ -70,10 +70,9 @@ $sql_2 = qq{select distinct products.type from prices, products where
 	prices.part_num = products.part_num and prices.retailer = ?};
 
 $sql_3 = qq{select distinct prices.manufacturer, prices.part_num
-	from prices, products where
-	prices.part_num = products.part_num and
-	products.manufacturer = prices.manufacturer
-	and products.type = ? and prices.retailer = ?};
+	from prices, products where prices.part_num = products.part_num and
+	products.manufacturer = prices.manufacturer and products.type = ? and
+	prices.retailer = ?};
 
 generate_folder($sql_1, $sql_2, $sql_3, "retailers", "Retailers");
 
@@ -90,8 +89,7 @@ $sql_2 = qq{select distinct products.manufacturer from prices, products where
 	prices.part_num = products.part_num and products.type = ?};
 
 $sql_3 = qq{select distinct prices.manufacturer, prices.part_num
-	from prices, products where
-	prices.part_num = products.part_num and
+	from prices, products where prices.part_num = products.part_num and
 	products.manufacturer = prices.manufacturer and
 	products.manufacturer = ? and products.type = ?};
 
@@ -129,16 +127,15 @@ $sql = "select manufacturer, part_num from products where last_seen > ? order by
 my $upds = $dbh->selectall_arrayref($sql, undef, time - (1 * 60 * 60));
 
 #
-# index.html
+# index
 #
 my $vars = {
 	nret => 66, nmanuf => 99, nprod => $num_products,
 	nnew => scalar @$news, news => $news, nupd => scalar @$upds, upds => $upds
 };
-print "info: index.html\n" if ($args{v});
+print "info: index\n" if ($args{v});
 $template->process("index.tt", $vars, "index.html")
 	or die "template: " . $template->error() . "\n";
-
 
 #
 # svg
