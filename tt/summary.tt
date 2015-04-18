@@ -1,0 +1,16 @@
+[% WRAPPER wrapper.tt %]
+[% PERL %]
+	# all url references are lower case
+	my $dir_prefix = lc($stash->get("name"));
+	$stash->set("name_lc", $dir_prefix);
+[% END %]
+	<h1><img alt="[% name %]" class="logo_small" src="/logo/[% logo %]"/></h1>
+
+	<ul>
+	[% FOREACH item IN info %]
+		<li><a href="/[% type %]/[% info.$item.link %].html">
+			[% info.$item.num %]</a>
+		[% item %]
+	[% END %]
+	</ul>
+[% END %]
