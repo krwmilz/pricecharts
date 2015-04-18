@@ -21,14 +21,12 @@ my $dbh = get_dbh($cfg->{http}, undef, $args{v});
 my $svg_dir = $cfg->{http}{chroot} . $cfg->{http}{htdocs} . "/svg";
 
 # we don't output svg's when -n is given
-print "info: output dir is $svg_dir\n" if ($args{v} && !$args{n});
+print "info: svg: output dir is $svg_dir\n" if ($args{v} && !$args{n});
 
+# svg dimensions
 my ($left, $center, $right, $top, $middle, $bottom) = (3, 957, 40, 15, 150, 20);
 my $width = $right + $center + $left;
 my $height = $top + $middle + $bottom;
-
-print "info: l, c, r, w = $left, $center, $right, $width\n" if ($args{v});
-print "info: t, m, b, h = $top, $middle, $bottom, $height\n" if ($args{v});
 
 my $where_clause = $args{a} ? "" : "where svg_stale = 1";
 my $sql = "select manufacturer, part_num from products $where_clause";
@@ -105,11 +103,8 @@ while (my ($manufacturer, $part_num) = $parts_sth->fetchrow_array()) {
 	$success_sth->execute($manufacturer, $part_num_cased);
 	$rendered_total++;
 }
-
-if ($args{v}) {
-	printf "\b%i rendered (%i skipped), %i series (%i points)\n",
-		$rendered_total, $raw_total - $rendered_total, $series, $points;
-}
+printf "\b%i rendered, %i skipped, ", $rendered_total, $raw_total - $rendered_total if ($args{v});
+printf "%i points in %i series\n", $points, $series if ($args{v});
 
 $dbh->disconnect();
 
