@@ -19,13 +19,7 @@
 	<a href="/retailers.html">Retailers</a>
 	<a href="/product_types.html">Product Types</a>
 	</div>
-	<hr class="clear_both">
 
 	[% content %]
-
-	<!--hr class="clear_both">
-	<div id="footer">
-		<a href="mailto:not_real@getaddrinfo.net">Feedback/Donate</a>
-	</div-->
 </body>
 </html>

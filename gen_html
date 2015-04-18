@@ -4,8 +4,11 @@ use strict;
 use warnings;
 
 use Config::Grammar;
-use Getopt::Std;
+use Data::Dumper;
 use File::Copy;
+use Getopt::Std;
+use Lingua::EN::Inflect qw(PL);
+use POSIX qw(ceil);
 use PriceChart;
 use Template;
 use Time::Piece;
@@ -32,55 +35,79 @@ my $template = Template->new($config)
 	|| die "template: . " . Template->error() . "\n";
 
 #
-# manufacturers/*
+# manufacturers
 #
-my $sql = "select distinct lower(manufacturer) from products";
-my $manufacturers = $dbh->selectall_arrayref($sql);
+my $sql = "select distinct lower(manufacturer) from prices group by manufacturer " .
+	"having count(distinct part_num) > 1";
+my $manufacturers = $dbh->selectcol_arrayref($sql);
 
-my ($num_manuf, $manufacturer_indexed) = (scalar @$manufacturers, 0);
-print "info: gen manufacturers/ " if ($args{v});
-for (@$manufacturers) {
-	my ($manufacturer) = @$_;
+my ($num_manuf, %summary, %logo_file) = (scalar @$manufacturers, (), ());
+print "info: manufacturers  " if ($args{v});
+for my $manufacturer (@$manufacturers) {
+	spin() if ($args{v});
 
-	# merge manufacturers that are spelled the same except for casing
+	# logo graphic can have many extensions
+	my ($logo_file) = glob("$work_dir/logo/\"$manufacturer\".*");
+	if ($logo_file) {
+		$logo_file = substr($logo_file, rindex($logo_file, "/") + 1);
+		$logo_file{$manufacturer} = $logo_file;
+	}
+
+	# take a risk and choose the first manufacturer as the proper spelling
 	$sql = "select manufacturer from products where lower(manufacturer) = ?";
 	my ($manufacturer_cased) = $dbh->selectrow_array($sql, undef, $manufacturer);
 
-	# must have at least one price
-	$sql = "select distinct manufacturer, part_num from prices where " .
-		"lower(manufacturer) = ?";
-	my $products = $dbh->selectall_arrayref($sql, undef, $manufacturer);
-	$_->[2] = get_description($_->[0], $_->[1]) for (@$products);
+	# must have at least one price to show up from this
+	$sql = qq{select distinct products.type from prices, products where
+		prices.part_num = products.part_num and
+		lower(prices.manufacturer) = lower(products.manufacturer) and
+		lower(prices.manufacturer) = ?};
+	my $types = $dbh->selectcol_arrayref($sql, undef, $manufacturer);
 
-	my $vars = {
-		name => $manufacturer_cased, num => scalar @$products,
-		products => $products,
-	};
-	$template->process("chart_list.tt", $vars,
-		"manufacturers/$manufacturer.html")
-		|| die "template: " . $template->error() . "\n";
+	# show product charts categorized first by type and then manufacturer
+	for my $type (sort @$types) {
+		$sql = qq{select distinct manufacturer, part_num
+			from products where type = ? and
+			lower(manufacturer) = ?};
+		my $products = $dbh->selectall_arrayref($sql, undef, $type, $manufacturer);
+		$_->[2] = get_description($_->[0], $_->[1]) for (@$products);
 
-	$manufacturer_indexed += @$products;
-	$_->[1] = scalar @$products;
+		my $n = scalar @$products;
+		$type = PL($type, $n);
+		my $type_link = lc($type);
+		$type_link =~ s/ /_/;
+
+		$summary{$manufacturer}{$type}{num} = $n;
+		$summary{$manufacturer}{$type}{link} = "$manufacturer/$type_link";
+
+		my $vars = {
+			name => $manufacturer_cased, type => $type,
+			products => $products, logo_file => $logo_file, num => $n
+		};
+		$template->process("chart_list.tt", $vars,
+			"manufacturers/$manufacturer/$type_link.html")
+			|| die "template: " . $template->error() . "\n";
+	}
 }
-print "$num_manuf pages, $manufacturer_indexed indexed\n" if ($args{v});
+print "\n" if ($args{v});
 
-#
-# manufacturers.html
-#
-print "info: gen manufacturers.html\n" if ($args{v});
-
-# sort by total number of products
-my @manuf_sorted = sort {$b->[1] <=> $a->[1]} @$manufacturers;
-my $vars = { name => "Manufacturers", num => $num_manuf, links => \@manuf_sorted };
-$template->process("link_list.tt", $vars, "manufacturers.html")
+my $vars = { name => "Manufacturers", list => \%summary, logo_file => \%logo_file };
+$template->process("coarse_list.tt", $vars, "manufacturers.html")
 	|| die "template: " . $template->error() . "\n";
+
+exit;
 
 #
 # retailers/*
 #
 $sql = "select distinct retailer from prices";
 my $retailers = $dbh->selectall_arrayref($sql);
+
+$sql = qq{select count(distinct products.part_num), products.type
+	from products, prices where products.part_num = prices.part_num and
+	lower(products.manufacturer) = lower(prices.manufacturer) and
+	prices.retailer = ?  group by products.type};
+my $retailer_types_sth = $dbh->prepare($sql);
 
 my ($num_retailers, $retailer_indexed) = (scalar @$retailers, 0);
 print "info: gen retailers/ " if ($args{v});
@@ -99,9 +126,21 @@ for (@$retailers) {
 	};
 	$template->process("chart_list.tt", $vars, "retailers/$retailer_lc.html")
 		|| die "template: " . $template->error() . "\n";
-
 	$retailer_indexed += @$products;
-	$_->[1] = scalar @$products;
+
+	$retailer_types_sth->execute($retailer);
+
+	$_->[1] = "";
+	my $first = 1;
+	while (my ($count, $type) = $retailer_types_sth->fetchrow_array()) {
+		$_->[1] .= ", " unless ($first);
+		$_->[1] .= "$count " . PL($type, $count);
+		$first = 0;
+	}
+
+	# need to quote manufacturer, knock off entire path after
+	my ($logo_path) = glob("$work_dir/logo/\"$retailer_lc\".*");
+	$_->[2] = substr($logo_path, rindex($logo_path, "/") + 1);
 }
 print "$num_retailers pages, $retailer_indexed indexed\n" if ($args{v});
 
@@ -109,9 +148,7 @@ print "$num_retailers pages, $retailer_indexed indexed\n" if ($args{v});
 # retailers.html
 #
 print "info: gen retailers.html\n" if ($args{v});
-
-my @retailers_sorted = sort {$b->[1] <=> $a->[1]} @$retailers;
-$vars = { name => "Retailers", num => $num_retailers, links => \@retailers_sorted };
+$vars = { name => "Retailers", links => $retailers };
 $template->process("link_list.tt", $vars, "retailers.html")
 	|| die "template: " . $template->error() . "\n";
 
@@ -149,7 +186,7 @@ print "$num_types pages, $type_indexed indexed\n" if ($args{v});
 print "info: gen product_types.html\n" if ($args{v});
 
 my @types_sorted = sort {$b->[1] <=> $a->[1]} @$product_types;
-$vars = { name => "Product_Types", num => $num_types, links => \@types_sorted };
+$vars = { name => "Product_Types", links => \@types_sorted };
 $template->process("link_list.tt", $vars, "product_types.html")
 	|| die "template: " . $template->error() . "\n";
 
@@ -177,9 +214,10 @@ while (my ($part_num, $row) = each %$products) {
 # get a list of products added within the last week
 $sql = "select manufacturer, part_num from products where first_seen > ?";
 my $news = $dbh->selectall_arrayref($sql, undef, time - (7 * 24 * 60 * 60));
+splice @$news, 20;
 
-$sql = "select manufacturer, part_num from products where last_seen > ?";
-my $upds = $dbh->selectall_arrayref($sql, undef, time - (2 * 60 * 60));
+$sql = "select manufacturer, part_num from products where last_seen > ? order by last_seen";
+my $upds = $dbh->selectall_arrayref($sql, undef, time - (1 * 60 * 60));
 
 #
 # index.html
@@ -203,8 +241,16 @@ sub get_description
 		"manufacturer = ? and part_num = ? order by date";
 	my $descriptions = $dbh->selectcol_arrayref($sql, undef, $manufacturer,
 		$part_num);
+	unless (@$descriptions) {
+		print "error: no descriptions for $manufacturer $part_num\n";
+	}
 
-	# for now just return the first one ever scraped
-	# XXX: leaving as is for cool future improvements (string interpolation!)
-	return $descriptions->[0];
+	# pick the shortest non-zero description
+	my $best = $descriptions->[0];
+	for (@$descriptions) {
+		next if ($_ eq "");
+		$best = $_ if (length($_) < length($best));
+	}
+
+	return $best;
 }

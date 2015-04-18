@@ -1,0 +1,49 @@
+[% WRAPPER wrapper.tt %]
+[% PERL %]
+	# all url references are lower case
+	my $dir_prefix = lc($stash->get("name"));
+	$stash->set("dir_prefix", $dir_prefix);
+
+	my $total = scalar(keys %{$stash->get("list")});
+	$stash->set("num", $total);
+	$stash->set("i", -1);
+	$stash->set("boundary", POSIX::ceil($total / 3));
+[% END %]
+	<h1>[% name %] ([% num %])</h1>
+
+	[% FOREACH item IN list.keys.sort %]
+		[% PERL %]
+			# all url references are lower case
+			my $link = lc $stash->get("item");
+			$stash->set("link", $link);
+
+			my $i = $stash->get("i");
+			$stash->set("i", ++$i);
+		[% END %]
+		[% IF (i % boundary) == 0 %]
+			[% IF i != 0 %]
+				</ul>
+				</div>
+			[% END %]
+
+			<div class="thirds_column">
+			<ul>
+		[% END %]
+
+		<li><div class="list_item">
+		<a href="/[% dir_prefix %]/[% link %].html">
+			<img alt="[% item %]" class="[% dir_prefix %]"
+				src="/logo/[% logo_file.$item %]" />
+		</a>
+
+		<br><div class="breakdown">
+		[% FOREACH type IN list.$item.keys %]
+			[% list.$item.$type.num %]
+			<a href="/[% dir_prefix %]/[% list.$item.$type.link %].html">
+				[% type %]</a>,
+		[% END %]
+		</div></div>
+	[% END %]
+	</ul>
+	</div>
+[% END %]

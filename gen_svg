@@ -23,7 +23,7 @@ my $svg_dir = $cfg->{http}{chroot} . $cfg->{http}{htdocs} . "/svg";
 # we don't output svg's when -n is given
 print "info: output dir is $svg_dir\n" if ($args{v} && !$args{n});
 
-my ($left, $center, $right, $top, $middle, $bottom) = (10, 950, 40, 15, 150, 20);
+my ($left, $center, $right, $top, $middle, $bottom) = (3, 957, 40, 15, 150, 20);
 my $width = $right + $center + $left;
 my $height = $top + $middle + $bottom;
 
@@ -220,15 +220,6 @@ if ($args{v}) {
 }
 
 $dbh->disconnect();
-
-my $state = 0;
-sub spin
-{
-	my @spin_states = ("-", "\\", "|", "/");
-
-	print "\b";
-	print $spin_states[++$state % 4];
-}
 
 sub catmullrom_to_bezier
 {

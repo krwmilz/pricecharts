@@ -3,8 +3,8 @@
 	my $name_lc = lc($stash->get("name"));
 	$stash->set("name_lc", $name_lc);
 [% END %]
-	<h1><img alt="[% name %]" class="logo_small" src="/logo/[% name_lc %].svg"/>
-		([% num %] total)</h1>
+	<h1><img alt="[% name %]" class="logo_small" src="/logo/[% logo_file %]"/>
+		[% num %] [% type %]</h1>
 	[% FOREACH product IN products %]
 	[% PERL %]
 		my $manufacturer = $stash->get("product.0");
@@ -12,12 +12,11 @@
 		my $part_num = $stash->get("product.1");
 		$stash->set("part_lc", lc($part_num));
 	[% END %]
-	<hr>
 	<div class="product">
 		<!-- make the manufacturer logo into a link -->
 		<a href="/manufacturers/[% manufacturer_lc %].html">
 			<img alt="[% product.0 %]" class="logo_small"
-			src="/logo/[% manufacturer_lc %].svg"/></a>
+			src="/logo/[% logo_file %]"/></a>
 
 		<!-- display the description -->
 		[% product.2 %]

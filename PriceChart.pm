@@ -5,7 +5,7 @@ use File::Path qw(make_path);
 use Exporter;
 
 @ISA = ("Exporter");
-@EXPORT = qw(get_config get_dom get_log get_dbh trunc_line new_ua make_path);
+@EXPORT = qw(get_config get_dom get_log get_dbh trunc_line new_ua make_path spin);
 
 
 sub get_config
@@ -160,6 +160,15 @@ sub trunc_line
 
 	my $chopped = substr($line, 0, $len);
 	return $chopped . "...";
+}
+
+my $state = 0;
+sub spin
+{
+	my @spin_states = ("-", "\\", "|", "/");
+
+	print "\b";
+	print $spin_states[++$state % 4];
 }
 
 1;

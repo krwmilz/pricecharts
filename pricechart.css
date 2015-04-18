@@ -15,23 +15,54 @@ p {
 	text-align: center;
 }
 
+.thirds_column {
+	padding-left: 2%;
+	padding-right: 2%;
+	width: 29%;
+	display: inline-block;
+}
+
 .column {
 	width: 40%;
 	padding-left: 5%;
 	padding-right: 5%;
-	float: left;
+	/* float: left; */
+	display: inline-block;
 }
 
 .product {
-	margin-bottom: 25px;
-	margin-top: 25px;
+	padding: 5px;
+	margin-top: 5px;
+	margin-bottom: 5px;
+	border: 1px solid gray;
+	border-radius: 3px;
 }
 
 @media (max-width: 640px) {
+	.thirds_column {
+		width: 100%;
+		padding-left: 0%;
+		padding-right: 0%;
+	}
+
 	.column {
 		width: 100%;
 		padding-left: 0%;
 		padding-right: 0%;
+	}
+}
+
+@media (max-width: 1280) {
+	.thirds_column {
+		width: 40%;
+		padding-left: 5%;
+		padding-right: 5%;
+	}
+}
+
+@media print {
+	body {
+		width: 100%;
 	}
 }
 
@@ -42,12 +73,13 @@ p {
 
 .manufacturers {
 	height: 3em;
-	vertical-align: middle;
-	padding: 5px;
 }
 
 .retailers {
 	height: 4em;
+}
+
+.list_item {
 	vertical-align: middle;
 	padding: 5px;
 }
@@ -96,4 +128,8 @@ p {
 
 .chart_data:hover {
 	stroke-width: 2;
+}
+
+.breakdown {
+	font-size: 0.8em;
 }
