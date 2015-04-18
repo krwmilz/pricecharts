@@ -38,12 +38,15 @@ my $template = Template->new($config)
 #
 # manufacturers
 #
-my $sql = "select distinct lower(manufacturer) from prices group by manufacturer " .
-	"having count(distinct part_num) > 1";
+my $stale_clause = $args{a} ? "" : "and products.svg_stale = 1";
+my $sql = qq{select distinct lower(prices.manufacturer) from prices, products where
+	lower(prices.manufacturer) = lower(products.manufacturer) and
+	prices.part_num = products.part_num $stale_clause
+	group by prices.manufacturer having count(distinct prices.part_num) > 1};
 my $manufacturers = $dbh->selectcol_arrayref($sql);
 
 my ($num_manuf, %summary, %logo_file) = (scalar @$manufacturers, (), ());
-print "info: manufacturers  " if ($args{v});
+print "info: manufacturers:  " if ($args{v});
 for my $manufacturer (@$manufacturers) {
 	spin() if ($args{v});
 
@@ -238,31 +241,10 @@ print "info: gen index.html\n" if ($args{v});
 $template->process("index.tt", $vars, "index.html")
 	|| die "template: " . $template->error() . "\n";
 
-sub get_description
-{
-	my $manufacturer = shift;
-	my $part_num = shift;
 
-	my $sql = "select description from descriptions where " .
-		"manufacturer = ? and part_num = ? order by date";
-	my $descriptions = $dbh->selectcol_arrayref($sql, undef, $manufacturer,
-		$part_num);
-	unless (@$descriptions) {
-		print "error: no descriptions for $manufacturer $part_num\n";
-	}
-
-	# pick the shortest non-zero description
-	my $best = $descriptions->[0];
-	for (@$descriptions) {
-		next if ($_ eq "");
-		$best = $_ if (length($_) < length($best));
-	}
-
-	return $best;
-}
-
-
-
+#
+# svg
+#
 my $svg_dir = $cfg->{http}{chroot} . $cfg->{http}{htdocs} . "/svg";
 
 # we don't output svg's when -n is given
@@ -274,7 +256,7 @@ my $width = $right + $center + $left;
 my $height = $top + $middle + $bottom;
 
 my $where_clause = $args{a} ? "" : "where svg_stale = 1";
-my $sql = "select manufacturer, part_num from products $where_clause";
+$sql = "select manufacturer, part_num from products $where_clause";
 my $parts_sth = $dbh->prepare($sql);
 
 $sql = "select distinct retailer from prices where part_num = ? and manufacturer = ?";
@@ -284,8 +266,6 @@ $sql = "select date, price from prices where " .
 	"part_num = ? and retailer = ? order by date";
 my $point_sth = $dbh->prepare($sql);
 
-$sql = "update products set svg_stale = 0 where manufacturer = ? and part_num = ?";
-my $success_sth = $dbh->prepare($sql);
 
 $parts_sth->execute();
 print "info: svg:  " if ($args{v});
@@ -344,14 +324,38 @@ while (my ($manufacturer, $part_num) = $parts_sth->fetchrow_array()) {
 	print $svg_fh "$_\n" for (@buf);
 	close $svg_fh;
 
-	# we outputted something to a file, set stale to 0
-	$success_sth->execute($manufacturer, $part_num_cased);
 	$rendered_total++;
 }
 printf "\b%i rendered, %i skipped, ", $rendered_total, $raw_total - $rendered_total if ($args{v});
 printf "%i points in %i series\n", $points, $series if ($args{v});
 
+$dbh->do("update products set svg_stale = 0");
+
 $dbh->disconnect();
+
+sub get_description
+{
+	my $manufacturer = shift;
+	my $part_num = shift;
+
+	my $sql = "select description from descriptions where " .
+		"manufacturer = ? and part_num = ? order by date";
+	my $descriptions = $dbh->selectcol_arrayref($sql, undef, $manufacturer,
+		$part_num);
+	unless (@$descriptions) {
+		print "error: no descriptions for $manufacturer $part_num\n";
+	}
+
+	# pick the shortest non-zero description
+	my $best = $descriptions->[0];
+	for (@$descriptions) {
+		next if ($_ eq "");
+		$best = $_ if (length($_) < length($best));
+	}
+
+	return $best;
+}
+
 
 #
 # make a new svg with provided coordinate and label data
