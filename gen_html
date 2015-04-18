@@ -17,15 +17,16 @@ use URI::Escape;
 
 
 my %args;
-getopts("anv", \%args);
+getopts("av", \%args);
 
 $| = 1 if ($args{v});
 
 my $cfg = get_config();
 my $dbh = get_dbh($cfg->{http}, undef, $args{v});
 
-my $work_dir =  $cfg->{http}{chroot} . $cfg->{http}{htdocs};
-print "info: working dir: $work_dir\n" if ($args{v});
+my $work_dir = $cfg->{http}{chroot} . $cfg->{http}{htdocs};
+my $svg_dir  = $work_dir . "/svg";
+print "info: work, svg dirs $work_dir\{,svg\}\n" if ($args{v});
 
 # rock a new template
 my $config = {
@@ -208,11 +209,12 @@ $template->process("coarse_list.tt", $vars, "types.html")
 #
 # products
 #
-$sql = "select * from products";
+$stale_clause = $args{a} ? "" : "where svg_stale = 1";
+$sql = "select * from products $stale_clause";
 my $products = $dbh->selectall_hashref($sql, "part_num");
 
 my $num_products = scalar keys %$products;
-print "info: gen products/ $num_products pages\n" if ($args{v});
+print "info: products:  " if ($args{v});
 while (my ($part_num, $row) = each %$products) {
 	my $part_num_lc = lc($part_num);
 	my $manufacturer_lc = lc($row->{manufacturer});
@@ -225,6 +227,7 @@ while (my ($part_num, $row) = each %$products) {
 		"products/$manufacturer_lc/$part_num_lc.html")
 		|| die "template: " . $template->error() . "\n";
 }
+print "\b$num_products processed\n" if ($args{v});
 
 # get a list of products added within the last week
 $sql = "select manufacturer, part_num from products where first_seen > ?";
@@ -241,18 +244,14 @@ $vars = {
 	nret => $num_retailers, nmanuf => $num_manuf, nprod => $num_products,
 	nnew => scalar @$news, news => $news, nupd => scalar @$upds, upds => $upds
 };
-print "info: gen index.html\n" if ($args{v});
+print "info: index.html\n" if ($args{v});
 $template->process("index.tt", $vars, "index.html")
-	|| die "template: " . $template->error() . "\n";
+	or die "template: " . $template->error() . "\n";
 
 
 #
 # svg
 #
-my $svg_dir = $cfg->{http}{chroot} . $cfg->{http}{htdocs} . "/svg";
-
-# we don't output svg's when -n is given
-print "info: svg: output dir is $svg_dir\n" if ($args{v} && !$args{n});
 
 # svg dimensions
 my ($left, $center, $right, $top, $middle, $bottom) = (3, 957, 40, 15, 150, 20);
