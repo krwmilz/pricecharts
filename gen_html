@@ -39,8 +39,8 @@ my $template = Template->new($config)
 # manufacturers
 #
 my $stale_clause = $args{a} ? "" : "and products.svg_stale = 1";
-my $sql = qq{select distinct lower(prices.manufacturer) from prices, products where
-	lower(prices.manufacturer) = lower(products.manufacturer) and
+my $sql = qq{select distinct prices.manufacturer from prices, products where
+	prices.manufacturer = products.manufacturer and
 	prices.part_num = products.part_num $stale_clause
 	group by prices.manufacturer having count(distinct prices.part_num) > 1};
 my $manufacturers = $dbh->selectcol_arrayref($sql);
@@ -50,48 +50,43 @@ print "info: manufacturers:  " if ($args{v});
 for my $manufacturer (@$manufacturers) {
 	spin() if ($args{v});
 
-	my $logo_file = get_logo($manufacturer);
+	my $logo_file = get_logo(lc($manufacturer));
 	$logo_file{$manufacturer} = $logo_file;
-
-	# take a risk and choose the first manufacturer as the proper spelling
-	$sql = "select manufacturer from products where lower(manufacturer) = ?";
-	my ($manufacturer_cased) = $dbh->selectrow_array($sql, undef, $manufacturer);
 
 	# must have at least one price to show up from this
 	$sql = qq{select distinct products.type from prices, products where
-		prices.part_num = products.part_num and
-		lower(prices.manufacturer) = lower(products.manufacturer) and
-		lower(prices.manufacturer) = ?};
+		prices.manufacturer = products.manufacturer and
+		prices.part_num = products.part_num and prices.manufacturer = ?};
 	my $types = $dbh->selectcol_arrayref($sql, undef, $manufacturer);
 
 	# show product charts categorized first by type and then manufacturer
+	my $manufacturer_link = linkify($manufacturer);
 	for my $type (sort @$types) {
 		$sql = qq{select distinct manufacturer, part_num
-			from products where type = ? and
-			lower(manufacturer) = ?};
+			from products where type = ? and manufacturer = ?};
 		my $products = $dbh->selectall_arrayref($sql, undef, $type, $manufacturer);
 		$_->[2] = get_description($_->[0], $_->[1]) for (@$products);
 
 		my $type_link = linkify($type);
 		$type = PL($type, scalar @$products);
 		$summary{$manufacturer}{$type}{num} = scalar @$products;
-		$summary{$manufacturer}{$type}{link} = "$manufacturer/$type_link";
+		$summary{$manufacturer}{$type}{link} = "$manufacturer_link/$type_link";
 
 		my $vars = {
-			name => $manufacturer_cased, type => $type,
+			name => $manufacturer, type => $type,
 			products => $products, logo_file => $logo_file
 		};
-		$template->process("chart_list.tt", $vars,
-			"manufacturers/$manufacturer/$type_link.html")
+		my $out_path = "manufacturers/$manufacturer_link/$type_link.html";
+		$template->process("chart_list.tt", $vars, $out_path)
 			or die "template: " . $template->error() . "\n";
 	}
 
 	# print Dumper($summary{$manufacturer});
 	my $vars = {
-		type => "manufacturer", name => $manufacturer_cased,
-		info => \$summary{$manufacturer}, logo => $logo_file{$manufacturer}
+		type => "manufacturer", name => $manufacturer,
+		info => \$summary{$manufacturer}, logo => $logo_file
 	};
-	$template->process("summary.tt", $vars, "manufacturers/$manufacturer.html")
+	$template->process("summary.tt", $vars, "manufacturers/$manufacturer_link.html")
 		or die "template: " . $template->error() . "\n";
 }
 print "\b$num_manuf processed\n" if ($args{v});
@@ -108,23 +103,22 @@ if ($args{a}) {
 	$sql = "select distinct retailer from prices";
 } else {
 	$sql = qq{select distinct prices.retailer from prices, products where
-		lower(prices.manufacturer) = lower(products.manufacturer) and
+		prices.manufacturer = products.manufacturer and
 		prices.part_num = products.part_num and products.svg_stale = 1};
 }
-my $retailers = $dbh->selectall_arrayref($sql);
+my $retailers = $dbh->selectcol_arrayref($sql);
 
 my $num_retailers = scalar @$retailers;
 (%summary, %logo_file) = ((), ());
 print "info: retailers:  " if ($args{v});
-for (@$retailers) {
-	my ($retailer) = @$_;
+for my $retailer (@$retailers) {
 	my $retailer_lc = lc($retailer);
 	spin() if ($args{v});
 
 	my $logo_file = get_logo($retailer);
 
 	$sql = qq{select distinct products.type from prices, products where
-		lower(prices.manufacturer) = lower(products.manufacturer) and
+		prices.manufacturer = products.manufacturer and
 		prices.part_num = products.part_num and prices.retailer = ?};
 	my $types = $dbh->selectcol_arrayref($sql, undef, $retailer);
 
@@ -132,7 +126,7 @@ for (@$retailers) {
 		$sql = qq{select distinct prices.manufacturer, prices.part_num
 			from prices, products where
 			prices.part_num = products.part_num and
-			lower(products.manufacturer) = lower(prices.manufacturer)
+			products.manufacturer = prices.manufacturer
 			and products.type = ? and prices.retailer = ?};
 		my $products = $dbh->selectall_arrayref($sql, undef, $type, $retailer);
 		$_->[2] = get_description($_->[0], $_->[1]) for (@$products);
@@ -154,53 +148,65 @@ for (@$retailers) {
 }
 print "\b$num_retailers processed\n" if ($args{v});
 
-#
-# retailers.html
-#
-my $vars = { name => "Retailers", list => \%summary, logo_file => \%logo_file };
+$vars = { name => "Retailers", list => \%summary, logo_file => \%logo_file };
 $template->process("coarse_list.tt", $vars, "retailers.html")
 	or die "template: " . $template->error() . "\n";
 
 #
-# product_types
+# product types
 #
-$sql = "select distinct type from products";
-my $product_types = $dbh->selectall_arrayref($sql);
+$stale_clause = $args{a} ? "" : "and products.svg_stale = 1";
+$sql = qq{select distinct products.type from products, prices where
+	products.manufacturer = prices.manufacturer and
+	products.part_num = prices.part_num $stale_clause};
+my $types = $dbh->selectcol_arrayref($sql);
 
-my ($num_types, $type_indexed) = (scalar @$product_types, 0);
-print "info: gen product_types/ " if ($args{v});
-for (@$product_types) {
-	my ($type) = @$_;
+my $num_types = scalar @$types;
+print "info: types:  " if ($args{v});
+(%summary, %logo_file) = ((), ());
+for my $type (@$types) {
 	my $type_lc = lc($type);
+	spin() if ($args{v});
 
-	$sql = "select manufacturer, part_num from products where type = ?";
-	my $products = $dbh->selectall_arrayref($sql, undef, $type);
-	$_->[2] = get_description($_->[0], $_->[1]) for (@$products);
+	my $logo_file = "";
 
-	my $vars = {
-		name => $type, num => scalar @$products,
-		products => $products,
-	};
-	$template->process("chart_list.tt", $vars, "product_types/$type_lc.html")
-		|| die "template: " . $template->error() . "\n";
+	$sql = qq{select distinct products.manufacturer from prices, products where
+		prices.manufacturer = products.manufacturer and
+		prices.part_num = products.part_num and products.type = ?};
+	my $manufacturers = $dbh->selectcol_arrayref($sql, undef, $type);
 
-	$type_indexed += @$products;
-	$_->[1] = scalar @$products;
+	my $type_link = linkify($type);
+	for my $manufacturer (sort @$manufacturers) {
+		$sql = qq{select distinct prices.manufacturer, prices.part_num
+			from prices, products where
+			prices.part_num = products.part_num and
+			products.manufacturer = prices.manufacturer and
+			products.manufacturer = ?};
+		my $products = $dbh->selectall_arrayref($sql, undef, $manufacturer);
+		$_->[2] = get_description($_->[0], $_->[1]) for (@$products);
+
+		my $manuf_link = linkify($manufacturer);
+		$manufacturer = PL($manufacturer, scalar @$products);
+		$summary{$type}{$manufacturer}{num} = scalar @$products;
+		$summary{$type}{$manufacturer}{link} = "$type_link/$manuf_link";
+
+		my $vars = {
+			name => $manufacturer, type => $type,
+			products => $products, logo_file => $logo_file
+		};
+		$template->process("chart_list.tt", $vars,
+			"types/$type_link/$manuf_link.html")
+			or die "template: " . $template->error() . "\n";
+	}
 }
-print "$num_types pages, $type_indexed indexed\n" if ($args{v});
+print "\b$num_types processed\n" if ($args{v});
+
+$vars = { name => "Types", list => \%summary, logo_file => \%logo_file };
+$template->process("coarse_list.tt", $vars, "types.html")
+	or die "template: " . $template->error() . "\n";
 
 #
-# product_types.html
-#
-print "info: gen product_types.html\n" if ($args{v});
-
-my @types_sorted = sort {$b->[1] <=> $a->[1]} @$product_types;
-$vars = { name => "Product_Types", links => \@types_sorted };
-$template->process("link_list.tt", $vars, "product_types.html")
-	|| die "template: " . $template->error() . "\n";
-
-#
-# products/*
+# products
 #
 $sql = "select * from products";
 my $products = $dbh->selectall_hashref($sql, "part_num");
