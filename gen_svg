@@ -45,18 +45,85 @@ $sql = "update products set svg_stale = 0 where manufacturer = ? and part_num = 
 my $success_sth = $dbh->prepare($sql);
 
 $parts_sth->execute();
-print "info: generating  " if ($args{v});
+print "info: svg:  " if ($args{v});
 my ($raw_total, $rendered_total, $points, $series) = (0, 0, 0, 0);
 while (my ($manufacturer, $part_num) = $parts_sth->fetchrow_array()) {
 	$raw_total++;
 	spin() if ($args{v});
+	my %series;
 
-	# make sure we have at least two prices to work with
-	$sql = "select min(date), max(date), min(price), max(price) " .
-		"from prices where part_num = ? and manufacturer = ?";
+	$sql = qq{select min(date), max(date), min(price), max(price)
+		from prices where manufacturer = ? and part_num = ?};
 	my ($x_min, $x_max, $y_min, $y_max) =
-		$dbh->selectrow_array($sql, undef, $part_num, $manufacturer);
+		$dbh->selectrow_array($sql, undef, $manufacturer, $part_num);
 	next unless (defined $x_min);
+
+	# each series on the chart represents a retailers prices
+	$retailer_sth->execute($part_num, $manufacturer);
+	while (my ($retailer) = $retailer_sth->fetchrow_array()) {
+		$sql = "select url, color from retailers where name = ?";
+		my ($url, $color) = $dbh->selectrow_array($sql, undef, $retailer);
+
+		# xlink:href's don't like raw ampersands
+		$url =~ s/&/&amp;/g;
+
+		$series{$retailer}{url} = $url;
+		$series{$retailer}{color} = $color;
+
+		$point_sth->execute($part_num, $retailer);
+		$series{$retailer}{data} = $point_sth->fetchall_arrayref();
+		$points += scalar @{$series{$retailer}{data}};
+		$series++;
+	}
+
+	my $svg = make_svg(\%series, $x_min, $x_max, $y_min, $y_max, $part_num);
+
+	next if ($args{n});
+
+	# all links lower case
+	my $part_num_cased = $part_num;
+	$part_num = lc($part_num);
+
+	# giant hack, if the part number has / in it, make some directories
+	if ($part_num =~ /\//) {
+		my $needed_dirs = substr($part_num, 0, rindex($part_num, '/'));
+		make_path("$svg_dir/$needed_dirs", { verbose => $args{v} });
+	}
+	open my $svg_fh, ">", "$svg_dir/$part_num.svg" or
+		die "couldn't open $svg_dir/$part_num: $!";
+
+	# XXX: not sure how to add this programatically, hack around for now
+	my @buf = split("\n", $svg->xmlify);
+	my $css_include = "<?xml-stylesheet href=\"/pricechart.css\" type=\"text/css\"?>";
+	# must be the second line
+	splice (@buf, 1, 0, ($css_include));
+
+	print $svg_fh "$_\n" for (@buf);
+	close $svg_fh;
+
+	# we outputted something to a file, set stale to 0
+	$success_sth->execute($manufacturer, $part_num_cased);
+	$rendered_total++;
+}
+
+if ($args{v}) {
+	printf "\b%i rendered (%i skipped), %i series (%i points)\n",
+		$rendered_total, $raw_total - $rendered_total, $series, $points;
+}
+
+$dbh->disconnect();
+
+#
+# make a new svg with provided coordinate and label data
+#
+sub make_svg
+{
+	my $series = shift;
+	my $x_min = shift;
+	my $x_max = shift;
+	my $y_min = shift;
+	my $y_max = shift;
+	my $part_num = shift;
 
 	$y_max = ceil($y_max / 100) * 100;
 	$y_min = floor($y_min / 100) * 100;
@@ -114,28 +181,20 @@ while (my ($manufacturer, $part_num) = $parts_sth->fetchrow_array()) {
 		);
 	}
 
-	# each series on the chart represents a retailers prices
-	$retailer_sth->execute($part_num, $manufacturer);
-	while (my ($retailer) = $retailer_sth->fetchrow_array()) {
+	while (my ($retailer, $values) = each %$series) {
 		my $retailer_id = lc($retailer);
 		$retailer_id =~ s/ /_/;
 
-		$sql = "select url, color from retailers where name = ?";
-		my ($url, $color) = $dbh->selectrow_array($sql, undef, $retailer);
+		my $url = $values->{url};
+		my $color = $values->{color};
 
-		# xlink:href's don't like raw ampersands
-		$url =~ s/&/&amp;/g;
-
-		# get all prices that we've scraped per product per retailer
 		my (@xs, @ys, @pts);
-		$point_sth->execute($part_num, $retailer);
-		while (my ($date, $price) = $point_sth->fetchrow_array) {
-			# transform and clamp real world coordinates
-			push @xs, sprintf "%.3f", ($date - $x_min) * $x_scale + $left;
-			push @ys, sprintf "%.3f", $height - $bottom - ($price - $y_min) * $y_scale;
+		for (@{$values->{data}}) {
+			my ($x, $y) = @$_;
+			push @xs, sprintf "%.3f", ($x - $x_min) * $x_scale + $left;
+			push @ys, sprintf "%.3f", $height - $bottom - ($y - $y_min) * $y_scale;
 			push @pts, $xs[-1];
 			push @pts, $ys[-1];
-			$points++;
 		}
 
 		if (@pts < 6) {
@@ -171,8 +230,6 @@ while (my ($manufacturer, $part_num) = $parts_sth->fetchrow_array()) {
 		$anchor->text(class => "chart_series_text", fill => "#$color"
 		)->tag("textPath", -href => "#path_$retailer_id"
 		)->tag("tspan", "dy" => "-5")->cdata($retailer);
-
-		$series++;
 	}
 
 	# when graph is loaded make a sliding motion show the graph lines
@@ -185,41 +242,8 @@ while (my ($manufacturer, $part_num) = $parts_sth->fetchrow_array()) {
 	# 	fill => "freeze", -method => ""
 	# );
 
-	next if ($args{n});
-
-	# all links lower case
-	my $part_num_cased = $part_num;
-	$part_num = lc($part_num);
-
-	# giant hack, if the part number has / in it, make some directories
-	if ($part_num =~ /\//) {
-		my $needed_dirs = substr($part_num, 0, rindex($part_num, '/'));
-		make_path("$svg_dir/$needed_dirs", { verbose => $args{v} });
-	}
-	open my $svg_fh, ">", "$svg_dir/$part_num.svg" or
-		die "couldn't open $svg_dir/$part_num: $!";
-
-	# XXX: not sure how to add this programatically, hack around for now
-	my @buf = split("\n", $svg->xmlify);
-	my $css_include = "<?xml-stylesheet href=\"/pricechart.css\" type=\"text/css\"?>";
-	# must be the second line
-	splice (@buf, 1, 0, ($css_include));
-
-	print $svg_fh "$_\n" for (@buf);
-	close $svg_fh;
-
-	# we outputted something to a file, set stale to 0
-	$success_sth->execute($manufacturer, $part_num_cased);
-	$rendered_total++;
+	return $svg
 }
-
-if ($args{v}) {
-	print "\n";
-	printf "info: %i rendered (%i skipped), %i series (%i points)\n",
-		$rendered_total, $raw_total - $rendered_total, $series, $points;
-}
-
-$dbh->disconnect();
 
 sub catmullrom_to_bezier
 {
