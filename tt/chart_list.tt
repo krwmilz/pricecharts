@@ -2,6 +2,9 @@
 [% PERL %]
 	my $name_lc = lc($stash->get("name"));
 	$stash->set("name_lc", $name_lc);
+
+	my $num = scalar @{$stash->get("products")};
+	$stash->set("num", $num);
 [% END %]
 	<h1><img alt="[% name %]" class="logo_small" src="/logo/[% logo_file %]"/>
 		[% num %] [% type %]</h1>

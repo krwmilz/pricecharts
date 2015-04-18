@@ -50,12 +50,8 @@ print "info: manufacturers:  " if ($args{v});
 for my $manufacturer (@$manufacturers) {
 	spin() if ($args{v});
 
-	# logo graphic can have many extensions
-	my ($logo_file) = glob("$work_dir/logo/\"$manufacturer\".*");
-	if ($logo_file) {
-		$logo_file = substr($logo_file, rindex($logo_file, "/") + 1);
-		$logo_file{$manufacturer} = $logo_file;
-	}
+	my $logo_file = get_logo($manufacturer);
+	$logo_file{$manufacturer} = $logo_file;
 
 	# take a risk and choose the first manufacturer as the proper spelling
 	$sql = "select manufacturer from products where lower(manufacturer) = ?";
@@ -76,21 +72,18 @@ for my $manufacturer (@$manufacturers) {
 		my $products = $dbh->selectall_arrayref($sql, undef, $type, $manufacturer);
 		$_->[2] = get_description($_->[0], $_->[1]) for (@$products);
 
-		my $n = scalar @$products;
-		$type = PL($type, $n);
-		my $type_link = lc($type);
-		$type_link =~ s/ /_/;
-
-		$summary{$manufacturer}{$type}{num} = $n;
+		my $type_link = linkify($type);
+		$type = PL($type, scalar @$products);
+		$summary{$manufacturer}{$type}{num} = scalar @$products;
 		$summary{$manufacturer}{$type}{link} = "$manufacturer/$type_link";
 
 		my $vars = {
 			name => $manufacturer_cased, type => $type,
-			products => $products, logo_file => $logo_file, num => $n
+			products => $products, logo_file => $logo_file
 		};
 		$template->process("chart_list.tt", $vars,
 			"manufacturers/$manufacturer/$type_link.html")
-			|| die "template: " . $template->error() . "\n";
+			or die "template: " . $template->error() . "\n";
 	}
 
 	# print Dumper($summary{$manufacturer});
@@ -99,72 +92,77 @@ for my $manufacturer (@$manufacturers) {
 		info => \$summary{$manufacturer}, logo => $logo_file{$manufacturer}
 	};
 	$template->process("summary.tt", $vars, "manufacturers/$manufacturer.html")
-		|| die "template: " . $template->error() . "\n";
+		or die "template: " . $template->error() . "\n";
 }
-print "\n" if ($args{v});
+print "\b$num_manuf processed\n" if ($args{v});
 
 my $vars = { name => "Manufacturers", list => \%summary, logo_file => \%logo_file };
 $template->process("coarse_list.tt", $vars, "manufacturers.html")
-	|| die "template: " . $template->error() . "\n";
+	or die "template: " . $template->error() . "\n";
 
 
 #
-# retailers/*
+# retailers
 #
-$sql = "select distinct retailer from prices";
+if ($args{a}) {
+	$sql = "select distinct retailer from prices";
+} else {
+	$sql = qq{select distinct prices.retailer from prices, products where
+		lower(prices.manufacturer) = lower(products.manufacturer) and
+		prices.part_num = products.part_num and products.svg_stale = 1};
+}
 my $retailers = $dbh->selectall_arrayref($sql);
 
-$sql = qq{select count(distinct products.part_num), products.type
-	from products, prices where products.part_num = prices.part_num and
-	lower(products.manufacturer) = lower(prices.manufacturer) and
-	prices.retailer = ?  group by products.type};
-my $retailer_types_sth = $dbh->prepare($sql);
-
-my ($num_retailers, $retailer_indexed) = (scalar @$retailers, 0);
-print "info: gen retailers/ " if ($args{v});
+my $num_retailers = scalar @$retailers;
+(%summary, %logo_file) = ((), ());
+print "info: retailers:  " if ($args{v});
 for (@$retailers) {
 	my ($retailer) = @$_;
 	my $retailer_lc = lc($retailer);
+	spin() if ($args{v});
 
-	# must have at least one price
-	$sql = "select distinct manufacturer, part_num from prices where retailer = ?";
-	my $products = $dbh->selectall_arrayref($sql, undef, $retailer);
-	$_->[2] = get_description($_->[0], $_->[1]) for (@$products);
+	my $logo_file = get_logo($retailer);
 
-	my $vars = {
-		name => $retailer, num => scalar @$products,
-		products => $products,
-	};
-	$template->process("chart_list.tt", $vars, "retailers/$retailer_lc.html")
-		|| die "template: " . $template->error() . "\n";
-	$retailer_indexed += @$products;
+	$sql = qq{select distinct products.type from prices, products where
+		lower(prices.manufacturer) = lower(products.manufacturer) and
+		prices.part_num = products.part_num and prices.retailer = ?};
+	my $types = $dbh->selectcol_arrayref($sql, undef, $retailer);
 
-	$retailer_types_sth->execute($retailer);
+	for my $type (sort @$types) {
+		$sql = qq{select distinct prices.manufacturer, prices.part_num
+			from prices, products where
+			prices.part_num = products.part_num and
+			lower(products.manufacturer) = lower(prices.manufacturer)
+			and products.type = ? and prices.retailer = ?};
+		my $products = $dbh->selectall_arrayref($sql, undef, $type, $retailer);
+		$_->[2] = get_description($_->[0], $_->[1]) for (@$products);
 
-	$_->[1] = "";
-	my $first = 1;
-	while (my ($count, $type) = $retailer_types_sth->fetchrow_array()) {
-		$_->[1] .= ", " unless ($first);
-		$_->[1] .= "$count " . PL($type, $count);
-		$first = 0;
+		my $type_link = linkify($type);
+		my $retailer_link = linkify($retailer);
+		$type = PL($type, scalar @$products);
+		$summary{$retailer}{$type}{num} = scalar @$products;
+		$summary{$retailer}{$type}{link} = "$retailer_link/$type_link";
+
+		my $vars = {
+			name => $retailer, type => $type,
+			products => $products, logo_file => $logo_file
+		};
+		$template->process("chart_list.tt", $vars,
+			"retailers/$retailer_link/$type_link.html")
+			or die "template: " . $template->error() . "\n";
 	}
-
-	# need to quote manufacturer, knock off entire path after
-	my ($logo_path) = glob("$work_dir/logo/\"$retailer_lc\".*");
-	$_->[2] = substr($logo_path, rindex($logo_path, "/") + 1);
 }
-print "$num_retailers pages, $retailer_indexed indexed\n" if ($args{v});
+print "\b$num_retailers processed\n" if ($args{v});
 
 #
 # retailers.html
 #
-print "info: gen retailers.html\n" if ($args{v});
-$vars = { name => "Retailers", links => $retailers };
-$template->process("link_list.tt", $vars, "retailers.html")
-	|| die "template: " . $template->error() . "\n";
+my $vars = { name => "Retailers", list => \%summary, logo_file => \%logo_file };
+$template->process("coarse_list.tt", $vars, "retailers.html")
+	or die "template: " . $template->error() . "\n";
 
 #
-# product_types/*
+# product_types
 #
 $sql = "select distinct type from products";
 my $product_types = $dbh->selectall_arrayref($sql);
@@ -266,7 +264,6 @@ $sql = "select date, price from prices where " .
 	"part_num = ? and retailer = ? order by date";
 my $point_sth = $dbh->prepare($sql);
 
-
 $parts_sth->execute();
 print "info: svg:  " if ($args{v});
 my ($raw_total, $rendered_total, $points, $series) = (0, 0, 0, 0);
@@ -332,6 +329,28 @@ printf "%i points in %i series\n", $points, $series if ($args{v});
 $dbh->do("update products set svg_stale = 0");
 
 $dbh->disconnect();
+
+sub get_logo
+{
+	my $name = shift;
+
+	# logo graphic can have many extensions
+	my ($logo_file) = glob("$work_dir/logo/\"$name\".*");
+	if ($logo_file) {
+		$logo_file = substr($logo_file, rindex($logo_file, "/") + 1);
+		return $logo_file;
+	}
+	return undef;
+}
+
+sub linkify
+{
+	my $type = shift;
+
+	my $type_link = lc($type);
+	$type_link =~ s/ /_/;
+	return $type_link;
+}
 
 sub get_description
 {
