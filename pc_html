@@ -28,7 +28,6 @@ my $work_dir = $cfg->{http}{chroot} . $cfg->{http}{htdocs};
 my $svg_dir  = $work_dir . "/svg";
 print "info: work, svg dirs $work_dir\{,svg\}\n" if ($args{v});
 
-# rock a new template
 my $config = {
 	INTERPOLATE => 1, POST_CHOMP => 1, EVAL_PERL => 1,
 	INCLUDE_PATH => "$work_dir/tt", OUTPUT_PATH => $work_dir
@@ -102,7 +101,7 @@ $stale_clause = $args{a} ? "" : "where svg_stale = 1";
 my $sql = "select * from products $stale_clause";
 my $products = $dbh->selectall_hashref($sql, "part_num");
 
-my $num_products = scalar keys %$products;
+my $n = scalar keys %$products;
 print "info: products:  " if ($args{v});
 while (my ($part_num, $row) = each %$products) {
 	my $part_num_lc = lc($part_num);
@@ -111,37 +110,41 @@ while (my ($part_num, $row) = each %$products) {
 	$row->{description} =
 		get_description($row->{manufacturer}, $row->{part_num});
 
-	# template makes directories if needed
 	$template->process("product.tt", $row,
 		"products/$manufacturer_lc/$part_num_lc.html")
 		|| die "template: " . $template->error() . "\n";
 }
-print "\b$num_products processed\n" if ($args{v});
+print "\b$n processed\n" if ($args{v});
 
-# get a list of products added within the last week
-$sql = "select manufacturer, part_num from products where first_seen > ?";
-my $news = $dbh->selectall_arrayref($sql, undef, time - (7 * 24 * 60 * 60));
-splice @$news, 20;
-
-$sql = "select manufacturer, part_num from products where last_seen > ? order by last_seen";
-my $upds = $dbh->selectall_arrayref($sql, undef, time - (1 * 60 * 60));
 
 #
 # index
 #
+$sql = "select manufacturer, part_num from products where first_seen > ? limit 10";
+my $new = $dbh->selectall_arrayref($sql, undef, time - (7 * 24 * 60 * 60));
+
+$sql = "select manufacturer, part_num from products where last_seen > ? order by last_seen";
+my $upd = $dbh->selectall_arrayref($sql, undef, time - (0.5 * 60 * 60));
+
+my $cutoff = time - (30 * 24 * 60 * 60);
+$sql = "select count(*), count(distinct manufacturer) from products where last_seen > $cutoff";
+my ($p, $m) = $dbh->selectrow_array($sql);
+
+$sql = "select count(*) from retailers";
+my ($r) = $dbh->selectrow_array($sql);
+
 my $vars = {
-	nret => 66, nmanuf => 99, nprod => $num_products,
-	nnew => scalar @$news, news => $news, nupd => scalar @$upds, upds => $upds
+	nret => $r, nmanuf => $m, nprod => $p, nnew => scalar @$new,
+	news => $new, nupd => scalar @$upd, upds => $upd
 };
-print "info: index\n" if ($args{v});
+print "info: index: $p products, $m manufacturers, $r retailers\n" if ($args{v});
 $template->process("index.tt", $vars, "index.html")
 	or die "template: " . $template->error() . "\n";
+
 
 #
 # svg
 #
-
-# svg dimensions
 my ($left, $center, $right, $top, $middle, $bottom) = (3, 957, 40, 15, 150, 20);
 my $width = $right + $center + $left;
 my $height = $top + $middle + $bottom;
@@ -246,7 +249,6 @@ sub generate_folder
 		my $it_link = linkify($it);
 		my $types = $dbh->selectcol_arrayref($sql_2, undef, $it);
 
-		# show product charts categorized first by type and then manufacturer
 		for my $type (sort @$types) {
 			my $products = $dbh->selectall_arrayref($sql_3, undef, $type, $it);
 			$_->[2] = get_description($_->[0], $_->[1]) for (@$products);
