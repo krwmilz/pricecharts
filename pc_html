@@ -27,7 +27,7 @@ my $dbh = get_dbh($cfg->{http}, undef, $args{v});
 my $clause = $args{a} ? "" : "where svg_stale = 1";
 my ($n) = $dbh->selectrow_array("select count(*) from products $clause");
 if ($n < 1) {
-	print "info: nothing stale\n";
+	print "info: nothing stale\n" if ($args{v});
 	$dbh->disconnect();
 	exit;
 }
