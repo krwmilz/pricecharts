@@ -139,6 +139,18 @@ sub mem_exp_scrape_class
 			$old++;
 		}
 		else {
+			$sql = qq{select manufacturer from products where
+				lower(manufacturer) = ?};
+			my $manufs = $dbh->selectcol_arrayref($sql, undef, lc($brand));
+			if ($manufs) {
+				# take a risk that the first one is spelled right
+				if ($manufs->[0] ne $brand) {
+					print "warn: forcing misspelled $brand to ";
+					print $manufs->[0] . "\n";
+					$brand = $manufs->[0];
+				}
+			}
+
 			$insert_sth->execute($part_num, $brand, "Memory Express", $type,
 				time, time, 0) or die $dbh->errstr();
 			print "$thumb_hdr: inserted into db\n" if ($args{v});
