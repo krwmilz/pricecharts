@@ -270,7 +270,6 @@ sub generate_folder
 	for my $it (@$stale_list) {
 		spin() if ($args{v});
 
-		my $logo_file = get_logo(lc($it));
 		my $it_link = linkify($it);
 		my $types = $dbh->selectcol_arrayref($sql_types, undef, $it);
 
@@ -280,7 +279,7 @@ sub generate_folder
 
 			my $vars = {
 				name => $it, type => PL($type, scalar @$products),
-				products => $products, logo_file => $logo_file
+				products => $products
 			};
 			my $type_link = linkify($type);
 			my $out_path = "$name_lc/$it_link/$type_link.html";
@@ -298,19 +297,6 @@ sub generate_folder
 	my $vars = { name => $name, list => $coarse_list };
 	$template->process("coarse_list.tt", $vars, "$name_lc.html")
 		or die "template: " . $template->error() . "\n";
-}
-
-sub get_logo
-{
-	my $name = shift;
-
-	# logo graphic can have many extensions
-	my ($logo_file) = glob("$work_dir/logo/\"$name\".*");
-	if ($logo_file) {
-		$logo_file = substr($logo_file, rindex($logo_file, "/") + 1);
-		return $logo_file;
-	}
-	return undef;
 }
 
 sub linkify
