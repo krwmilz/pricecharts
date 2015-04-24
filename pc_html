@@ -92,9 +92,10 @@ $products_fine = qq{select distinct prices.manufacturer, prices.part_num
 
 $summary = qq{select manufacturer, count(*) from prices where retailer = ? group by manufacturer};
 
-$coarse_list = qq{select prices.retailer, count(distinct products.part_num) as count, products.type
-	from products, prices where prices.manufacturer = products.manufacturer and
-	prices.part_num = products.part_num group by prices.retailer, products.type};
+$coarse_list = qq{select prices.retailer, count(distinct products.part_num) as
+	count, products.type from products, prices where prices.manufacturer =
+	products.manufacturer and prices.part_num = products.part_num group by
+	prices.retailer, products.type};
 @key_fields = ("retailer", "type");
 $coarse = $dbh->selectall_hashref($coarse_list, \@key_fields);
 
@@ -104,20 +105,28 @@ generate_folder($stale_list, $types, $products_fine, "Retailers", $coarse, $summ
 # product types
 #
 $stale_clause = $args{a} ? "" : "and products.svg_stale = 1";
-my $sql_1 = qq{select distinct products.type from products, prices where
+$stale_list = qq{select distinct products.type from products, prices where
 	products.manufacturer = prices.manufacturer and
 	products.part_num = prices.part_num $stale_clause};
 
-my $sql_2 = qq{select distinct products.manufacturer from prices, products where
+$types = qq{select distinct products.manufacturer from prices, products where
 	prices.manufacturer = products.manufacturer and
 	prices.part_num = products.part_num and products.type = ?};
 
-my $sql_3 = qq{select distinct prices.manufacturer, prices.part_num
+$products_fine = qq{select distinct prices.manufacturer, prices.part_num
 	from prices, products where prices.part_num = products.part_num and
 	products.manufacturer = prices.manufacturer and
 	products.manufacturer = ? and products.type = ?};
 
-generate_folder($sql_1, $sql_2, $sql_3, "types", "Types");
+$summary = qq{select manufacturer, count(*) from products where type = ?
+	group by manufacturer};
+
+$coarse_list = qq{select type, count(*) as count, manufacturer from products
+	group by type, manufacturer};
+@key_fields = ("type", "manufacturer");
+$coarse = $dbh->selectall_hashref($coarse_list, \@key_fields);
+
+generate_folder($stale_list, $types, $products_fine, "Types", $coarse, $summary);
 
 #
 # products
@@ -272,8 +281,8 @@ sub generate_folder
 
 		my $it_link = linkify($it);
 		my $types = $dbh->selectcol_arrayref($sql_types, undef, $it);
-
 		for my $type (sort @$types) {
+
 			my $products = $dbh->selectall_arrayref($sql_products, undef, $type, $it);
 			$_->[2] = get_description($_->[0], $_->[1]) for (@$products);
 
