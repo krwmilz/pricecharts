@@ -8,9 +8,9 @@
 
 	<ul>
 	[% FOREACH item IN info %]
-		<li><a href="/[% type %]/[% info.$item.link %].html">
-			[% info.$item.num %]</a>
-		[% item %]
+		<li><a href="/[% type %]/[% item.0 %].html">
+			[% item.0 %]
+		</a>: [% item.1 %]
 	[% END %]
 	</ul>
 [% END %]

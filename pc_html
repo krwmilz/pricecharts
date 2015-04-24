@@ -24,6 +24,14 @@ $| = 1 if ($args{v});
 my $cfg = get_config();
 my $dbh = get_dbh($cfg->{http}, undef, $args{v});
 
+my $clause = $args{a} ? "" : "where svg_stale = 1";
+my ($n) = $dbh->selectrow_array("select count(*) from products $clause");
+if ($n < 1) {
+	print "info: nothing stale\n";
+	$dbh->disconnect();
+	exit;
+}
+
 my $work_dir = $cfg->{http}{chroot} . $cfg->{http}{htdocs};
 my $svg_dir  = $work_dir . "/svg";
 print "info: work, svg dirs $work_dir\{,svg\}\n" if ($args{v});
@@ -39,55 +47,72 @@ my $template = Template->new($config)
 # manufacturers
 #
 my $stale_clause = $args{a} ? "" : "and products.svg_stale = 1";
-my $sql_1 = qq{select distinct prices.manufacturer from prices, products where
+my $stale_list = qq{select distinct prices.manufacturer from prices, products where
 	prices.manufacturer = products.manufacturer and
-	prices.part_num = products.part_num $stale_clause
-	group by prices.manufacturer having count(distinct prices.part_num) > 1};
+	prices.part_num = products.part_num $stale_clause};
 
-my $sql_2 = qq{select distinct products.type from prices, products where
-	prices.manufacturer = products.manufacturer and prices.manufacturer = ?
-	and prices.part_num = products.part_num};
+my $types = qq{select distinct products.type from prices, products where
+	prices.manufacturer = products.manufacturer and
+	prices.part_num = products.part_num and prices.manufacturer = ?
+	$stale_clause};
 
-my $sql_3 = qq{select distinct manufacturer, part_num from products
+my $products_fine = qq{select distinct manufacturer, part_num from products
 	where type = ? and manufacturer = ?};
 
-generate_folder($sql_1, $sql_2, $sql_3, "manufacturers", "Manufacturers");
+my $summary = qq{select type, count(*) from products where manufacturer = ? group by type};
+
+my $coarse_list = qq{select manufacturer, count(*) as count, type from products group by
+	manufacturer, type};
+my @key_fields = ("manufacturer", "type");
+my $coarse = $dbh->selectall_hashref($coarse_list, \@key_fields);
+
+generate_folder($stale_list, $types, $products_fine, "Manufacturers", $coarse, $summary);
 
 #
 # retailers
 #
 if ($args{a}) {
-	$sql_1 = "select distinct retailer from prices";
+	$stale_list = "select distinct retailer from prices";
 } else {
-	$sql_1 = qq{select distinct prices.retailer from prices, products where
+	$stale_list = qq{select distinct prices.retailer from prices, products where
 		prices.manufacturer = products.manufacturer and
 		prices.part_num = products.part_num and products.svg_stale = 1};
 }
 
-$sql_2 = qq{select distinct products.type from prices, products where
+$stale_clause = $args{a} ? "" : "and products.svg_stale = 1";
+$types = qq{select distinct products.type from prices, products where
 	prices.manufacturer = products.manufacturer and
-	prices.part_num = products.part_num and prices.retailer = ?};
+	prices.part_num = products.part_num and prices.retailer = ?
+	$stale_clause};
 
-$sql_3 = qq{select distinct prices.manufacturer, prices.part_num
+$products_fine = qq{select distinct prices.manufacturer, prices.part_num
 	from prices, products where prices.part_num = products.part_num and
 	products.manufacturer = prices.manufacturer and products.type = ? and
 	prices.retailer = ?};
 
-generate_folder($sql_1, $sql_2, $sql_3, "retailers", "Retailers");
+$summary = qq{select manufacturer, count(*) from prices where retailer = ? group by manufacturer};
+
+$coarse_list = qq{select prices.retailer, count(distinct products.part_num) as count, products.type
+	from products, prices where prices.manufacturer = products.manufacturer and
+	prices.part_num = products.part_num group by prices.retailer, products.type};
+@key_fields = ("retailer", "type");
+$coarse = $dbh->selectall_hashref($coarse_list, \@key_fields);
+
+generate_folder($stale_list, $types, $products_fine, "Retailers", $coarse, $summary);
 
 #
 # product types
 #
 $stale_clause = $args{a} ? "" : "and products.svg_stale = 1";
-$sql_1 = qq{select distinct products.type from products, prices where
+my $sql_1 = qq{select distinct products.type from products, prices where
 	products.manufacturer = prices.manufacturer and
 	products.part_num = prices.part_num $stale_clause};
 
-$sql_2 = qq{select distinct products.manufacturer from prices, products where
+my $sql_2 = qq{select distinct products.manufacturer from prices, products where
 	prices.manufacturer = products.manufacturer and
 	prices.part_num = products.part_num and products.type = ?};
 
-$sql_3 = qq{select distinct prices.manufacturer, prices.part_num
+my $sql_3 = qq{select distinct prices.manufacturer, prices.part_num
 	from prices, products where prices.part_num = products.part_num and
 	products.manufacturer = prices.manufacturer and
 	products.manufacturer = ? and products.type = ?};
@@ -101,7 +126,7 @@ $stale_clause = $args{a} ? "" : "where svg_stale = 1";
 my $sql = "select * from products $stale_clause";
 my $products = $dbh->selectall_hashref($sql, "part_num");
 
-my $n = scalar keys %$products;
+$n = scalar keys %$products;
 print "info: products:  " if ($args{v});
 while (my ($part_num, $row) = each %$products) {
 	my $part_num_lc = lc($part_num);
@@ -230,54 +255,47 @@ $dbh->disconnect();
 #
 sub generate_folder
 {
-	my $sql_1 = shift;
-	my $sql_2 = shift;
-	my $sql_3 = shift;
-	my $name_lc = shift;
+	my $sql_stale_outer = shift;
+	my $sql_types = shift;
+	my $sql_products = shift;
 	my $name = shift;
+	my $coarse_list = shift;
+	my $sql_summary = shift;
 
-	my $coarse_list = $dbh->selectcol_arrayref($sql_1);
-
-	my ($num, %summary, %logo_file) = (scalar @$coarse_list, (), ());
+	my $name_lc = lc ($name);
 	print "info: $name_lc:  " if ($args{v});
-	for my $it (@$coarse_list) {
+
+	my $stale_list = $dbh->selectcol_arrayref($sql_stale_outer);
+	my $num = scalar @$stale_list;
+	for my $it (@$stale_list) {
 		spin() if ($args{v});
 
 		my $logo_file = get_logo(lc($it));
-		$logo_file{$it} = $logo_file;
-
 		my $it_link = linkify($it);
-		my $types = $dbh->selectcol_arrayref($sql_2, undef, $it);
+		my $types = $dbh->selectcol_arrayref($sql_types, undef, $it);
 
 		for my $type (sort @$types) {
-			my $products = $dbh->selectall_arrayref($sql_3, undef, $type, $it);
+			my $products = $dbh->selectall_arrayref($sql_products, undef, $type, $it);
 			$_->[2] = get_description($_->[0], $_->[1]) for (@$products);
 
-			my $type_link = linkify($type);
-			$type = PL($type, scalar @$products);
-			$summary{$it}{$type}{num} = scalar @$products;
-			$summary{$it}{$type}{link} = "$it_link/$type_link";
-
 			my $vars = {
-				name => $it, type => $type,
+				name => $it, type => PL($type, scalar @$products),
 				products => $products, logo_file => $logo_file
 			};
+			my $type_link = linkify($type);
 			my $out_path = "$name_lc/$it_link/$type_link.html";
-			$template->process("chart_list.tt", $vars, $out_path)
+			$template->process("fine_list.tt", $vars, $out_path)
 				or die "template: " . $template->error() . "\n";
 		}
 
-		# print Dumper($summary{$manufacturer});
-		my $vars = {
-			type => "manufacturer", name => $it,
-			info => \$summary{$it}, logo => $logo_file
-		};
+		my $summary = $dbh->selectall_arrayref($sql_summary, undef, $it);
+		my $vars = { type => $name_lc, name => $it, info => $summary };
 		$template->process("summary.tt", $vars, "$name_lc/$it_link.html")
 			or die "template: " . $template->error() . "\n";
 	}
 	print "\b$num processed\n" if ($args{v});
 
-	my $vars = { name => $name, list => \%summary, logo_file => \%logo_file };
+	my $vars = { name => $name, list => $coarse_list };
 	$template->process("coarse_list.tt", $vars, "$name_lc.html")
 		or die "template: " . $template->error() . "\n";
 }

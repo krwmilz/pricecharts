@@ -1,5 +1,6 @@
 [% WRAPPER wrapper.tt %]
 [% PERL %]
+	use Lingua::EN::Inflect qw(PL);
 	# all url references are lower case
 	my $dir_prefix = lc($stash->get("name"));
 	$stash->set("dir_prefix", $dir_prefix);
@@ -15,10 +16,14 @@
 		[% PERL %]
 			# all url references are lower case
 			my $link = lc $stash->get("item");
+			$link =~ s/ /_/;
 			$stash->set("link", $link);
 
 			my $i = $stash->get("i");
 			$stash->set("i", ++$i);
+
+			my ($logo) = glob("logo/$link.*");
+			$stash->set("logo", $logo);
 		[% END %]
 		[% IF (i % boundary) == 0 %]
 			[% IF i != 0 %]
@@ -33,14 +38,22 @@
 		<li><div class="list_item">
 		<a href="/[% dir_prefix %]/[% link %].html">
 			<img alt="[% item %]" class="[% dir_prefix %]"
-				src="/logo/[% logo_file.$item %]" />
+				src="/[% logo %]" />
 		</a>
 
 		<br><div class="breakdown">
 		[% FOREACH type IN list.$item.keys %]
-			[% list.$item.$type.num %]
-			<a href="/[% dir_prefix %]/[% list.$item.$type.link %].html">
-				[% type %]</a>,
+			[% PERL %]
+				my $type = $stash->get("type");
+				my $count = $stash->get("list.\$item.\$type.count");
+				my $type_link = lc $type;
+				$type_link =~ s/ /_/;
+				$stash->set("type_link", $type_link);
+				$stash->set("type_pl", PL($type, $count));
+			[% END %]
+			[% list.$item.$type.count %]
+			<a href="/[% dir_prefix %]/[% link %]/[% type_link %].html">
+				[% type_pl %]</a>,
 		[% END %]
 		</div></div>
 	[% END %]

@@ -5,21 +5,28 @@
 
 	my $num = scalar @{$stash->get("products")};
 	$stash->set("num", $num);
+
+	$name_lc =~ s/ /_/;
+	my ($logo) = glob("logo/$name_lc*");
+	$stash->set("logo", $logo);
 [% END %]
-	<h1><img alt="[% name %]" class="logo_small" src="/logo/[% logo_file %]"/>
+	<h1><img alt="[% name %]" class="logo_small" src="/[% logo %]"/>
 		[% num %] [% type %]</h1>
 	[% FOREACH product IN products %]
 	[% PERL %]
-		my $manufacturer = $stash->get("product.0");
-		$stash->set("manufacturer_lc", lc($manufacturer));
+		my $manufacturer = lc $stash->get("product.0");
+		$stash->set("manufacturer_lc", $manufacturer);
 		my $part_num = $stash->get("product.1");
 		$stash->set("part_lc", lc($part_num));
+
+		my ($logo) = glob("logo/$manufacturer*");
+		$stash->set("logo", $logo);
 	[% END %]
 	<div class="product">
 		<!-- make the manufacturer logo into a link -->
 		<a href="/manufacturers/[% manufacturer_lc %].html">
 			<img alt="[% product.0 %]" class="logo_small"
-			src="/logo/[% logo_file %]"/></a>
+			src="/[% logo %]"/></a>
 
 		<!-- display the description -->
 		[% product.2 %]
