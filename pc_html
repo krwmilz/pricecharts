@@ -140,6 +140,7 @@ print "info: products:  " if ($args{v});
 while (my ($part_num, $row) = each %$products) {
 	my $part_num_lc = lc($part_num);
 	my $manufacturer_lc = lc($row->{manufacturer});
+	spin() if ($args{v});
 
 	$row->{description} =
 		get_description($row->{manufacturer}, $row->{part_num});
@@ -157,7 +158,7 @@ print "\b$n processed\n" if ($args{v});
 $sql = "select manufacturer, part_num from products where first_seen > ? limit 10";
 my $new = $dbh->selectall_arrayref($sql, undef, time - (7 * 24 * 60 * 60));
 
-$sql = "select manufacturer, part_num from products where last_seen > ? order by last_seen";
+$sql = "select manufacturer, part_num from products where last_scraped > ? order by last_scraped desc";
 my $upd = $dbh->selectall_arrayref($sql, undef, time - (0.5 * 60 * 60));
 
 my $cutoff = time - (30 * 24 * 60 * 60);
@@ -277,11 +278,11 @@ sub generate_folder
 	my $stale_list = $dbh->selectcol_arrayref($sql_stale_outer);
 	my $num = scalar @$stale_list;
 	for my $it (@$stale_list) {
-		spin() if ($args{v});
 
 		my $it_link = linkify($it);
 		my $types = $dbh->selectcol_arrayref($sql_types, undef, $it);
 		for my $type (sort @$types) {
+			spin() if ($args{v});
 
 			my $products = $dbh->selectall_arrayref($sql_products, undef, $type, $it);
 			$_->[2] = get_description($_->[0], $_->[1]) for (@$products);
