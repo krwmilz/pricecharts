@@ -35,36 +35,33 @@
 	</div>
 
 	<div class="column">
-		<h1>New Products ([% nnew %])</h1>
+		<h1>New Products ([% news.size %])</h1>
 		<ul>
-			[% FOREACH new IN news %]
-			[% PERL %]
-				my $part_num = $stash->get("new.1");
-				$stash->set("part_lc", lc($part_num));
-				my $manufacturer = $stash->get("new.0");
-				$stash->set("manuf_lc", lc($manufacturer));
-			[% END %]
+		[% FOREACH new IN news %]
+			[% manuf_link = new.0.lower.replace('[ #\/]', '_') %]
+			[% part_link  = new.1.lower.replace('[ #\/]', '_') %]
+
 			<li><img class="logo_small" alt="[% new.0 %]"
-				src="/logo/[% manuf_lc %].svg"></img>
-			<a href="/products/[% manuf_lc %]/[% part_lc %].html">[% new.1 %]</a>
-			[% END %]
+				src="/logo/[% manuf_link %].svg"></img>
+
+			<a href="/products/[% manuf_link %]/[% part_link %].html">
+				[% new.1 %]</a>
+		[% END %]
 		</ul>
 	</div>
 
 	<div class="column">
-		<h1>Recently Updated ([% nupd %])</h1>
+		<h1>Recently Updated ([% upds.size %])</h1>
 		<ul>
-			[% FOREACH upd IN upds %]
-			[% PERL %]
-				my $part_num = $stash->get("upd.1");
-				$stash->set("part_lc", lc($part_num));
-				my $manufacturer = $stash->get("upd.0");
-				$stash->set("manuf_lc", lc($manufacturer));
-			[% END %]
+		[% FOREACH upd IN upds %]
+			[% manuf_link = upd.0.lower.replace('[ #\/]', '_') %]
+			[% part_link  = upd.1.lower.replace('[ #\/]', '_') %]
+
 			<li><img class="logo_small" alt="[% upd.0 %]"
-				src="/logo/[% manuf_lc %].svg"></img>
-			<a href="/products/[% manuf_lc %]/[% part_lc %].html">[% upd.1 %]</a>
-			[% END %]
+				src="/logo/[% manuf_link %].svg"></img>
+			<a href="/products/[% manuf_link %]/[% part_link %].html">
+				[% upd.1 %]</a>
+		[% END %]
 		</ul>
 	</div>
 [% END %]

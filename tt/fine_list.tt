@@ -1,40 +1,37 @@
 [% WRAPPER wrapper.tt %]
+[% name_link = name.lower.replace('[ #\/]', '_') %]
 [% PERL %]
-	my $name_lc = lc($stash->get("name"));
-	$stash->set("name_lc", $name_lc);
-
-	my $num = scalar @{$stash->get("products")};
-	$stash->set("num", $num);
-
-	$name_lc =~ s/ /_/;
-	my ($logo) = glob("logo/$name_lc*");
+	my $name_html = $stash->get("name_link");
+	my ($logo) = glob("logo/$name_html*");
 	$stash->set("logo", $logo);
 [% END %]
 	<h1><img alt="[% name %]" class="logo_small" src="/[% logo %]"/>
-		[% num %] [% type %]</h1>
-	[% FOREACH product IN products %]
-	[% PERL %]
-		my $manufacturer = lc $stash->get("product.0");
-		$stash->set("manufacturer_lc", $manufacturer);
-		my $part_num = $stash->get("product.1");
-		$stash->set("part_lc", lc($part_num));
+		[% products.size %] [% type %]</h1>
 
-		my ($logo) = glob("logo/$manufacturer*");
-		$stash->set("logo", $logo);
-	[% END %]
+	[% FOREACH product IN products %]
 	<div class="product">
-		<!-- make the manufacturer logo into a link -->
-		<a href="/manufacturers/[% manufacturer_lc %].html">
+		[% manuf_html = product.0.lower.replace('[ #\/]', '_') %]
+		[% part_link  = product.1.lower.replace('[ #\/]', '_') %]
+
+		[% PERL %]
+			my $manuf_html = $stash->get("manuf_html");
+			my ($logo) = glob("logo/$manuf_html*");
+			$stash->set("logo", $logo);
+		[% END %]
+
+		[%# make the manufacturer logo into a link %]
+		<a href="/manufacturers/[% manuf_html %].html">
 			<img alt="[% product.0 %]" class="logo_small"
 			src="/[% logo %]"/></a>
 
-		<!-- display the description -->
+		[%# display the description %]
 		[% product.2 %]
-		<!-- inline link to the products page, in parenthesis  -->
-		(<a href="/products/[% manufacturer_lc %]/[% part_lc %].html">[% product.1 %]</a>)<br>
 
-		<!-- show the chart -->
-		<object data="/svg/[% part_lc %].svg" type="image/svg+xml">
+		[%# inline link to the products page, in parenthesis %]
+		(<a href="/products/[% manuf_html %]/[% part_link %].html">[% product.1 %]</a>)<br>
+
+		[%# show the chart %]
+		<object data="/svg/[% manuf_html %]/[% part_link %].svg" type="image/svg+xml">
 		</object>
 	</div>
 	[% END %]

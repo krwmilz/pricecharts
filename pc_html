@@ -24,14 +24,6 @@ $| = 1 if ($args{v});
 my $cfg = get_config();
 my $dbh = get_dbh($cfg->{http}, undef, $args{v});
 
-my $clause = $args{a} ? "" : "where svg_stale = 1";
-my ($n) = $dbh->selectrow_array("select count(*) from products $clause");
-if ($n < 1) {
-	print "info: nothing stale\n" if ($args{v});
-	$dbh->disconnect();
-	exit;
-}
-
 my $work_dir = $cfg->{http}{chroot} . $cfg->{http}{htdocs};
 my $svg_dir  = $work_dir . "/svg";
 print "info: work, svg dirs $work_dir\{,svg\}\n" if ($args{v});
@@ -131,26 +123,26 @@ generate_folder($stale_list, $types, $products_fine, "Types", $coarse, $summary)
 #
 # products
 #
+print "info: products:  " if ($args{v});
+
 $stale_clause = $args{a} ? "" : "where svg_stale = 1";
 my $sql = "select * from products $stale_clause";
 my $products = $dbh->selectall_hashref($sql, "part_num");
 
-$n = scalar keys %$products;
-print "info: products:  " if ($args{v});
+my $n = scalar keys %$products;
 while (my ($part_num, $row) = each %$products) {
-	my $part_num_lc = lc($part_num);
-	my $manufacturer_lc = lc($row->{manufacturer});
+	my $part_link = linkify($part_num);
+	my $manuf_link = linkify($row->{manufacturer});
 	spin() if ($args{v});
 
 	$row->{description} =
 		get_description($row->{manufacturer}, $row->{part_num});
 
 	$template->process("product.tt", $row,
-		"products/$manufacturer_lc/$part_num_lc.html")
+		"products/$manuf_link/$part_link.html")
 		|| die "template: " . $template->error() . "\n";
 }
 print "\b$n processed\n" if ($args{v});
-
 
 #
 # index
@@ -168,78 +160,73 @@ my ($p, $m) = $dbh->selectrow_array($sql);
 $sql = "select count(*) from retailers";
 my ($r) = $dbh->selectrow_array($sql);
 
-my $vars = {
-	nret => $r, nmanuf => $m, nprod => $p, nnew => scalar @$new,
-	news => $new, nupd => scalar @$upd, upds => $upd
-};
+my $vars = { nret => $r, nmanuf => $m, nprod => $p, news => $new, upds => $upd };
 print "info: index: $p products, $m manufacturers, $r retailers\n" if ($args{v});
 $template->process("index.tt", $vars, "index.html")
 	or die "template: " . $template->error() . "\n";
 
-
 #
 # svg
 #
+print "info: svg:  " if ($args{v});
+
 my ($left, $center, $right, $top, $middle, $bottom) = (3, 957, 40, 15, 150, 20);
 my $width = $right + $center + $left;
 my $height = $top + $middle + $bottom;
 
-my $where_clause = $args{a} ? "" : "where svg_stale = 1";
-$sql = "select manufacturer, part_num from products $where_clause";
-my $parts_sth = $dbh->prepare($sql);
-
 $sql = "select distinct retailer from prices where part_num = ? and manufacturer = ?";
 my $retailer_sth = $dbh->prepare($sql);
 
-$sql = "select date, price from prices where " .
-	"part_num = ? and retailer = ? order by date";
+$sql = qq{select date, price from prices where part_num = ? and retailer = ?
+	order by date};
 my $point_sth = $dbh->prepare($sql);
 
-$parts_sth->execute();
-print "info: svg:  " if ($args{v});
+$sql = qq{select min(date), max(date), min(price), max(price) from prices
+	where manufacturer = ? and part_num = ?};
+my $extremes_sth = $dbh->prepare($sql);
+
+$sql = "select url, color from retailers where name = ?";
+my $ret_info_sth = $dbh->prepare($sql);
+
 my ($raw_total, $rendered_total, $points, $series) = (0, 0, 0, 0);
-while (my ($manufacturer, $part_num) = $parts_sth->fetchrow_array()) {
+
+my $where_clause = $args{a} ? "" : "where svg_stale = 1";
+my $parts_sql = "select manufacturer, part_num from products $where_clause";
+for (@{$dbh->selectall_arrayref($parts_sql)}) {
+	my ($manufacturer, $part_num) = @$_;
+
 	$raw_total++;
 	spin() if ($args{v});
-	my %series;
 
-	$sql = qq{select min(date), max(date), min(price), max(price)
-		from prices where manufacturer = ? and part_num = ?};
 	my ($x_min, $x_max, $y_min, $y_max) =
-		$dbh->selectrow_array($sql, undef, $manufacturer, $part_num);
+		$dbh->selectrow_array($extremes_sth, undef, $manufacturer, $part_num);
 	next unless (defined $x_min);
 
-	# each series on the chart represents a retailers prices
+	my %series;
 	$retailer_sth->execute($part_num, $manufacturer);
 	while (my ($retailer) = $retailer_sth->fetchrow_array()) {
-		$sql = "select url, color from retailers where name = ?";
-		my ($url, $color) = $dbh->selectrow_array($sql, undef, $retailer);
+		my ($url, $color) =
+			$dbh->selectrow_array($ret_info_sth, undef, $retailer);
 
 		# xlink:href's don't like raw ampersands
 		$url =~ s/&/&amp;/g;
 
 		$series{$retailer}{url} = $url;
 		$series{$retailer}{color} = $color;
-
-		$point_sth->execute($part_num, $retailer);
-		$series{$retailer}{data} = $point_sth->fetchall_arrayref();
+		$series{$retailer}{data} =
+			$dbh->selectall_arrayref($point_sth, undef, $part_num, $retailer);
 		$points += scalar @{$series{$retailer}{data}};
 		$series++;
 	}
 
 	my $svg = make_svg(\%series, $x_min, $x_max, $y_min, $y_max, $part_num);
 
-	# all links lower case
-	my $part_num_cased = $part_num;
-	$part_num = lc($part_num);
+	my $manufacturer_dir = linkify($manufacturer);
+	my $part_link = linkify($part_num);
+	make_path("$svg_dir/$manufacturer_dir", { verbose => $args{v} });
 
-	# giant hack, if the part number has / in it, make some directories
-	if ($part_num =~ /\//) {
-		my $needed_dirs = substr($part_num, 0, rindex($part_num, '/'));
-		make_path("$svg_dir/$needed_dirs", { verbose => $args{v} });
-	}
-	open my $svg_fh, ">", "$svg_dir/$part_num.svg" or
-		die "couldn't open $svg_dir/$part_num: $!";
+	my $svg_path = "$svg_dir/$manufacturer_dir/$part_link.svg";
+	open my $svg_fh, ">", "$svg_path" or die "couldn't open $svg_path: $!";
 
 	# XXX: not sure how to add this programatically, hack around for now
 	my @buf = split("\n", $svg->xmlify);
@@ -258,7 +245,6 @@ printf "%i points in %i series\n", $points, $series if ($args{v});
 $dbh->do("update products set svg_stale = 0");
 
 $dbh->disconnect();
-
 
 #
 # generate an entire tree of html structure
@@ -314,7 +300,7 @@ sub linkify
 	my $type = shift;
 
 	my $type_link = lc($type);
-	$type_link =~ s/ /_/;
+	$type_link =~ s/[ #\/]/_/g;
 	return $type_link;
 }
 
@@ -340,7 +326,6 @@ sub get_description
 
 	return $best;
 }
-
 
 #
 # make a new svg with provided coordinate and label data
@@ -414,9 +399,6 @@ sub make_svg
 		my $retailer_id = lc($retailer);
 		$retailer_id =~ s/ /_/;
 
-		my $url = $values->{url};
-		my $color = $values->{color};
-
 		my (@xs, @ys, @pts);
 		for (@{$values->{data}}) {
 			my ($x, $y) = @$_;
@@ -435,6 +417,8 @@ sub make_svg
 			my $d = catmullrom_to_bezier(\@pts);
 			$defs->tag("path", "d" => $d, id => "path_$retailer_id");
 		}
+
+		my ($url, $color) = ($values->{url}, $values->{color});
 
 		# the line, points, and label can be grouped under one anchor
 		my $anchor = $svg->anchor(-href => $url . $part_num,

@@ -1,59 +1,40 @@
 [% WRAPPER wrapper.tt %]
-[% PERL %]
-	use Lingua::EN::Inflect qw(PL);
-	# all url references are lower case
-	my $dir_prefix = lc($stash->get("name"));
-	$stash->set("dir_prefix", $dir_prefix);
+	<h1>[% name %] ([% list.keys.size %])</h1>
 
-	my $total = scalar(keys %{$stash->get("list")});
-	$stash->set("num", $total);
-	$stash->set("i", -1);
-	$stash->set("boundary", POSIX::ceil($total / 3));
-[% END %]
-	<h1>[% name %] ([% num %])</h1>
-
+	<div class="thirds_column">
+	<ul>
+	[% i = 0 %]
 	[% FOREACH item IN list.keys.sort %]
+		[% item_link = item.lower.replace('[ #\/]', '_') %]
 		[% PERL %]
-			# all url references are lower case
-			my $link = lc $stash->get("item");
-			$link =~ s/ /_/;
-			$stash->set("link", $link);
-
-			my $i = $stash->get("i");
-			$stash->set("i", ++$i);
-
+			my $link = $stash->get("item_link");
 			my ($logo) = glob("logo/$link.*");
 			$stash->set("logo", $logo);
 		[% END %]
-		[% IF (i % boundary) == 0 %]
-			[% IF i != 0 %]
-				</ul>
-				</div>
-			[% END %]
+
+		[% i = i + 1 %]
+		[% IF (i % (list.keys.size / 3)) == 0 %]
+			</ul>
+			</div>
 
 			<div class="thirds_column">
 			<ul>
 		[% END %]
 
 		<li><div class="list_item">
-		<a href="/[% dir_prefix %]/[% link %].html">
-			<img alt="[% item %]" class="[% dir_prefix %]"
+		[% name_link = name.lower.replace('[ #\/]', '_') %]
+		<a href="/[% name_link %]/[% item_link %].html">
+			<img alt="[% item %]" class="[% name_link %]"
 				src="/[% logo %]" />
-		</a>
+		</a><br>
 
-		<br><div class="breakdown">
+		<div class="breakdown">
 		[% FOREACH type IN list.$item.keys %]
-			[% PERL %]
-				my $type = $stash->get("type");
-				my $count = $stash->get("list.\$item.\$type.count");
-				my $type_link = lc $type;
-				$type_link =~ s/ /_/;
-				$stash->set("type_link", $type_link);
-				$stash->set("type_pl", PL($type, $count));
-			[% END %]
 			[% list.$item.$type.count %]
-			<a href="/[% dir_prefix %]/[% link %]/[% type_link %].html">
-				[% type_pl %]</a>,
+
+			[% type_link = type.lower.replace('[ #\/]', '_') %]
+			<a href="/[% name_link %]/[% item_link %]/[% type_link %].html">
+				[% type %]</a>,
 		[% END %]
 		</div></div>
 	[% END %]

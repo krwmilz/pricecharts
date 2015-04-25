@@ -1,29 +1,33 @@
 [% WRAPPER wrapper.tt %]
 [% PERL %]
-	my $manuf = $stash->get("manufacturer");
-	$stash->set("manufacturer_lc", lc($manuf));
-	my $part_num = $stash->get("part_num");
-	$stash->set("part_num_lc", lc($part_num));
-
+	# drop the exact time on this somehow
 	my $time_str = scalar localtime($stash->get('first_seen'));
 	$stash->set("first_seen_proc", $time_str);
-	# drop the exact time on this somehow
 	$time_str = scalar localtime($stash->get('last_seen'));
 	$stash->set("last_seen_proc", $time_str);
 [% END %]
-	<h1><a href="/manufacturers/[% manufacturer_lc %].html">
+	[% manuf_link = manufacturer.lower.replace('[ #\/]', '_') %]
+	<h1><a href="/manufacturers/[% manuf_link %].html">
 		<img class="logo_small" alt="[% manufacturer %]"
-		src="/logo/[% manufacturer_lc %].svg"/></a>
-		[% part_num %]</h1>
-	<div class="product">
-		<table>
-			<tr><td>Manufacturer:</td><td>[% manufacturer %]</td></tr>
-			<tr><td>Description:</td><td>[% description %]</td></tr>
-			<tr><td>Type:</td><td>[% type %]</td></tr>
-			<tr><td>First Seen:</td><td>[% first_seen_proc %]</td></tr>
-			<tr><td>Last Seen:</td><td>[% last_seen_proc %]</td></tr>
-		</table>
-		<object data="/svg/[% part_num_lc %].svg" type="image/svg+xml">
-		</object>
-	</div>
+		src="/logo/[% manuf_link %].svg"/></a>
+	[% part_num %]</h1>
+
+	[% BLOCK row %]
+	<tr>
+		<td>[% first %]:</td>
+		<td>[% second %]</td>
+	</tr>
+	[% END %]
+
+	<table>
+		[% PROCESS row first='Manufacturer' second=manufacturer %]
+		[% PROCESS row first='Description' second=description %]
+		[% PROCESS row first='Type' second=type %]
+		[% PROCESS row first='First Seen' second=first_seen_proc %]
+		[% PROCESS row first='Last Seen' second=last_seen_proc %]
+	</table>
+
+	[% part_link  = part_num.lower.replace('[ #\/]', '_') %]
+	<object data="/svg/[% manuf_link %]/[% part_link %].svg" type="image/svg+xml">
+	</object>
 [% END %]
