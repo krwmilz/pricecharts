@@ -30,18 +30,20 @@ my $config = {
 };
 my $www = Template->new($config) || die Template->error(), "\n";
 
+my $and_stale = $args{a} ? "" : "and products.svg_stale = 1";
+my $where_stale = $args{a} ? "" : "where svg_stale = 1";
+
 #
 # manufacturers
 #
-my $stale_clause = $args{a} ? "" : "and products.svg_stale = 1";
 my $stale_list = qq{select distinct prices.manufacturer from prices, products where
 	prices.manufacturer = products.manufacturer and
-	prices.part_num = products.part_num $stale_clause};
+	prices.part_num = products.part_num $and_stale};
 
 my $types = qq{select distinct products.type from prices, products where
 	prices.manufacturer = products.manufacturer and
 	prices.part_num = products.part_num and prices.manufacturer = ?
-	$stale_clause};
+	$and_stale};
 
 my $products_fine = qq{select distinct manufacturer, part_num from products
 	where type = ? and manufacturer = ?};
@@ -58,26 +60,22 @@ generate_folder($stale_list, $types, $products_fine, "Manufacturers", $coarse, $
 #
 # retailers
 #
-if ($args{a}) {
-	$stale_list = "select distinct retailer from prices";
-} else {
-	$stale_list = qq{select distinct prices.retailer from prices, products where
-		prices.manufacturer = products.manufacturer and
-		prices.part_num = products.part_num and products.svg_stale = 1};
-}
+$stale_list = qq{select distinct prices.retailer from prices, products where
+	prices.manufacturer = products.manufacturer and
+	prices.part_num = products.part_num $and_stale};
 
-$stale_clause = $args{a} ? "" : "and products.svg_stale = 1";
 $types = qq{select distinct products.type from prices, products where
 	prices.manufacturer = products.manufacturer and
 	prices.part_num = products.part_num and prices.retailer = ?
-	$stale_clause};
+	$and_stale};
 
 $products_fine = qq{select distinct prices.manufacturer, prices.part_num
 	from prices, products where prices.part_num = products.part_num and
 	products.manufacturer = prices.manufacturer and products.type = ? and
 	prices.retailer = ?};
 
-$summary = qq{select manufacturer, count(*) from prices where retailer = ? group by manufacturer};
+$summary = qq{select manufacturer, count(*) from prices where retailer = ?
+	group by manufacturer};
 
 $coarse_list = qq{select prices.retailer, count(distinct products.part_num) as
 	count, products.type from products, prices where prices.manufacturer =
@@ -91,10 +89,9 @@ generate_folder($stale_list, $types, $products_fine, "Retailers", $coarse, $summ
 #
 # product types
 #
-$stale_clause = $args{a} ? "" : "and products.svg_stale = 1";
 $stale_list = qq{select distinct products.type from products, prices where
 	products.manufacturer = prices.manufacturer and
-	products.part_num = prices.part_num $stale_clause};
+	products.part_num = prices.part_num $and_stale};
 
 $types = qq{select distinct products.manufacturer from prices, products where
 	prices.manufacturer = products.manufacturer and
@@ -120,10 +117,8 @@ generate_folder($stale_list, $types, $products_fine, "Types", $coarse, $summary)
 #
 print "info: products: " if ($args{v});
 
-$stale_clause = $args{a} ? "" : "where svg_stale = 1";
-my $sql = "select * from products $stale_clause";
+my $sql = "select * from products $where_stale";
 my $products = $dbh->selectall_hashref($sql, "part_num");
-
 while (my ($part_num, $row) = each %$products) {
 	my $part_link = linkify($part_num);
 	my $manuf_link = linkify($row->{manufacturer});
@@ -139,31 +134,29 @@ print scalar(keys %$products) . " processed\n" if ($args{v});
 #
 # index
 #
-$sql = "select manufacturer, part_num from products where first_seen > ? limit 10";
-my $new = $dbh->selectall_arrayref($sql, undef, time - (7 * 24 * 60 * 60));
+print "info: index: ";
 
-$sql = "select manufacturer, part_num from products where last_scraped > ? order by last_scraped desc";
-my $upd = $dbh->selectall_arrayref($sql, undef, time - (0.5 * 60 * 60));
+$sql = "select manufacturer, part_num from products order by first_seen desc limit 10";
+my $new = $dbh->selectall_arrayref($sql);
 
-my $cutoff = time - (30 * 24 * 60 * 60);
-$sql = "select count(*), count(distinct manufacturer) from products where last_seen > $cutoff";
-my ($p, $m) = $dbh->selectrow_array($sql);
+$sql = qq{select manufacturer, part_num from products order by last_scraped desc limit 5};
+my $upd = $dbh->selectall_arrayref($sql);
+
+$sql = "select count(*), count(distinct manufacturer) from products where last_seen > ?";
+my ($p, $m) = $dbh->selectrow_array($sql, undef, time - (30 * 24 * 60 * 60));
 
 $sql = "select count(*) from retailers";
 my ($r) = $dbh->selectrow_array($sql);
 
 my $vars = { nret => $r, nmanuf => $m, nprod => $p, news => $new, upds => $upd };
-print "info: index: $p products, $m manufacturers, $r retailers\n" if ($args{v});
 $www->process("index.tt", $vars, "index.html") or die $www->error(), "\n";
+
+print "$p products, $m manufacturers, $r retailers\n" if ($args{v});
 
 #
 # svg
 #
 print "info: svg:  " if ($args{v});
-
-my ($left, $center, $right, $top, $middle, $bottom) = (3, 957, 40, 15, 150, 20);
-my $width = $right + $center + $left;
-my $height = $top + $middle + $bottom;
 
 my @series_keys = ("retailer", "date");
 $sql = "select retailer, date, price from prices where manufacturer = ? and
@@ -179,8 +172,7 @@ my $retailer_info = $dbh->selectall_hashref($sql, "name");
 
 my ($total, $rendered) = (0, 0);
 
-my $where_clause = $args{a} ? "" : "where svg_stale = 1";
-my $parts_sql = "select manufacturer, part_num from products $where_clause";
+my $parts_sql = "select manufacturer, part_num from products $where_stale";
 for (@{$dbh->selectall_arrayref($parts_sql)}) {
 	my ($manufacturer, $part_num) = @$_;
 
@@ -305,6 +297,10 @@ sub make_svg
 	my $y_max = shift;
 	my $part_num = shift;
 	my $retailer_info = shift;
+
+	my ($left, $center, $right, $top, $middle, $bottom) = (3, 957, 40, 15, 150, 20);
+	my $width = $right + $center + $left;
+	my $height = $top + $middle + $bottom;
 
 	$y_max = ceil($y_max / 100) * 100;
 	$y_min = floor($y_min / 100) * 100;
