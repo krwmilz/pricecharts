@@ -435,44 +435,38 @@ sub catmullrom_to_bezier
 	# 0    1/6  1    -1/6
 	# 0    0    1    0
 
-	my $d = "M" . $pts[0] . ", " . $pts[1] . " ";
+	my $d = "M $pts[0], $pts[1] ";
 	my $iLen = @pts;
 	for (my $i = 0; $iLen - 2 > $i; $i += 2) {
-		my @p;
+		my (@xs, @ys);
 		if ($i == 0) {
-			push @p, {x => $pts[$i], y => $pts[$i + 1]};
-			push @p, {x => $pts[$i], y => $pts[$i + 1]};
-			push @p, {x => $pts[$i + 2], y => $pts[$i + 3]};
-			push @p, {x => $pts[$i + 4], y => $pts[$i + 5]};
+			push @xs, $pts[$i];	push @ys, $pts[$i + 1];
+			push @xs, $pts[$i];	push @ys, $pts[$i + 1];
+			push @xs, $pts[$i + 2];	push @ys, $pts[$i + 3];
+			push @xs, $pts[$i + 4];	push @ys, $pts[$i + 5];
 		}
 		elsif ($i == ($iLen - 4)) {
-			push @p, {x => $pts[$i - 2], y => $pts[$i - 1]};
-			push @p, {x => $pts[$i], y => $pts[$i + 1]};
-			push @p, {x => $pts[$i + 2], y => $pts[$i + 3]};
-			push @p, {x => $pts[$i + 2], y => $pts[$i + 3]};
+			push @xs, $pts[$i - 2];	push @ys, $pts[$i - 1];
+			push @xs, $pts[$i];	push @ys, $pts[$i + 1];
+			push @xs, $pts[$i + 2];	push @ys, $pts[$i + 3];
+			push @xs, $pts[$i + 2];	push @ys, $pts[$i + 3];
 		}
 		else {
-			push @p, {x => $pts[$i - 2], y => $pts[$i - 1]};
-			push @p, {x => $pts[$i], y => $pts[$i + 1]};
-			push @p, {x => $pts[$i + 2], y => $pts[$i + 3]};
-			push @p, {x => $pts[$i + 4], y => $pts[$i + 5]};
+			push @xs, $pts[$i - 2];	push @ys, $pts[$i - 1];
+			push @xs, $pts[$i];	push @ys, $pts[$i + 1];
+			push @xs, $pts[$i + 2];	push @ys, $pts[$i + 3];
+			push @xs, $pts[$i + 4];	push @ys, $pts[$i + 5];
 		}
 
-		my @bp;
-		push @bp, {x => $p[1]{x}, y => $p[1]{y}};
-		push @bp, {
-			x => ((-$p[0]{x} + 6*$p[1]{x} + $p[2]{x}) / 6),
-			y => ((-$p[0]{y} + 6*$p[1]{y} + $p[2]{y}) / 6)
-		};
-		push @bp, {
-			x => (($p[1]{x} + 6*$p[2]{x} - $p[3]{x}) / 6),
-			y => (($p[1]{y} + 6*$p[2]{y} - $p[3]{y}) / 6)
-		};
-		push @bp, {x => $p[2]{x}, y => $p[2]{y}};
+		my (@bp_x, @bp_y);
+		push @bp_x, $xs[1];	push @bp_y, $ys[1];
+		push @bp_x, ((-$xs[0] + 6*$xs[1] + $xs[2]) / 6);
+		push @bp_y, ((-$ys[0] + 6*$ys[1] + $ys[2]) / 6);
+		push @bp_x, (($xs[1] + 6*$xs[2] - $xs[3]) / 6);
+		push @bp_y, (($ys[1] + 6*$ys[2] - $ys[3]) / 6);
+		push @bp_x, $xs[2];	push @bp_y, $ys[2];
 
-		$d .= "C " . $bp[1]{x} . ", " . $bp[1]{y} . " " .
-			$bp[2]{x} . ", " . $bp[2]{y} . " " .
-			$bp[3]{x} . ", " . $bp[3]{y} . " ";
+		$d .= "C $bp_x[1], $bp_y[1] $bp_x[2], $bp_y[2] $bp_x[3], $bp_y[3] ";
 	}
 
 	return $d;
