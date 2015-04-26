@@ -2,7 +2,7 @@
 	<div class="column">
 		<h1>Welcome</h1>
 
-		<p> Welcome to <em>Price</em>Chart, a price comparison
+		<p> Welcome to <em>Price</em><b>Chart</b>, a price comparison
 		service for consumer electronics.
 		Currently <b>[% nprod %]</b> products from
 		<b>[% nmanuf %]</b>
@@ -14,24 +14,7 @@
 		search box at the top right.</p>
 
 		<p> <em>Price</em><b>Chart</b> periodically looks up the prices
-		of products, which are saved and converted into charts.</p>
-	</div>
-
-	<div class="column">
-		<h1>Motivation</h1>
-
-		<p> <em>Price</em><b>Chart</b> is meant to be a consumer
-		purchasing tool. It gives the consumer unprecedented insight
-		into retail pricing.</p>
-
-		<p> A savvy consumer will conduct price comparisons
-		between different retailers before making a purchasing decision.
-		The consumer decides on a certain product they are interested in,
-		and checks stores in their area for both availability and price.
-		This service automates the <em>price comparison</em> process. </p>
-		
-		<p> This is important because the price difference between
-		different retailers can be significant.</p>
+		of products that are saved and converted into charts.</p>
 	</div>
 
 	<div class="column">
@@ -48,9 +31,7 @@
 				[% new.1 %]</a>
 		[% END %]
 		</ul>
-	</div>
 
-	<div class="column">
 		<h1>Recently Updated ([% upds.size %])</h1>
 		<ul>
 		[% FOREACH upd IN upds %]
