@@ -4,16 +4,12 @@ use strict;
 use warnings;
 
 use Config::Grammar;
-use Data::Dumper;
-use File::Copy;
 use Getopt::Std;
 use Lingua::EN::Inflect qw(PL);
 use POSIX;
 use PriceChart;
 use SVG;
 use Template;
-use Time::Piece;
-use URI::Escape;
 
 
 my %args;
@@ -32,8 +28,7 @@ my $config = {
 	INTERPOLATE => 1, POST_CHOMP => 1, EVAL_PERL => 1,
 	INCLUDE_PATH => "$work_dir/tt", OUTPUT_PATH => $work_dir
 };
-my $www = Template->new($config)
-	|| die Template->error(), "\n";
+my $www = Template->new($config) || die Template->error(), "\n";
 
 #
 # manufacturers
@@ -198,7 +193,6 @@ for (@{$dbh->selectall_arrayref($parts_sql)}) {
 
 	my $series = $dbh->selectall_hashref($series_sth, \@series_keys, undef,
 		$manufacturer, $part_num);
-
 	my $svg = make_svg($series, $x_min, $x_max, $y_min, $y_max, $part_num, $retailer_info);
 
 	my $manufacturer_dir = linkify($manufacturer);
