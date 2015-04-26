@@ -72,7 +72,7 @@ my $config = { INCLUDE_PATH => "$http_cfg{htdocs}/tt" };
 my $template = Template->new($config) || die $Template::ERROR . "\n";
 
 # try hard here not to use EVAL_PERL in the template
-my $sql = "select distinct manufacturer, part_num, lower(part_num), lower(manufacturer) ".
+my $sql = "select distinct manufacturer, part_num " .
 	"from prices where part_num like ? or manufacturer like ?";
 my $search_sth = $dbh->prepare($sql);
 
@@ -93,11 +93,7 @@ while ($request->Accept() >= 0) {
 	$search_sth->execute("%$input%", "%$input%");
 	my $products = $search_sth->fetchall_arrayref();
 
-	my $vars = {
-		query => $input, num_results => scalar @$products,
-		results => $products
-	};
-
+	my $vars = { query => $input, results => $products };
 	$template->process("search.tt", $vars)
 		|| print "template: " . $template->error();
 	$requests_total++;
