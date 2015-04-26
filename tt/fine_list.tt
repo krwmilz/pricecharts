@@ -12,13 +12,11 @@
 	<div class="product">
 		[% manuf_html = product.0.lower.replace('[ #\/]', '_') %]
 		[% part_link  = product.1.lower.replace('[ #\/]', '_') %]
-
 		[% PERL %]
 			my $manuf_html = $stash->get("manuf_html");
 			my ($logo) = glob("logo/$manuf_html*");
 			$stash->set("logo", $logo);
 		[% END %]
-
 		[%# make the manufacturer logo into a link %]
 		<a href="/manufacturers/[% manuf_html %].html">
 			<img alt="[% product.0 %]" class="logo_small"

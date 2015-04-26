@@ -11,7 +11,6 @@
 			my ($logo) = glob("logo/$link.*");
 			$stash->set("logo", $logo);
 		[% END %]
-
 		[% i = i + 1 %]
 		[% IF (i % (list.keys.size / 3)) == 0 %]
 			</ul>
@@ -20,7 +19,6 @@
 			<div class="thirds_column">
 			<ul>
 		[% END %]
-
 		<li><div class="list_item">
 		[% name_link = name.lower.replace('[ #\/]', '_') %]
 		<a href="/[% name_link %]/[% item_link %].html">
@@ -30,10 +28,9 @@
 
 		<div class="breakdown">
 		[% FOREACH type IN list.$item.keys %]
-			[% list.$item.$type.count %]
-
+			[% n = list.$item.$type.count %]
 			[% type_link = type.lower.replace('[ #\/]', '_') %]
-			<a href="/[% name_link %]/[% item_link %]/[% type_link %].html">
+			[% n %] <a href="/[% name_link %]/[% item_link %]/[% type_link %].html">
 				[% type %]</a>,
 		[% END %]
 		</div></div>
