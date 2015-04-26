@@ -32,26 +32,27 @@ my $www = Template->new($config) || die Template->error(), "\n";
 
 my $and_stale = $args{a} ? "" : "and products.svg_stale = 1";
 my $where_stale = $args{a} ? "" : "where svg_stale = 1";
+my $part_equality = qq{prices.manufacturer = products.manufacturer and
+	prices.part_num = products.part_num};
 
 #
 # manufacturers
 #
 my $stale_list = qq{select distinct prices.manufacturer from prices, products where
-	prices.manufacturer = products.manufacturer and
-	prices.part_num = products.part_num $and_stale};
+	$part_equality $and_stale};
 
 my $types = qq{select distinct products.type from prices, products where
-	prices.manufacturer = products.manufacturer and
-	prices.part_num = products.part_num and prices.manufacturer = ?
-	$and_stale};
+	$part_equality and prices.manufacturer = ? $and_stale};
 
-my $products_fine = qq{select distinct manufacturer, part_num from products
-	where type = ? and manufacturer = ?};
+my $products_fine = qq{select distinct products.manufacturer, products.part_num
+	from products, prices where $part_equality and products.type = ? and
+	products.manufacturer = ?};
 
 my $summary = qq{select type, count(*) from products where manufacturer = ? group by type};
 
-my $coarse_list = qq{select manufacturer, count(*) as count, type from products group by
-	manufacturer, type};
+my $coarse_list = qq{select products.manufacturer, count(distinct products.part_num)
+	as count, products.type from products, prices where $part_equality
+	group by products.manufacturer, products.type};
 my @key_fields = ("manufacturer", "type");
 my $coarse = $dbh->selectall_hashref($coarse_list, \@key_fields);
 
@@ -61,25 +62,20 @@ generate_folder($stale_list, $types, $products_fine, "Manufacturers", $coarse, $
 # retailers
 #
 $stale_list = qq{select distinct prices.retailer from prices, products where
-	prices.manufacturer = products.manufacturer and
-	prices.part_num = products.part_num $and_stale};
+	$part_equality $and_stale};
 
 $types = qq{select distinct products.type from prices, products where
-	prices.manufacturer = products.manufacturer and
-	prices.part_num = products.part_num and prices.retailer = ?
-	$and_stale};
+	$part_equality and prices.retailer = ?  $and_stale};
 
 $products_fine = qq{select distinct prices.manufacturer, prices.part_num
-	from prices, products where prices.part_num = products.part_num and
-	products.manufacturer = prices.manufacturer and products.type = ? and
+	from prices, products where $part_equality and products.type = ? and
 	prices.retailer = ?};
 
 $summary = qq{select manufacturer, count(*) from prices where retailer = ?
 	group by manufacturer};
 
 $coarse_list = qq{select prices.retailer, count(distinct products.part_num) as
-	count, products.type from products, prices where prices.manufacturer =
-	products.manufacturer and prices.part_num = products.part_num group by
+	count, products.type from products, prices where $part_equality group by
 	prices.retailer, products.type};
 @key_fields = ("retailer", "type");
 $coarse = $dbh->selectall_hashref($coarse_list, \@key_fields);
@@ -90,17 +86,14 @@ generate_folder($stale_list, $types, $products_fine, "Retailers", $coarse, $summ
 # product types
 #
 $stale_list = qq{select distinct products.type from products, prices where
-	products.manufacturer = prices.manufacturer and
-	products.part_num = prices.part_num $and_stale};
+	$part_equality $and_stale};
 
 $types = qq{select distinct products.manufacturer from prices, products where
-	prices.manufacturer = products.manufacturer and
-	prices.part_num = products.part_num and products.type = ?};
+	$part_equality and products.type = ?};
 
 $products_fine = qq{select distinct prices.manufacturer, prices.part_num
-	from prices, products where prices.part_num = products.part_num and
-	products.manufacturer = prices.manufacturer and
-	products.manufacturer = ? and products.type = ?};
+	from prices, products where $part_equality and products.manufacturer = ?
+	and products.type = ?};
 
 $summary = qq{select manufacturer, count(*) from products where type = ?
 	group by manufacturer};
@@ -136,7 +129,7 @@ print scalar(keys %$products) . " processed\n" if ($args{v});
 #
 print "info: index: ";
 
-$sql = "select manufacturer, part_num from products order by first_seen desc limit 10";
+$sql = "select manufacturer, part_num from products order by first_seen desc limit 5";
 my $new = $dbh->selectall_arrayref($sql);
 
 $sql = qq{select manufacturer, part_num from products order by last_scraped desc limit 5};
@@ -220,7 +213,6 @@ sub generate_folder
 	print "info: $name_lc:  " if ($args{v});
 
 	my $stale_list = $dbh->selectcol_arrayref($sql_stale_outer);
-	my $num = scalar @$stale_list;
 	for my $it (@$stale_list) {
 		spin() if ($args{v});
 
@@ -246,11 +238,12 @@ sub generate_folder
 		$www->process("summary.tt", $vars, "$name_lc/$it_link.html")
 			or die $www->error(), "\n";
 	}
-	print "\b$num processed\n" if ($args{v});
 
 	my $vars = { name => $name, list => $coarse_list };
 	$www->process("coarse_list.tt", $vars, "$name_lc.html")
 		or die $www->error(), "\n";
+
+	print "\b" . scalar @$stale_list . " processed\n" if ($args{v});
 }
 
 sub linkify
@@ -465,8 +458,6 @@ sub catmullrom_to_bezier
 			push @p, {x => $pts[$i + 4], y => $pts[$i + 5]};
 		}
 
-		#	print Dumper(@p);
-
 		my @bp;
 		push @bp, {x => $p[1]{x}, y => $p[1]{y}};
 		push @bp, {
@@ -484,6 +475,5 @@ sub catmullrom_to_bezier
 			$bp[3]{x} . ", " . $bp[3]{y} . " ";
 	}
 
-	# print $d;
 	return $d;
 }
