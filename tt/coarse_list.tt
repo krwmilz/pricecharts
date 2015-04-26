@@ -1,5 +1,6 @@
 [% WRAPPER wrapper.tt %]
 	<h1>[% name %] ([% list.keys.size %])</h1>
+	[% name_link = name.lower.replace('[ #\/]', '_') %]
 
 	<div class="thirds_column">
 	<ul>
@@ -11,16 +12,15 @@
 			my ($logo) = glob("logo/$link.*");
 			$stash->set("logo", $logo);
 		[% END %]
-		[% i = i + 1 %]
-		[% IF (i % (list.keys.size / 3)) == 0 %]
+		[% IF i != 0 && (i % ((list.keys.size / 3) + 1)) == 0 %]
 			</ul>
 			</div>
 
 			<div class="thirds_column">
 			<ul>
 		[% END %]
+		[% i = i + 1 %]
 		<li><div class="list_item">
-		[% name_link = name.lower.replace('[ #\/]', '_') %]
 		<a href="/[% name_link %]/[% item_link %].html">
 			<img alt="[% item %]" class="[% name_link %]"
 				src="/[% logo %]" />
