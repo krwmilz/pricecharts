@@ -32,8 +32,8 @@ my $config = {
 	INTERPOLATE => 1, POST_CHOMP => 1, EVAL_PERL => 1,
 	INCLUDE_PATH => "$work_dir/tt", OUTPUT_PATH => $work_dir
 };
-my $template = Template->new($config)
-	|| die "template: . " . Template->error() . "\n";
+my $www = Template->new($config)
+	|| die Template->error(), "\n";
 
 #
 # manufacturers
@@ -129,7 +129,6 @@ $stale_clause = $args{a} ? "" : "where svg_stale = 1";
 my $sql = "select * from products $stale_clause";
 my $products = $dbh->selectall_hashref($sql, "part_num");
 
-my $n = scalar keys %$products;
 while (my ($part_num, $row) = each %$products) {
 	my $part_link = linkify($part_num);
 	my $manuf_link = linkify($row->{manufacturer});
@@ -137,11 +136,10 @@ while (my ($part_num, $row) = each %$products) {
 	$row->{description} =
 		get_description($row->{manufacturer}, $row->{part_num});
 
-	$template->process("product.tt", $row,
-		"products/$manuf_link/$part_link.html")
-		|| die "template: " . $template->error() . "\n";
+	my $url = "products/$manuf_link/$part_link.html";
+	$www->process("product.tt", $row, $url) or die $www->error(), "\n";
 }
-print "$n processed\n" if ($args{v});
+print scalar(keys %$products) . " processed\n" if ($args{v});
 
 #
 # index
@@ -161,8 +159,7 @@ my ($r) = $dbh->selectrow_array($sql);
 
 my $vars = { nret => $r, nmanuf => $m, nprod => $p, news => $new, upds => $upd };
 print "info: index: $p products, $m manufacturers, $r retailers\n" if ($args{v});
-$template->process("index.tt", $vars, "index.html")
-	or die "template: " . $template->error() . "\n";
+$www->process("index.tt", $vars, "index.html") or die $www->error(), "\n";
 
 #
 # svg
@@ -173,6 +170,7 @@ my ($left, $center, $right, $top, $middle, $bottom) = (3, 957, 40, 15, 150, 20);
 my $width = $right + $center + $left;
 my $height = $top + $middle + $bottom;
 
+my @series_keys = ("retailer", "date");
 $sql = "select retailer, date, price from prices where manufacturer = ? and
 	part_num = ?";
 my $series_sth = $dbh->prepare($sql);
@@ -198,8 +196,7 @@ for (@{$dbh->selectall_arrayref($parts_sql)}) {
 		$dbh->selectrow_array($extremes_sth, undef, $manufacturer, $part_num);
 	next unless (defined $x_min);
 
-	my @key_fields = ("retailer", "date");
-	my $series = $dbh->selectall_hashref($series_sth, \@key_fields, undef,
+	my $series = $dbh->selectall_hashref($series_sth, \@series_keys, undef,
 		$manufacturer, $part_num);
 
 	my $svg = make_svg($series, $x_min, $x_max, $y_min, $y_max, $part_num, $retailer_info);
@@ -216,10 +213,9 @@ for (@{$dbh->selectall_arrayref($parts_sql)}) {
 
 	$rendered++;
 }
-printf "\b%i rendered, %i skipped\n", $rendered, $total - $rendered if ($args{v});
+printf "\b$rendered rendered, %i skipped\n", $total - $rendered if ($args{v});
 
 $dbh->do("update products set svg_stale = 0");
-
 $dbh->disconnect();
 
 #
@@ -255,20 +251,20 @@ sub generate_folder
 			};
 			my $type_link = linkify($type);
 			my $out_path = "$name_lc/$it_link/$type_link.html";
-			$template->process("fine_list.tt", $vars, $out_path)
-				or die "template: " . $template->error() . "\n";
+			$www->process("fine_list.tt", $vars, $out_path)
+				or die $www->error(), "\n";
 		}
 
 		my $summary = $dbh->selectall_arrayref($sql_summary, undef, $it);
 		my $vars = { type => $name_lc, name => $it, info => $summary };
-		$template->process("summary.tt", $vars, "$name_lc/$it_link.html")
-			or die "template: " . $template->error() . "\n";
+		$www->process("summary.tt", $vars, "$name_lc/$it_link.html")
+			or die $www->error(), "\n";
 	}
 	print "\b$num processed\n" if ($args{v});
 
 	my $vars = { name => $name, list => $coarse_list };
-	$template->process("coarse_list.tt", $vars, "$name_lc.html")
-		or die "template: " . $template->error() . "\n";
+	$www->process("coarse_list.tt", $vars, "$name_lc.html")
+		or die $www->error(), "\n";
 }
 
 sub linkify
