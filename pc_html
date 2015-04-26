@@ -123,7 +123,7 @@ generate_folder($stale_list, $types, $products_fine, "Types", $coarse, $summary)
 #
 # products
 #
-print "info: products:  " if ($args{v});
+print "info: products: " if ($args{v});
 
 $stale_clause = $args{a} ? "" : "where svg_stale = 1";
 my $sql = "select * from products $stale_clause";
@@ -133,7 +133,6 @@ my $n = scalar keys %$products;
 while (my ($part_num, $row) = each %$products) {
 	my $part_link = linkify($part_num);
 	my $manuf_link = linkify($row->{manufacturer});
-	spin() if ($args{v});
 
 	$row->{description} =
 		get_description($row->{manufacturer}, $row->{part_num});
@@ -142,7 +141,7 @@ while (my ($part_num, $row) = each %$products) {
 		"products/$manuf_link/$part_link.html")
 		|| die "template: " . $template->error() . "\n";
 }
-print "\b$n processed\n" if ($args{v});
+print "$n processed\n" if ($args{v});
 
 #
 # index
@@ -241,11 +240,11 @@ sub generate_folder
 	my $stale_list = $dbh->selectcol_arrayref($sql_stale_outer);
 	my $num = scalar @$stale_list;
 	for my $it (@$stale_list) {
+		spin() if ($args{v});
 
 		my $it_link = linkify($it);
 		my $types = $dbh->selectcol_arrayref($sql_types, undef, $it);
 		for my $type (sort @$types) {
-			spin() if ($args{v});
 
 			my $products = $dbh->selectall_arrayref($sql_products, undef, $type, $it);
 			$_->[2] = get_description($_->[0], $_->[1]) for (@$products);
