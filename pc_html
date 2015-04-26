@@ -223,18 +223,12 @@ for (@{$dbh->selectall_arrayref($parts_sql)}) {
 
 	my $manufacturer_dir = linkify($manufacturer);
 	my $part_link = linkify($part_num);
+
 	make_path("$svg_dir/$manufacturer_dir", { verbose => $args{v} });
-
 	my $svg_path = "$svg_dir/$manufacturer_dir/$part_link.svg";
+
 	open my $svg_fh, ">", "$svg_path" or die "couldn't open $svg_path: $!";
-
-	# XXX: not sure how to add this programatically, hack around for now
-	my @buf = split("\n", $svg->xmlify);
-	my $css_include = "<?xml-stylesheet href=\"/pricechart.css\" type=\"text/css\"?>";
-	# must be the second line
-	splice (@buf, 1, 0, ($css_include));
-
-	print $svg_fh "$_\n" for (@buf);
+	print $svg_fh $svg->xmlify;
 	close $svg_fh;
 
 	$rendered_total++;
@@ -350,6 +344,9 @@ sub make_svg
 	my $svg = SVG->new(viewBox => "0 0 $width $height");
 	my $defs = $svg->defs();
 	my ($x_scale, $y_scale) = ($center / $domain, $middle / $range);
+
+	$defs->tag("link", href => "/pricechart.css", type => "text/css",
+		rel => "stylesheet", xmlns => "http://www.w3.org/1999/xhtml");
 
 	# make price labels along right side and lines across chart
 	my $num_labels = 5;
