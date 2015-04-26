@@ -174,52 +174,36 @@ my ($left, $center, $right, $top, $middle, $bottom) = (3, 957, 40, 15, 150, 20);
 my $width = $right + $center + $left;
 my $height = $top + $middle + $bottom;
 
-$sql = "select distinct retailer from prices where part_num = ? and manufacturer = ?";
-my $retailer_sth = $dbh->prepare($sql);
-
-$sql = qq{select date, price from prices where part_num = ? and retailer = ?
-	order by date};
-my $point_sth = $dbh->prepare($sql);
+$sql = "select retailer, date, price from prices where manufacturer = ? and
+	part_num = ?";
+my $series_sth = $dbh->prepare($sql);
 
 $sql = qq{select min(date), max(date), min(price), max(price) from prices
 	where manufacturer = ? and part_num = ?};
 my $extremes_sth = $dbh->prepare($sql);
 
-$sql = "select url, color from retailers where name = ?";
-my $ret_info_sth = $dbh->prepare($sql);
+$sql = "select name, url, color from retailers";
+my $retailer_info = $dbh->selectall_hashref($sql, "name");
 
-my ($raw_total, $rendered_total, $points, $series) = (0, 0, 0, 0);
+my ($total, $rendered) = (0, 0);
 
 my $where_clause = $args{a} ? "" : "where svg_stale = 1";
 my $parts_sql = "select manufacturer, part_num from products $where_clause";
 for (@{$dbh->selectall_arrayref($parts_sql)}) {
 	my ($manufacturer, $part_num) = @$_;
 
-	$raw_total++;
+	$total++;
 	spin() if ($args{v});
 
 	my ($x_min, $x_max, $y_min, $y_max) =
 		$dbh->selectrow_array($extremes_sth, undef, $manufacturer, $part_num);
 	next unless (defined $x_min);
 
-	my %series;
-	$retailer_sth->execute($part_num, $manufacturer);
-	while (my ($retailer) = $retailer_sth->fetchrow_array()) {
-		my ($url, $color) =
-			$dbh->selectrow_array($ret_info_sth, undef, $retailer);
+	my @key_fields = ("retailer", "date");
+	my $series = $dbh->selectall_hashref($series_sth, \@key_fields, undef,
+		$manufacturer, $part_num);
 
-		# xlink:href's don't like raw ampersands
-		$url =~ s/&/&amp;/g;
-
-		$series{$retailer}{url} = $url;
-		$series{$retailer}{color} = $color;
-		$series{$retailer}{data} =
-			$dbh->selectall_arrayref($point_sth, undef, $part_num, $retailer);
-		$points += scalar @{$series{$retailer}{data}};
-		$series++;
-	}
-
-	my $svg = make_svg(\%series, $x_min, $x_max, $y_min, $y_max, $part_num);
+	my $svg = make_svg($series, $x_min, $x_max, $y_min, $y_max, $part_num, $retailer_info);
 
 	my $manufacturer_dir = linkify($manufacturer);
 	my $part_link = linkify($part_num);
@@ -231,10 +215,9 @@ for (@{$dbh->selectall_arrayref($parts_sql)}) {
 	print $svg_fh $svg->xmlify;
 	close $svg_fh;
 
-	$rendered_total++;
+	$rendered++;
 }
-printf "\b%i rendered, %i skipped, ", $rendered_total, $raw_total - $rendered_total if ($args{v});
-printf "%i points in %i series\n", $points, $series if ($args{v});
+printf "\b%i rendered, %i skipped\n", $rendered, $total - $rendered if ($args{v});
 
 $dbh->do("update products set svg_stale = 0");
 
@@ -332,6 +315,7 @@ sub make_svg
 	my $y_min = shift;
 	my $y_max = shift;
 	my $part_num = shift;
+	my $retailer_info = shift;
 
 	$y_max = ceil($y_max / 100) * 100;
 	$y_min = floor($y_min / 100) * 100;
@@ -397,8 +381,8 @@ sub make_svg
 		$retailer_id =~ s/ /_/;
 
 		my (@xs, @ys, @pts);
-		for (@{$values->{data}}) {
-			my ($x, $y) = @$_;
+		for (sort keys %{$values}) {
+			my ($x, $y) = ($_, $values->{$_}{price});
 			push @xs, sprintf "%.3f", ($x - $x_min) * $x_scale + $left;
 			push @ys, sprintf "%.3f", $height - $bottom - ($y - $y_min) * $y_scale;
 			push @pts, $xs[-1];
@@ -415,7 +399,11 @@ sub make_svg
 			$defs->tag("path", "d" => $d, id => "path_$retailer_id");
 		}
 
-		my ($url, $color) = ($values->{url}, $values->{color});
+		my $info = $retailer_info->{$retailer};
+		my ($url, $color) = ($info->{url}, $info->{color});
+
+		# xlink:href's don't like raw ampersands
+		$url =~ s/&/&amp;/g;
 
 		# the line, points, and label can be grouped under one anchor
 		my $anchor = $svg->anchor(-href => $url . $part_num,
