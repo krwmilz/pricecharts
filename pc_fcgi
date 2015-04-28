@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-# because we chroot all dependencies must be explicitly listed
+# all dependencies explicitly listed
 use Config::Grammar;
 use DBD::SQLite;
 use Encode;
@@ -26,61 +26,80 @@ getopts("v", \%args);
 
 # fork into background unless verbose
 unless ($args{v}) {
-	exit if (fork());
+	if (fork()) {
+		exit();
+	}
 }
 
 my $cfg = get_config();
 my %http_cfg = %{$cfg->{"http"}};
 
-# translates user/group names to id's, needs to be before chroot
-my $uid_name = $http_cfg{"uid"};
-my $gid_name = $http_cfg{"gid"};
-my $uid = getpwnam($uid_name) or die "error: user $uid_name does not exist\n";
-my $gid = getgrnam($gid_name) or die "error: group $gid_name does not exist\n";
-print "info: $uid_name:$gid_name -> $uid:$gid\n" if ($args{v});;
-
-# chroot early
-print "info: chrooting to $http_cfg{chroot}\n" if ($args{v});
-chroot($http_cfg{"chroot"});
-chdir("/");
-
-# XXX: verify we have indeed dropped privileges?
-$( = $) = "$gid $gid";
-$< = $> = $uid;
-print "info: uid:gid set to $<:$(\n" if ($args{v});
-
-print "info: opening syslog\n" if ($args{v});
-openlog("pc_fcgi", LOG_PID, LOG_DAEMON);
+openlog("ps_fcgi", LOG_PID, LOG_DAEMON);
 
 if (-e $http_cfg{socket}) {
-	my $msg = "socket $http_cfg{socket} exists, not starting\n";
-	print "error: $msg\n" if ($args{v});
+	my $msg = "error: socket $http_cfg{socket} exists\n";
+	print "$msg\n" if ($args{v});
 	syslog(LOG_ERR, $msg);
 	exit;
 }
 
-# XXX: i need to be sudo for this to work? after we've dropped privileges?
-print "info: opening $http_cfg{socket}\n" if ($args{v});
 my $socket = FCGI::OpenSocket($http_cfg{socket}, 1024);
-
-my $dbh = get_dbh($cfg->{"http"}, $http_cfg{db_dir}, $args{v});
 my $request = FCGI::Request(\*STDIN, \*STDOUT, \*STDERR, \%ENV, $socket,
 	FCGI::FAIL_ACCEPT_ON_INTR);
 
-print "info: making template, include_path = $http_cfg{htdocs}\n" if ($args{v});
+my $dbh = get_dbh($cfg->{http}, $http_cfg{db_dir});
+my $sql = qq{select distinct manufacturer, part_num from prices where
+	manufacturer like ? or part_num like ?};
+my $srch_sth = $dbh->prepare($sql);
+
+my ($user, $group) = ($http_cfg{uid}, $http_cfg{gid});
+my $uid = getpwnam($user)  or die "error: user $user does not exist\n";
+my $gid = getgrnam($group) or die "error: group $group does not exist\n";
+chown $uid, $gid, $http_cfg{socket} or die "error: chown $uid:$gid: $!";
+
+if (fork()) {
+	# parent
+	$0 = "ps_fcgi [priv]";
+
+	# child should catch sigint and exit nicely, then we exit nicely here too
+	$SIG{INT} = "IGNORE";
+
+	print "info: parent: alive\n" if ($args{v});
+	syslog(LOG_INFO, "parent: alive");
+	wait();
+
+	print "info: parent: cleaning up\n" if ($args{v});
+	syslog(LOG_INFO, "parent: shutdown");
+
+	$dbh->disconnect();
+	FCGI::CloseSocket($socket);
+	unlink($http_cfg{socket}) or print "error: could not unlink $http_cfg{socket}: $!";
+	closelog();
+
+	exit 0;
+}
+
+# child
+$0 = "ps_fcgi sloth";
+
+print "info: child: chroot $http_cfg{chroot}\n" if ($args{v});
+chroot($http_cfg{"chroot"});
+chdir("/");
+
+$( = $) = "$gid $gid";
+$< = $> = $uid;
+print "info: child: uid:gid appears to be $<:$(\n" if ($args{v});
+
 my $config = { INCLUDE_PATH => "$http_cfg{htdocs}/tt" };
 my $template = Template->new($config) || die $Template::ERROR . "\n";
-
-# try hard here not to use EVAL_PERL in the template
-my $sql = "select distinct manufacturer, part_num " .
-	"from prices where part_num like ? or manufacturer like ?";
-my $search_sth = $dbh->prepare($sql);
 
 # intercept signals to shut down cleanly
 $SIG{INT} =  \&child_sig;
 $SIG{TERM} = \&child_sig;
 
-syslog(LOG_INFO, "startup");
+syslog(LOG_INFO, "child: ready");
+print "info: child: ready\n" if ($args{v});
+
 my $requests_total = 0;
 while ($request->Accept() >= 0) {
 	print "Content-Type: text/html\r\n\r\n";
@@ -90,27 +109,17 @@ while ($request->Accept() >= 0) {
 	$input = uri_unescape($input);
 
 	# fuzzy search on manufacturer and part number
-	$search_sth->execute("%$input%", "%$input%");
-	my $products = $search_sth->fetchall_arrayref();
-
-	my $vars = { query => $input, results => $products };
+	$srch_sth->execute("%$input%", "%$input%");
+	my $vars = { query => $input, results => $srch_sth->fetchall_arrayref() };
 	$template->process("search.tt", $vars)
 		|| print "template: " . $template->error();
+
 	$requests_total++;
 }
-syslog(LOG_INFO, "shutdown, $requests_total total requests served");
-closelog();
-
-$search_sth = undef;
-$dbh->disconnect();
-
-FCGI::CloseSocket($socket);
-unlink($http_cfg{socket}) or print "error: could not unlink $http_cfg{socket}: $!";
+syslog(LOG_INFO, "child: shutdown, $requests_total requests");
 
 sub child_sig
 {
-	my $signame = shift;
-
 	$request->LastCall();
-	print "info: caught SIG$signame\n" if ($args{v});
+	print "info: child: caught signal " . lc shift . "\n" if ($args{v});
 }

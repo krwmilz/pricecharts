@@ -4,4 +4,6 @@ daemon="perl /home/kyle/src/pricechart/pc_fcgi"
 
 . /etc/rc.d/rc.subr
 
+pexp="perl: ps_fcgi sloth"
+
 rc_cmd $1
