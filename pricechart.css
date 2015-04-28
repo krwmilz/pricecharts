@@ -107,8 +107,9 @@ p {
 	stroke-width: 3;
 }
 
-.chart_series_text {
+.chart_retailer_text {
 	font-size: 0.6em;
+	font-family: sans-serif;
 	text-decoration: bold;
 }
 

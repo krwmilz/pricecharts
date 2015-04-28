@@ -403,7 +403,7 @@ sub make_svg
 		}
 
 		# show retailer name along the start of the path
-		$anchor->text(class => "chart_series_text", fill => "#$color"
+		$anchor->text(class => "chart_retailer_text", fill => "#$color"
 		)->tag("textPath", -href => "#path_$retailer_id"
 		)->tag("tspan", "dy" => "-5")->cdata($retailer);
 	}
