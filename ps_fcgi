@@ -32,7 +32,7 @@ unless ($args{v}) {
 }
 
 my $cfg = get_config();
-my %http_cfg = %{$cfg->{"http"}};
+my %http_cfg = %{$cfg->{http}};
 
 openlog("ps_fcgi", LOG_PID, LOG_DAEMON);
 
@@ -47,7 +47,8 @@ my $socket = FCGI::OpenSocket($http_cfg{socket}, 1024);
 my $request = FCGI::Request(\*STDIN, \*STDOUT, \*STDERR, \%ENV, $socket,
 	FCGI::FAIL_ACCEPT_ON_INTR);
 
-my $dbh = get_dbh($cfg->{http}, $http_cfg{db_dir});
+# XXX: sqlite_open_flags => DBD::SQLite::OPEN_READONLY
+my $dbh = get_dbh($cfg->{general}{db_dir}, $args{v});
 my $sql = qq{select distinct manufacturer, part_num from prices where
 	manufacturer like ? or part_num like ?};
 my $srch_sth = $dbh->prepare($sql);
@@ -56,6 +57,9 @@ my ($user, $group) = ($http_cfg{uid}, $http_cfg{gid});
 my $uid = getpwnam($user)  or die "error: user $user does not exist\n";
 my $gid = getgrnam($group) or die "error: group $group does not exist\n";
 chown $uid, $gid, $http_cfg{socket} or die "error: chown $uid:$gid: $!";
+
+my $config = { INCLUDE_PATH => "$http_cfg{htdocs}/tt" };
+my $template = Template->new($config) || die $Template::ERROR . "\n";
 
 if (fork()) {
 	# parent
@@ -89,9 +93,6 @@ chdir("/");
 $( = $) = "$gid $gid";
 $< = $> = $uid;
 print "info: child: uid:gid appears to be $<:$(\n" if ($args{v});
-
-my $config = { INCLUDE_PATH => "$http_cfg{htdocs}/tt" };
-my $template = Template->new($config) || die $Template::ERROR . "\n";
 
 # intercept signals to shut down cleanly
 $SIG{INT} =  \&child_sig;

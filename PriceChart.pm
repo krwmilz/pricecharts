@@ -18,7 +18,9 @@ sub get_config
 				"email",
 				"smtp",
 				# XXX: add simple regex validation here
-				"addrs"
+				"addrs",
+				"db_dir",
+				"log_dir",
 			],
 		},
 		http => {
@@ -27,9 +29,7 @@ sub get_config
 				"uid",
 				"gid",
 				"chroot",
-				"db_dir",
 				"htdocs",
-				"logs",
 			],
 		},
 		retailers => {
@@ -54,17 +54,16 @@ sub get_config
 
 sub get_dbh
 {
-	my $cfg = shift;
-	my $db_dir = shift || $cfg->{"chroot"} . $cfg->{"db_dir"};
+	my $db_dir = shift;
 	my $verbose = shift || undef;
 
 	make_path($db_dir, { verbose => $verbose });
-	print "info: get_dbh: opening $db_dir/pricechart.db\n" if ($verbose);
+	print "info: get_dbh: opening $db_dir/db\n" if ($verbose);
 	my $dbh = DBI->connect(
-		"dbi:SQLite:dbname=$db_dir/pricechart.db",
+		"dbi:SQLite:dbname=$db_dir/db",
 		"",
 		"",
-		{RaiseError => 1}
+		{ RaiseError => 1 }
 	) or die $DBI::errstr;
 
 	return $dbh;

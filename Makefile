@@ -1,6 +1,9 @@
 USR ?=		/usr/local
 VAR ?=		/var
 
+USER =		kyle
+GROUP =		wheel
+
 USR_BIN =	$(USR)/bin
 PERL_LIBDATA =	$(USR)/libdata/perl5/site_perl
 HTDOCS =	$(VAR)/www/htdocs
@@ -14,16 +17,17 @@ HTML =		tt logo pricechart.css
 install:
 	cp $(BINS) $(USR_BIN)/
 	cp $(LIBS) $(PERL_LIBDATA)/
+	mkdir -p $(VAR)/db/pricesloth
+	chown $(USER):$(GROUP) $(VAR)/db/pricesloth
 
 	sed -e "s@$(DEV_BIN)@$(USR_BIN)@" < openbsd_rc.d_ps_fcgi \
 		> /etc/rc.d/ps_fcgi
 	chmod 555 /etc/rc.d/ps_fcgi
 	cp pricechart.cfg /etc/
 
-	mkdir -p $(HTDOCS)/pricechart
-	mkdir -p $(HTDOCS)/pricechart/svg
-	cp -R $(HTML) $(HTDOCS)/pricechart/
-	chown -R www:daemon $(HTDOCS)/pricechart
+	mkdir -p $(HTDOCS)/pricesloth
+	cp -R $(HTML) $(HTDOCS)/pricesloth/
+	chown -R $(USER):$(GROUP) $(HTDOCS)/pricesloth
 
 uninstall:
 	# rm /etc/rc.d/ps_fcgi

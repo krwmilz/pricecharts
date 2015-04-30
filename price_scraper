@@ -21,10 +21,10 @@ getopts("nv", \%args);
 $| = 1 if ($args{v});
 
 my $cfg = get_config();
-my $ua  = new_ua($cfg->{"general"}, $args{v});
-my $dbh = get_dbh($cfg->{"http"}, undef, $args{v});
+my $ua  = new_ua($cfg->{general}, $args{v});
+my $dbh = get_dbh($cfg->{general}{db_dir}, $args{v});
 
-my $log_path = $cfg->{"http"}{"chroot"} . $cfg->{"http"}{"logs"} . "/price_scrapes.txt";
+my $log_path = $cfg->{general}{log_dir} . "/pricesloth";
 my $log = get_log($log_path, $args{v});
 
 # allow products to go out of stock. if we haven't seen them for > 30 days
