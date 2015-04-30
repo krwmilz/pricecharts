@@ -8,7 +8,7 @@ USR_BIN =	$(USR)/bin
 PERL_LIBDATA =	$(USR)/libdata/perl5/site_perl
 HTDOCS =	$(VAR)/www/htdocs
 
-DEV_BIN =	/home/kyle/src/pricechart
+DEV_BIN =	/home/kyle/src/pricesloth
 BINS =		pc_html ps_fcgi price_scraper product_scraper
 # WARNING stupid idiom used below if adding > 1 item to LIBS!!
 LIBS =		PriceChart.pm
