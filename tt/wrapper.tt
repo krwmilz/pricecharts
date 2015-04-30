@@ -3,21 +3,22 @@
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 	<meta name="viewport" content="width=device-width" />
-	<title>PriceChart</title>
+	<title>PriceSloth</title>
 	<link rel="stylesheet" type="text/css" href="/pricechart.css" />
+	<link rel="icon" type="image/jpeg" href="/pricesloth.jpg">
 </head>
 <body>
-	<div>
+	<div class="menu">
+	<a href="/"><img class="sloth" src="/pricesloth.jpg"/></a>
+	<a href="/manufacturers.html">Manufacturers</a>
+	<a href="/retailers.html">Retailers</a>
+	<a href="/types.html">Types</a>
 	<form method="get" action="/search.html">
 		<fieldset>
 			<input type="text" name="q" />
 			<input type="submit" value="Find">
 		</fieldset>
 	</form>
-	<a href="/"><em>Price</em><b>Chart</b></a>
-	<a href="/manufacturers.html">Manufacturers</a>
-	<a href="/retailers.html">Retailers</a>
-	<a href="/types.html">Types</a>
 	</div>
 
 	[% content %]
