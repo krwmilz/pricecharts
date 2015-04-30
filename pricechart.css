@@ -1,21 +1,9 @@
 fieldset {
 	border: 0px;
-	padding: 0px;
 }
 
 p {
 	line-height: 1.5em;
-}
-
-#footer {
-	text-align: center;
-}
-
-.thirds_column {
-	padding: 0 2% 0 2%;
-	width: 29%;
-	display: inline-block;
-	vertical-align: top;
 }
 
 .column {
@@ -30,10 +18,15 @@ p {
 	margin: 0.3em 0 0.3em 0;
 	border: 1px solid gray;
 	border-radius: 3px;
+	min-width: 800px;
+}
+
+.sloth {
+	height: 3em;
 }
 
 @media (max-width: 640px) {
-	.thirds_column {
+	.manufacturers {
 		width: 100%;
 		padding: 0 0 0 0;
 	}
@@ -45,7 +38,7 @@ p {
 }
 
 @media (max-width: 1280) {
-	.thirds_column {
+	.manufacturers {
 		width: 40%;
 		padding: 0 5% 0 5%;
 	}
@@ -63,11 +56,30 @@ p {
 }
 
 .manufacturers {
+	padding: 0 2% 0 2%;
+	width: 29%;
+	display: inline-block;
+	vertical-align: top;
+}
+
+.manufacturers img {
 	height: 3em;
 }
 
 .retailers {
+	padding: 0 2% 0 2%;
+	width: 95%%;
+}
+
+.retailers img {
 	height: 4em;
+}
+
+.product_index {
+	width: 14%;
+	padding: 0 1% 0 1%;
+	display: inline-block;
+	vertical-align: top;
 }
 
 .list_item {
