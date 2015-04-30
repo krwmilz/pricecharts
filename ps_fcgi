@@ -77,7 +77,7 @@ if (fork()) {
 
 	$dbh->disconnect();
 	FCGI::CloseSocket($socket);
-	unlink($http_cfg{socket}) or print "error: could not unlink $http_cfg{socket}: $!";
+	unlink($http_cfg{socket}) or warn "unlink $http_cfg{socket} failed: $!";
 	closelog();
 
 	exit 0;
@@ -87,21 +87,19 @@ if (fork()) {
 $0 = "ps_fcgi sloth";
 
 print "info: child: chroot $http_cfg{chroot}\n" if ($args{v});
-chroot($http_cfg{"chroot"});
-chdir("/");
+chroot $http_cfg{chroot} or die "chroot $http_cfg{chroot} failed: $!\n";
+chdir "/" or die "cd / failed: $!\n" ;
 
 $( = $) = "$gid $gid";
 $< = $> = $uid;
 print "info: child: uid:gid appears to be $<:$(\n" if ($args{v});
 
-# intercept signals to shut down cleanly
-$SIG{INT} =  \&child_sig;
-$SIG{TERM} = \&child_sig;
+$SIG{INT} =  \&child_sig_handler;
+$SIG{TERM} = \&child_sig_handler;
 
 syslog(LOG_INFO, "child: ready");
 print "info: child: ready\n" if ($args{v});
 
-my $requests_total = 0;
 while ($request->Accept() >= 0) {
 	print "Content-Type: text/html\r\n\r\n";
 	my (undef, $input) = split("=", $ENV{QUERY_STRING});
@@ -112,14 +110,12 @@ while ($request->Accept() >= 0) {
 	# fuzzy search on manufacturer and part number
 	$srch_sth->execute("%$input%", "%$input%");
 	my $vars = { query => $input, results => $srch_sth->fetchall_arrayref() };
+
 	$template->process("search.tt", $vars)
 		|| print "template: " . $template->error();
-
-	$requests_total++;
 }
-syslog(LOG_INFO, "child: shutdown, $requests_total requests");
 
-sub child_sig
+sub child_sig_handler
 {
 	$request->LastCall();
 	print "info: child: caught signal " . lc shift . "\n" if ($args{v});
