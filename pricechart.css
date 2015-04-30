@@ -101,6 +101,7 @@ p {
 .chart_series {
 	fill-opacity: 0;
 	stroke-width: 2;
+	stroke-opacity: 0.8;
 }
 
 .chart_series:hover {
@@ -110,12 +111,12 @@ p {
 .chart_retailer_text {
 	font-size: 0.6em;
 	font-family: sans-serif;
-	text-decoration: bold;
 }
 
 .chart_data {
 	fill: white;
 	stroke-width: 2;
+	stroke-opacity: 0.8;
 }
 
 .breakdown {
