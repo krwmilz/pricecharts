@@ -17,7 +17,7 @@
 		of products that are saved and converted into charts.</p>
 	</div>
 
-	<div class="column">
+	<div class="column index_column">
 		<h1>New Products ([% news.size %])</h1>
 		<ul>
 		[% FOREACH new IN news %]

@@ -2,7 +2,7 @@
 	<h1>[% name %] ([% list.keys.size %])</h1>
 	[% name_link = name.lower.replace('[ #\/]', '_') %]
 
-	<div class="thirds_column">
+	<div class="column [% name_link %]">
 	<ul>
 	[% i = 0 %]
 	[% FOREACH item IN list.keys.sort %]
@@ -16,14 +16,13 @@
 			</ul>
 			</div>
 
-			<div class="thirds_column">
+			<div class="column [% name_link %]">
 			<ul>
 		[% END %]
 		[% i = i + 1 %]
 		<li><div class="list_item">
 		<a href="/[% name_link %]/[% item_link %].html">
-			<img alt="[% item %]" class="[% name_link %]"
-				src="/[% logo %]" />
+			<img alt="[% item %]" src="/[% logo %]" />
 		</a><br>
 
 		<div class="breakdown">

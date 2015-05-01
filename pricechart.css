@@ -7,10 +7,13 @@ p {
 }
 
 .column {
-	width: 40%;
-	padding: 0 4% 0 4%;
 	display: inline-block;
 	vertical-align: top;
+}
+
+.index_column {
+	width: 40%;
+	padding: 0 4% 0 4%;
 }
 
 .product {
@@ -25,13 +28,18 @@ p {
 	height: 3em;
 }
 
+.manufacturers {
+	padding: 0 2% 0 2%;
+	width: 29%;
+}
+
 @media (max-width: 640px) {
 	.manufacturers {
 		width: 100%;
 		padding: 0 0 0 0;
 	}
 
-	.column {
+	.index_column {
 		width: 100%;
 		padding: 0 0 0 0;
 	}
@@ -55,13 +63,6 @@ p {
 	padding: 5px;
 }
 
-.manufacturers {
-	padding: 0 2% 0 2%;
-	width: 29%;
-	display: inline-block;
-	vertical-align: top;
-}
-
 .manufacturers img {
 	height: 3em;
 }
@@ -83,12 +84,11 @@ p {
 }
 
 .list_item {
-	vertical-align: middle;
 	padding: 5px;
 }
 
 .logo_small {
-	height: 1em;
+	height: 2em;
 }
 
 /* horizontal rulers, plus date ticks */
