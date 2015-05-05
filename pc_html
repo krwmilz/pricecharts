@@ -122,7 +122,7 @@ generate_folder($stale_list, $types, $products_fine, "Types", $summary,
 #
 print "info: products: " if ($args{v});
 
-my $sql = "select * from products $where_stale";
+my $sql = "select * from products, prices where $part_equality $and_stale";
 my $products = $dbh->selectall_hashref($sql, "part_num");
 while (my ($part_num, $row) = each %$products) {
 	my $part_link = linkify($part_num);
