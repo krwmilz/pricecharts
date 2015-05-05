@@ -1,20 +1,21 @@
 [% WRAPPER wrapper.tt %]
-	<div class="column">
+	<div class="column index_column">
 		<h1>Welcome</h1>
 
-		<p> Welcome to <em>Price</em><b>Chart</b>, a price comparison
-		service for consumer electronics.
+		<p>Welcome to <b>PriceSloth</b>, a price comparison
+		tool for consumer electronics.
 		Currently <b>[% nprod %]</b> products from
 		<b>[% nmanuf %]</b>
 		<a href="/manufacturers.html">manufacturers</a>
 		are tracked across <b>[% nret %]</b>
 		<a href="/retailers.html">retailers</a>.</p>
 
-		<p> To start, try searching for a product or manufacturer in the
-		search box at the top right.</p>
+		<p>To start, try searching for a product or manufacturer in the
+		search box at the top.</p>
 
-		<p> <em>Price</em><b>Chart</b> periodically looks up the prices
-		of products that are saved and converted into charts.</p>
+		<p><b>PriceSloth</b> periodically looks up and saves the prices
+		of different products and converts this information into
+		charts.</p>
 	</div>
 
 	<div class="column index_column">
