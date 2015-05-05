@@ -36,6 +36,9 @@ my $where_stale = $args{a} ? "" : "where svg_stale = 1";
 my $part_equality = qq{prices.manufacturer = products.manufacturer and
 	prices.part_num = products.part_num};
 
+my $desc_sth = $dbh->prepare(qq{select description from descriptions where
+	manufacturer = ? and part_num = ? order by date});
+
 # catmull-rom to cubic bezier conversion matrix
 my $catrom_to_bezier = Math::MatrixReal->new_from_rows([[0,    1,   0,    0],
                                                         [-1/6,  1, 1/6,    0],
@@ -268,9 +271,7 @@ sub get_description
 	my $manufacturer = shift;
 	my $part_num = shift;
 
-	my $sql = "select description from descriptions where " .
-		"manufacturer = ? and part_num = ? order by date";
-	my $descriptions = $dbh->selectcol_arrayref($sql, undef, $manufacturer,
+	my $descriptions = $dbh->selectcol_arrayref($desc_sth, undef, $manufacturer,
 		$part_num);
 	unless (@$descriptions) {
 		print "error: no descriptions for $manufacturer $part_num\n";
