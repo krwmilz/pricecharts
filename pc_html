@@ -212,8 +212,9 @@ sub generate_folder
 	my $sql_types = shift;
 	my $sql_products = shift;
 	my $name = shift;
-	my $coarse_list = shift;
 	my $sql_summary = shift;
+	my $coarse_sql = shift;
+	my $coarse_keys_ref = shift;
 
 	my $name_lc = lc ($name);
 	print "info: $name_lc:  " if ($args{v});
