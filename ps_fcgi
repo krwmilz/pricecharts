@@ -118,5 +118,5 @@ while ($request->Accept() >= 0) {
 sub child_sig_handler
 {
 	$request->LastCall();
-	print "info: child: caught signal " . lc shift . "\n" if ($args{v});
+	print "info: child: caught sig" . lc shift . "\n" if ($args{v});
 }
