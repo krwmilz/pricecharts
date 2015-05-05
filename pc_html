@@ -141,17 +141,16 @@ print scalar(keys %$products) . " processed\n" if ($args{v});
 #
 print "info: index: ";
 
-$sql = "select manufacturer, part_num from products order by first_seen desc limit 5";
-my $new = $dbh->selectall_arrayref($sql);
+my $new = $dbh->selectall_arrayref(qq{select manufacturer, part_num
+	from products order by first_seen desc limit 5});
 
-$sql = qq{select manufacturer, part_num from products order by last_scraped desc limit 5};
-my $upd = $dbh->selectall_arrayref($sql);
+my $upd = $dbh->selectall_arrayref(qq{select manufacturer, part_num
+	from products order by last_scraped desc limit 5});
 
-$sql = "select count(*), count(distinct manufacturer) from products where last_seen > ?";
-my ($p, $m) = $dbh->selectrow_array($sql, undef, time - (30 * 24 * 60 * 60));
+my ($p, $m) = $dbh->selectrow_array(qq{select count(*), count(distinct manufacturer)
+	from products where last_seen > ?}, undef, time - (30 * 24 * 60 * 60));
 
-$sql = "select count(*) from retailers";
-my ($r) = $dbh->selectrow_array($sql);
+my ($r) = $dbh->selectrow_array("select count(*) from retailers");
 
 my $vars = { nret => $r, nmanuf => $m, nprod => $p, news => $new, upds => $upd };
 $www->process("index.tt", $vars, "index.html") or die $www->error(), "\n";
