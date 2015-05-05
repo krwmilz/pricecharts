@@ -89,6 +89,7 @@ p {
 
 .logo_small {
 	height: 2em;
+	vertical-align: middle;
 }
 
 /* horizontal rulers, plus date ticks */
