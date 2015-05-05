@@ -163,33 +163,28 @@ print "$p products, $m manufacturers, $r retailers\n" if ($args{v});
 print "info: svg:  " if ($args{v});
 
 my @series_keys = ("retailer", "date");
-$sql = "select retailer, date, price from prices where manufacturer = ? and
-	part_num = ?";
-my $series_sth = $dbh->prepare($sql);
+my $series_sth = $dbh->prepare(qq{select retailer, date, price from prices
+	where manufacturer = ? and part_num = ?});
 
-$sql = qq{select min(date), max(date), min(price), max(price) from prices
-	where manufacturer = ? and part_num = ?};
-my $extremes_sth = $dbh->prepare($sql);
+my $extremes_sth = $dbh->prepare(qq{select min(date), max(date), min(price),
+	max(price) from prices where manufacturer = ? and part_num = ?});
 
-$sql = "select name, url, color from retailers";
-my $retailer_info = $dbh->selectall_hashref($sql, "name");
+my $retailer_info = $dbh->selectall_hashref(qq{select name, url, color from
+	retailers}, "name");
 
-my ($total, $rendered) = (0, 0);
+my $parts_sth = $dbh->prepare(qq{select distinct products.manufacturer,
+	products.part_num from products, prices where $part_equality $and_stale});
+$parts_sth->execute();
 
-my $parts_sql = "select manufacturer, part_num from products $where_stale";
-for (@{$dbh->selectall_arrayref($parts_sql)}) {
-	my ($manufacturer, $part_num) = @$_;
-
-	$total++;
+my $rendered = 0;
+while (my ($manufacturer, $part_num) = $parts_sth->fetchrow_array()) {
 	spin() if ($args{v});
 
 	my ($x_min, $x_max, $y_min, $y_max) =
 		$dbh->selectrow_array($extremes_sth, undef, $manufacturer, $part_num);
-	next unless (defined $x_min);
-
 	my $series = $dbh->selectall_hashref($series_sth, \@series_keys, undef,
 		$manufacturer, $part_num);
-	my $svg = make_svg($series, $x_min, $x_max, $y_min, $y_max, $part_num, $retailer_info);
+	my $svg = make_svg($series, $x_min, $x_max, $y_min, $y_max, $part_num);
 
 	my $manufacturer_dir = linkify($manufacturer);
 	my $part_link = linkify($part_num);
@@ -203,7 +198,7 @@ for (@{$dbh->selectall_arrayref($parts_sql)}) {
 
 	$rendered++;
 }
-printf "\b$rendered rendered, %i skipped\n", $total - $rendered if ($args{v});
+print "\b$rendered rendered\n" if ($args{v});
 
 $dbh->do("update products set svg_stale = 0");
 $dbh->disconnect();
@@ -300,7 +295,6 @@ sub make_svg
 	my $y_min = shift;
 	my $y_max = shift;
 	my $part_num = shift;
-	my $retailer_info = shift;
 
 	my ($left, $center, $right, $top, $middle, $bottom) = (3, 957, 40, 15, 150, 20);
 	my $width = $right + $center + $left;
