@@ -23,7 +23,7 @@ install:
 	sed -e "s@$(DEV_BIN)@$(USR_BIN)@" < openbsd_rc.d_ps_fcgi \
 		> /etc/rc.d/ps_fcgi
 	chmod 555 /etc/rc.d/ps_fcgi
-	cp pricechart.cfg /etc/
+	cp pricesloth.cfg /etc/
 
 	mkdir -p $(HTDOCS)/pricesloth
 	cp -R $(HTML) $(HTDOCS)/pricesloth/

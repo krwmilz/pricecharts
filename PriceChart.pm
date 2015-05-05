@@ -46,7 +46,7 @@ sub get_config
 		}
 	});
 
-	my $cfg_file = "/etc/pricechart.cfg";
+	my $cfg_file = "/etc/pricesloth.cfg";
 	my $cfg = $parser->parse($cfg_file) or die "error: $parser->{err}\n";
 
 	return $cfg;
