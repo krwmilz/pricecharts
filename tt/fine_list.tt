@@ -12,6 +12,7 @@
 	<div class="product">
 		[% manuf_html = product.0.lower.replace('[ #\/]', '_') %]
 		[% part_link  = product.1.lower.replace('[ #\/]', '_') %]
+		<a name="[% part_link %]"></a>
 		[% PERL %]
 			my $manuf_html = $stash->get("manuf_html");
 			my ($logo) = glob("logo/$manuf_html*");
