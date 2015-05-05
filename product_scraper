@@ -315,9 +315,9 @@ sub send_email
 	return if ($verbose);
 	my $email = Email::Simple->create(
 		header => [
-			From	=> "Santa Claus <sc\@np.com>",
-			To	=> $cfg->{"general"}{"email"},
-			Subject	=> "pricechart product scrape",
+			From	=> "Price Sloth <www\@pricesloth.com>",
+			To	=> $cfg->{general}{email},
+			Subject	=> "weekly product scrape",
 		],
 		body => $mail
 	);
