@@ -26,11 +26,11 @@
 		</a><br>
 
 		<div class="breakdown">
-		[% FOREACH type IN list.$item.keys %]
-			[% n = list.$item.$type.count %]
-			[% type_link = type.lower.replace('[ #\/]', '_') %]
+		[% FOREACH pair IN list.$item.pairs %]
+			[% n = pair.value.count %]
+			[% type_link = pair.key.lower.replace('[ #\/]', '_') %]
 			[% n %] <a href="/[% name_link %]/[% item_link %]/[% type_link %].html">
-				[% type %]</a>,
+				[% pair.key %]</a>,
 		[% END %]
 		</div></div>
 	[% END %]
