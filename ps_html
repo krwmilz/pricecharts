@@ -313,7 +313,7 @@ sub make_svg
 	my $defs = $svg->defs();
 	my ($x_scale, $y_scale) = ($center / $domain, $middle / $range);
 
-	$defs->tag("link", href => "/pricechart.css", type => "text/css",
+	$defs->tag("link", href => "/pricesloth.css", type => "text/css",
 		rel => "stylesheet", xmlns => "http://www.w3.org/1999/xhtml");
 
 	# make price labels along right side and lines across chart
