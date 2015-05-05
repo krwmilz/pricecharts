@@ -6,6 +6,7 @@ use warnings;
 use Config::Grammar;
 use Getopt::Std;
 use Lingua::EN::Inflect qw(PL);
+use Math::MatrixReal;
 use POSIX;
 use PriceChart;
 use SVG;
@@ -34,6 +35,13 @@ my $and_stale = $args{a} ? "" : "and products.svg_stale = 1";
 my $where_stale = $args{a} ? "" : "where svg_stale = 1";
 my $part_equality = qq{prices.manufacturer = products.manufacturer and
 	prices.part_num = products.part_num};
+
+# catmull-rom to cubic bezier conversion matrix
+my $catrom_to_bezier = Math::MatrixReal->new_from_rows([[0,    1,   0,    0],
+                                                        [-1/6,  1, 1/6,    0],
+					                [0,   1/6,   1, -1/6],
+					                [0,     0,   1,    0]]);
+my $m_t = ~$catrom_to_bezier;
 
 #
 # manufacturers
@@ -358,22 +366,20 @@ sub make_svg
 		my $retailer_id = lc($retailer);
 		$retailer_id =~ s/ /_/;
 
-		my (@xs, @ys, @pts);
+		my (@xs, @ys);
 		for (sort keys %{$values}) {
 			my ($x, $y) = ($_, $values->{$_}{price});
 			push @xs, sprintf "%.3f", ($x - $x_min) * $x_scale + $left;
 			push @ys, sprintf "%.3f", $height - $bottom - ($y - $y_min) * $y_scale;
-			push @pts, $xs[-1];
-			push @pts, $ys[-1];
 		}
 
-		if (@pts < 6) {
+		if (@xs < 3) {
 			my $points = $svg->get_path(x => \@xs, y => \@ys, -type => "path");
 			$defs->path(%$points, id => "path_$retailer_id");
 		}
 		else {
 			# catmull rom time
-			my $d = catmullrom_to_bezier(\@pts);
+			my $d = catmullrom_to_bezier(\@xs, \@ys);
 			$defs->tag("path", "d" => $d, id => "path_$retailer_id");
 		}
 
@@ -426,47 +432,34 @@ sub make_svg
 #
 sub catmullrom_to_bezier
 {
-	my $pts_ref = shift;
-	my @pts = @$pts_ref;
+	my $xs_ref = shift;
+	my $ys_ref = shift;
 
-	# catmull-rom to cubic bezier conversion matrix
-	# 0    1    0    0
-	# -1/6 1    1/6  0
-	# 0    1/6  1    -1/6
-	# 0    0    1    0
+	my $d = "M $xs_ref->[0], $ys_ref->[0] ";
+	my $iLen = @$xs_ref;
+	for (my $i = 0; $iLen - 1 > $i; $i++) {
 
-	my $d = "M $pts[0], $pts[1] ";
-	my $iLen = @pts;
-	for (my $i = 0; $iLen - 2 > $i; $i += 2) {
-		my (@xs, @ys);
+		my @offsets = (-1, 0, 1, 2);
 		if ($i == 0) {
-			push @xs, $pts[$i];	push @ys, $pts[$i + 1];
-			push @xs, $pts[$i];	push @ys, $pts[$i + 1];
-			push @xs, $pts[$i + 2];	push @ys, $pts[$i + 3];
-			push @xs, $pts[$i + 4];	push @ys, $pts[$i + 5];
-		}
-		elsif ($i == ($iLen - 4)) {
-			push @xs, $pts[$i - 2];	push @ys, $pts[$i - 1];
-			push @xs, $pts[$i];	push @ys, $pts[$i + 1];
-			push @xs, $pts[$i + 2];	push @ys, $pts[$i + 3];
-			push @xs, $pts[$i + 2];	push @ys, $pts[$i + 3];
-		}
-		else {
-			push @xs, $pts[$i - 2];	push @ys, $pts[$i - 1];
-			push @xs, $pts[$i];	push @ys, $pts[$i + 1];
-			push @xs, $pts[$i + 2];	push @ys, $pts[$i + 3];
-			push @xs, $pts[$i + 4];	push @ys, $pts[$i + 5];
+			@offsets = (0, 0, 1, 2);
+		} elsif ($i == ($iLen - 2)) {
+			@offsets = (-1, 0, 1, 1);
 		}
 
-		my (@bp_x, @bp_y);
-		push @bp_x, $xs[1];	push @bp_y, $ys[1];
-		push @bp_x, ((-$xs[0] + 6*$xs[1] + $xs[2]) / 6);
-		push @bp_y, ((-$ys[0] + 6*$ys[1] + $ys[2]) / 6);
-		push @bp_x, (($xs[1] + 6*$xs[2] - $xs[3]) / 6);
-		push @bp_y, (($ys[1] + 6*$ys[2] - $ys[3]) / 6);
-		push @bp_x, $xs[2];	push @bp_y, $ys[2];
+		my (@xs, @ys);
+		for my $idx (@offsets) {
+			push @xs, $xs_ref->[$i + $idx];
+			push @ys, $ys_ref->[$i + $idx];
+		}
 
-		$d .= "C $bp_x[1], $bp_y[1] $bp_x[2], $bp_y[2] $bp_x[3], $bp_y[3] ";
+		my $x_row = Math::MatrixReal->new_from_rows([[@xs]]);
+		my $y_row = Math::MatrixReal->new_from_rows([[@ys]]);
+
+		$x_row = $x_row * $m_t;
+		$y_row = $y_row * $m_t;
+
+		my ($x, $y) = ($x_row->[0][0], $y_row->[0][0]);
+		$d .= "C $x->[1], $y->[1] $x->[2], $y->[2] $x->[3], $y->[3] ";
 	}
 
 	return $d;

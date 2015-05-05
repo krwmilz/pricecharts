@@ -7,6 +7,7 @@ p5-Getopt-Std
 p5-HTML-Grabber
 p5-IO-Tee
 p5-Lingua-EN-Inflect
+p5-Math-MatrixReal
 p5-SVG
 p5-Template
 p5-Term-ReadKey
