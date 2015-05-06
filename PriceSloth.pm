@@ -1,4 +1,4 @@
-package PriceChart;
+package PriceSloth;
 
 use DBI;
 use File::Path qw(make_path);

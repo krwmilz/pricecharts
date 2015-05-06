@@ -8,7 +8,7 @@ use Getopt::Std;
 use Lingua::EN::Inflect qw(PL);
 use Math::MatrixReal;
 use POSIX;
-use PriceChart;
+use PriceSloth;
 use SVG;
 use Template;
 

@@ -10,7 +10,7 @@ use Getopt::Std;
 use HTML::Grabber;
 use IO::Tee;
 use LWP::Simple;
-use PriceChart;
+use PriceSloth;
 use Term::ReadKey;
 use POSIX;
 

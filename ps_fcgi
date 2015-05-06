@@ -16,7 +16,7 @@ use Template::Iterator;
 use Template::Parser;
 use Template::Plugins;
 use Template::Stash::XS;
-use PriceChart;
+use PriceSloth;
 use Unix::Syslog qw(:macros :subs);
 use URI::Escape;
 

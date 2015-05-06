@@ -9,7 +9,7 @@ use HTML::Grabber;
 use IO::Tee;
 use List::Util qw(min);
 use LWP::Simple;
-use PriceChart;
+use PriceSloth;
 use POSIX;
 use Term::ReadKey;
 use URI::Escape;
