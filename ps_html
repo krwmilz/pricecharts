@@ -139,7 +139,7 @@ print scalar(keys %$products) . " processed\n" if ($args{v});
 #
 # index
 #
-print "info: index: ";
+print "info: index: " if ($args{v});
 
 my $new = $dbh->selectall_arrayref(qq{select manufacturer, part_num
 	from products order by first_seen desc limit 5});
