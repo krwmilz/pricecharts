@@ -10,6 +10,7 @@ p5-Lingua-EN-Inflect
 p5-Math-MatrixReal
 p5-SVG
 p5-Template
+p5-Template-Plugin-POSIX
 p5-Term-ReadKey
 p5-Unix-Syslog
 p5-libwww
