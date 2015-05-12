@@ -40,10 +40,12 @@ my $desc_sth = $dbh->prepare(qq{select description from descriptions where
 	manufacturer = ? and part_num = ? order by date});
 
 # catmull-rom to cubic bezier conversion matrix
-my $catrom_to_bezier = Math::MatrixReal->new_from_rows([[0,    1,   0,    0],
-                                                        [-1/6,  1, 1/6,    0],
-					                [0,   1/6,   1, -1/6],
-					                [0,     0,   1,    0]]);
+my $catrom_to_bezier = Math::MatrixReal->new_from_rows(
+	[[0,    1,   0,    0],
+	 [-1/6,  1, 1/6,    0],
+	 [0,   1/6,   1, -1/6],
+	 [0,     0,   1,    0]]
+);
 my $m_t = ~$catrom_to_bezier;
 
 #
