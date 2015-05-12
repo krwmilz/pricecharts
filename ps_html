@@ -26,7 +26,7 @@ my $svg_dir  = $work_dir . "/svg";
 print "info: work, svg dirs $work_dir\{,svg\}\n" if ($args{v});
 
 my $config = {
-	INTERPOLATE => 1, POST_CHOMP => 1, EVAL_PERL => 1,
+	POST_CHOMP => 1, EVAL_PERL => 1,
 	INCLUDE_PATH => "$work_dir/tt", OUTPUT_PATH => $work_dir
 };
 my $www = Template->new($config) || die Template->error(), "\n";
