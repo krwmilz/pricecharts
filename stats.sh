@@ -1,12 +1,8 @@
-#!/bin/sh
+#!/bin/ksh
 
 sql_cmd="sqlite3 /var/db/pricesloth/db"
 
-echo -n "prices: " 
-$sql_cmd "select count(*) from prices;"
-echo -n "products: " 
-$sql_cmd "select count(*) from products;"
-echo -n "descriptions: " 
-$sql_cmd "select count(*) from descriptions;"
-echo -n "retailers: " 
-$sql_cmd "select count(*) from retailers;"
+printf "prices:       %i\n" $($sql_cmd "select count(*) from prices;")
+printf "products:     %i\n" $($sql_cmd "select count(*) from products;")
+printf "descriptions: %i\n" $($sql_cmd "select count(*) from descriptions;")
+printf "retailers:    %i\n" $($sql_cmd "select count(*) from retailers;")
