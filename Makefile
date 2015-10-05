@@ -12,7 +12,7 @@ DEV_BIN =	/home/kyle/src/pricesloth
 BINS =		ps_html ps_fcgi price_scraper product_scraper
 # WARNING stupid idiom used below if adding > 1 item to LIBS!!
 LIBS =		PriceSloth.pm
-HTML =		tt logo pricesloth.css pricesloth.jpg
+HTML =		tt logo pricesloth.css charts.css
 
 install:
 	cp $(BINS) $(USR_BIN)/

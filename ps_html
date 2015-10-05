@@ -3,7 +3,9 @@
 use strict;
 use warnings;
 
+use BSD::arc4random qw(:all);
 use Config::Grammar;
+use Data::Dumper;
 use Getopt::Std;
 use Lingua::EN::Inflect qw(PL);
 use Math::MatrixReal;
@@ -23,7 +25,7 @@ my $dbh = get_dbh($cfg->{general}{db_dir}, $args{v});
 
 my $work_dir = $cfg->{http}{htdocs};
 my $svg_dir  = $work_dir . "/svg";
-print "info: work, svg dirs $work_dir\{,svg\}\n" if ($args{v});
+print "info: work, svg dirs $work_dir/\{,svg\}\n" if ($args{v});
 
 my $config = {
 	POST_CHOMP => 1, EVAL_PERL => 1,
@@ -33,98 +35,162 @@ my $www = Template->new($config) || die Template->error(), "\n";
 
 my $and_stale = $args{a} ? "" : "and products.svg_stale = 1";
 my $where_stale = $args{a} ? "" : "where svg_stale = 1";
-my $part_equality = qq{prices.manufacturer = products.manufacturer and
-	prices.part_num = products.part_num};
 
 my $desc_sth = $dbh->prepare(qq{select description from descriptions where
 	manufacturer = ? and part_num = ? order by date});
 
 # catmull-rom to cubic bezier conversion matrix
 my $catrom_to_bezier = Math::MatrixReal->new_from_rows(
-	[[0,    1,   0,    0],
+	[[0,     1,   0,    0],
 	 [-1/6,  1, 1/6,    0],
 	 [0,   1/6,   1, -1/6],
 	 [0,     0,   1,    0]]
 );
 my $m_t = ~$catrom_to_bezier;
 
+
 #
 # manufacturers
 #
-my $stale_list = qq{select distinct prices.manufacturer from prices, products where
-	$part_equality $and_stale};
+my $stale_list = qq{select distinct manufacturer from products $where_stale};
 
-my $types = qq{select distinct products.type from prices, products where
-	$part_equality and prices.manufacturer = ? $and_stale};
+my $types = qq{select distinct type from products where manufacturer = ? $and_stale};
 
-my $products_fine = qq{select distinct products.manufacturer, products.part_num
-	from products, prices where $part_equality and products.type = ? and
-	products.manufacturer = ?};
+my $products_fine = qq{select distinct manufacturer, part_num
+	from products where type = ? and manufacturer = ?};
 
 my $summary = qq{select type, count(*) from products where manufacturer = ? group by type};
 
-my $coarse_sql = qq{select products.manufacturer, count(distinct products.part_num)
-	as count, products.type from products, prices where $part_equality
-	group by products.manufacturer, products.type};
+generate_folder($stale_list, $types, $products_fine, "Manufacturers", $summary);
+
+# most natural grouping is manufacturer then type
+# (answers the question: what types of products does this manufacturer make?)
+my $coarse_sql = qq{select manufacturer, count(distinct part_num) as count,
+	type from products group by manufacturer, type};
 my @key_fields = ("manufacturer", "type");
 
-generate_folder($stale_list, $types, $products_fine, "Manufacturers", $summary,
-	$coarse_sql, \@key_fields);
+# second most natural grouping is manufacturer then retailer
+# (answers the question: which places sell this manufacturer?)
+
+my $manufacturer_list = $dbh->selectall_hashref($coarse_sql, \@key_fields);
+# print Dumper($manufacturer_list);
+
 
 #
 # retailers
 #
-$stale_list = qq{select distinct prices.retailer from prices, products where
-	$part_equality $and_stale};
+$stale_list = qq{select distinct retailer from prices $where_stale};
 
-$types = qq{select distinct products.type from prices, products where
-	$part_equality and prices.retailer = ?  $and_stale};
+$types = qq{select distinct manufacturer from prices where retailer = ? $and_stale};
 
-$products_fine = qq{select distinct prices.manufacturer, prices.part_num
-	from prices, products where $part_equality and products.type = ? and
-	prices.retailer = ?};
+$products_fine = qq{select distinct manufacturer, part_num
+	from prices where manufacturer = ? and retailer = ?};
 
 $summary = qq{select manufacturer, count(*) from prices where retailer = ?
 	group by manufacturer};
 
-$coarse_sql = qq{select prices.retailer, count(distinct products.part_num) as
-	count, products.type from products, prices where $part_equality group by
-	prices.retailer, products.type};
-@key_fields = ("retailer", "type");
+generate_folder($stale_list, $types, $products_fine, "Retailers", $summary);
 
-generate_folder($stale_list, $types, $products_fine, "Retailers", $summary,
-	$coarse_sql, \@key_fields);
+# most natural grouping here is a toss up between type and manufacturer
+# (answers the question: what manufacturers does this retailer sell?)
+$coarse_sql = qq{select retailer, count(distinct part_num) as count,
+	manufacturer from prices group by retailer, manufacturer};
+@key_fields = ("retailer", "manufacturer");
+
+# second grouping is retailer then type
+# (answers the question: what types of products does this retailer sell?)
+
+my $retailer_list = $dbh->selectall_hashref($coarse_sql, \@key_fields);
+# print Dumper($retailer_list);
 
 #
 # product types
 #
-$stale_list = qq{select distinct products.type from products, prices where
-	$part_equality $and_stale};
+$stale_list = qq{select distinct type from products $where_stale};
 
-$types = qq{select distinct products.manufacturer from prices, products where
-	$part_equality and products.type = ?};
+$types = qq{select distinct manufacturer from products where type = ?};
 
-$products_fine = qq{select distinct prices.manufacturer, prices.part_num
-	from prices, products where $part_equality and products.manufacturer = ?
-	and products.type = ?};
+$products_fine = qq{select distinct manufacturer, part_num from products where
+	manufacturer = ?  and type = ?};
 
 $summary = qq{select manufacturer, count(*) from products where type = ?
 	group by manufacturer};
 
-$coarse_sql = qq{select products.type, count(distinct products.part_num) as count,
-	products.manufacturer from products, prices where $part_equality
-	group by products.type, products.manufacturer};
+generate_folder($stale_list, $types, $products_fine, "Types", $summary);
+
+$coarse_sql = qq{select type, count(distinct part_num) as count,
+	manufacturer from products group by type, manufacturer};
 @key_fields = ("type", "manufacturer");
 
-generate_folder($stale_list, $types, $products_fine, "Types", $summary,
-	$coarse_sql, \@key_fields);
+my $types_list = $dbh->selectall_hashref($coarse_sql, \@key_fields);
+# print Dumper($types_list);
+
+#
+# index
+#
+my $vars = {
+	manufacturer_list => $manufacturer_list,
+	retailer_list => $retailer_list,
+	types_list => $types_list
+};
+$www->process("index.tt", $vars, "index.html")
+	or die $www->error(), "\n";
+
+#
+# about
+#
+my ($p, $m) = $dbh->selectrow_array(qq{select count(*),
+	count(distinct manufacturer) from products});
+
+# anything we haven't seen for over 30 days is stale
+my ($prod_stale) = $dbh->selectrow_array(qq{select count(*) from products
+	where last_seen < ?}, undef, time - (30 * 24 * 60 * 60));
+
+my ($r) = $dbh->selectrow_array("select count(*) from retailers");
+
+# XXX: this isn't right, it wont count parts with equal part numbers but
+# different manufacturers
+my ($have_prices) = $dbh->selectrow_array(qq{select count(distinct part_num)
+	from prices});
+
+# draw a graph of total number of products vs time
+my ($first_seen) = $dbh->selectrow_array("select first_seen from products order by first_seen limit 1");
+my $num_weeks = (time - $first_seen) / (60 * 60 * 24 * 7);
+my %totals_series;
+for my $i (0..$num_weeks) {
+	my $x = $first_seen + $i * (60 * 60 * 24 * 7);
+	my ($y) = $dbh->selectrow_array("select count(*) from products where first_seen < ?", undef, $x);
+	$totals_series{"Total"}{$x} = { "price" => $y };
+
+	($y) = $dbh->selectrow_array("select count(*) from products where last_seen < ?", undef, $x - (60 * 60 * 24 * 30));
+	$totals_series{"Stale"}{$x} = { "price" => $y };
+}
+
+# print Dumper(%totals_series);
+my %series_metadata;
+$series_metadata{"Total"} = { url => "", color => "000" };
+$series_metadata{"Stale"} = { url => "", color => "F00" };
+my $svg = make_svg(\%totals_series, "no_part_num", \%series_metadata, 1, "");
+
+my $svg_path = "$svg_dir/history_summary.svg";
+open my $svg_fh, ">", "$svg_path" or die "couldn't open $svg_path: $!";
+print $svg_fh $svg->xmlify;
+close $svg_fh;
+
+$vars = { nret => $r, nmanuf => $m, nprod => $p - $prod_stale,
+	nprod_stale => $prod_stale, no_prices => $p - $have_prices
+};
+$www->process("about.tt", $vars, "about.html") or die $www->error(), "\n";
+
+print "info: about.html done\n" if ($args{v});
+
 
 #
 # products
 #
 print "info: products: " if ($args{v});
 
-my $sql = "select * from products, prices where $part_equality $and_stale";
+my $sql = "select * from products $where_stale";
 my $products = $dbh->selectall_hashref($sql, "part_num");
 while (my ($part_num, $row) = each %$products) {
 	my $part_link = linkify($part_num);
@@ -138,29 +204,9 @@ while (my ($part_num, $row) = each %$products) {
 }
 print scalar(keys %$products) . " processed\n" if ($args{v});
 
-#
-# index
-#
-print "info: index: " if ($args{v});
-
-my $new = $dbh->selectall_arrayref(qq{select manufacturer, part_num
-	from products order by first_seen desc limit 5});
-
-my $upd = $dbh->selectall_arrayref(qq{select manufacturer, part_num
-	from products order by last_scraped desc limit 5});
-
-my ($p, $m) = $dbh->selectrow_array(qq{select count(*), count(distinct manufacturer)
-	from products where last_seen > ?}, undef, time - (30 * 24 * 60 * 60));
-
-my ($r) = $dbh->selectrow_array("select count(*) from retailers");
-
-my $vars = { nret => $r, nmanuf => $m, nprod => $p, news => $new, upds => $upd };
-$www->process("index.tt", $vars, "index.html") or die $www->error(), "\n";
-
-print "$p products, $m manufacturers, $r retailers\n" if ($args{v});
 
 #
-# svg
+# product svg;s
 #
 print "info: svg:  " if ($args{v});
 
@@ -168,25 +214,20 @@ my @series_keys = ("retailer", "date");
 my $series_sth = $dbh->prepare(qq{select retailer, date, price from prices
 	where manufacturer = ? and part_num = ?});
 
-my $extremes_sth = $dbh->prepare(qq{select min(date), max(date), min(price),
-	max(price) from prices where manufacturer = ? and part_num = ?});
-
 my $retailer_info = $dbh->selectall_hashref(qq{select name, url, color from
 	retailers}, "name");
 
-my $parts_sth = $dbh->prepare(qq{select distinct products.manufacturer,
-	products.part_num from products, prices where $part_equality $and_stale});
+my $parts_sth = $dbh->prepare(qq{select distinct manufacturer,
+	part_num from prices $where_stale});
 $parts_sth->execute();
 
 my $rendered = 0;
 while (my ($manufacturer, $part_num) = $parts_sth->fetchrow_array()) {
 	spin() if ($args{v});
 
-	my ($x_min, $x_max, $y_min, $y_max) =
-		$dbh->selectrow_array($extremes_sth, undef, $manufacturer, $part_num);
 	my $series = $dbh->selectall_hashref($series_sth, \@series_keys, undef,
 		$manufacturer, $part_num);
-	my $svg = make_svg($series, $x_min, $x_max, $y_min, $y_max, $part_num);
+	my $svg = make_svg($series, $part_num, $retailer_info);
 
 	my $manufacturer_dir = linkify($manufacturer);
 	my $part_link = linkify($part_num);
@@ -215,19 +256,17 @@ sub generate_folder
 	my $sql_products = shift;
 	my $name = shift;
 	my $sql_summary = shift;
-	my $coarse_sql = shift;
-	my $coarse_keys_ref = shift;
 
 	my $name_lc = lc ($name);
-	print "info: $name_lc:  " if ($args{v});
+	print "info: $name_lc/*:  " if ($args{v});
 
 	my $stale_list = $dbh->selectcol_arrayref($sql_stale_outer);
 	for my $it (@$stale_list) {
-		spin() if ($args{v});
 
 		my $it_link = linkify($it);
 		my $types = $dbh->selectcol_arrayref($sql_types, undef, $it);
 		for my $type (sort @$types) {
+			spin() if ($args{v});
 
 			my $products = $dbh->selectall_arrayref($sql_products, undef, $type, $it);
 			$_->[2] = get_description($_->[0], $_->[1]) for (@$products);
@@ -248,13 +287,6 @@ sub generate_folder
 			or die $www->error(), "\n";
 	}
 	print "\b" . scalar @$stale_list . " processed\n" if ($args{v});
-
-	return unless (@$stale_list);
-
-	my $coarse_list = $dbh->selectall_hashref($coarse_sql, $coarse_keys_ref);
-	my $vars = { name => $name, list => $coarse_list };
-	$www->process("coarse_list.tt", $vars, "$name_lc.html")
-		or die $www->error(), "\n";
 }
 
 sub linkify
@@ -293,18 +325,36 @@ sub get_description
 sub make_svg
 {
 	my $series = shift;
-	my $x_min = shift;
-	my $x_max = shift;
-	my $y_min = shift;
-	my $y_max = shift;
 	my $part_num = shift;
+	my $metadata = shift;
+	my $short = shift || 0;
+	my $right_axis_prefix = "\$";
 
 	my ($left, $center, $right, $top, $middle, $bottom) = (3, 957, 40, 15, 150, 20);
+	if ($short) {
+		$center = 457;
+		$right_axis_prefix = "";
+	}
+
 	my $width = $right + $center + $left;
 	my $height = $top + $middle + $bottom;
 
-	$y_max = ceil($y_max / 100) * 100;
-	$y_min = floor($y_min / 100) * 100;
+	my ($x_min, $x_max, $y_min, $y_max) = (100000000000, 0, 1000000, 0);
+	while (my ($retailer, $values) = each %$series) {
+		for (keys %{$values}) {
+			my ($x, $y) = ($_, $values->{$_}{price});
+			$x_min = $x if ($x < $x_min);
+			$x_max = $x if ($x > $x_max);
+			$y_min = $y if ($y < $y_min);
+			$y_max = $y if ($y > $y_max);
+		}
+	}
+
+	my $num_digits = ceil(log($y_max) / log(10));
+	my $magnitude = 10 ** ($num_digits - 1);
+
+	$y_max = ceil($y_max / $magnitude) * $magnitude;
+	$y_min = floor($y_min / $magnitude) * $magnitude;
 
 	my ($domain, $range) = ($x_max - $x_min, $y_max - $y_min);
 	$domain = 24 * 60 * 60 if ($domain <= 0);
@@ -315,7 +365,7 @@ sub make_svg
 	my $defs = $svg->defs();
 	my ($x_scale, $y_scale) = ($center / $domain, $middle / $range);
 
-	$defs->tag("link", href => "/pricesloth.css", type => "text/css",
+	$defs->tag("link", href => "/charts.css", type => "text/css",
 		rel => "stylesheet", xmlns => "http://www.w3.org/1999/xhtml");
 
 	# make price labels along right side and lines across chart
@@ -328,12 +378,17 @@ sub make_svg
 		$svg->text(
 			id => "price_$_", x => $left + $center + 5, y => $y + 3,
 			class => "chart_price", "text-anchor" => "start"
-		)->cdata("\$$price");
+		)->cdata("$right_axis_prefix$price");
 
 		$svg->line(
 			id => "horizontal_line_$_", x1 => $left, y1 => $y,
 			x2 => $width - $right, y2 => $y, class => "chart_rulers"
 		);
+	}
+
+	$num_labels = 8;
+	if ($short) {
+		$num_labels = 5;
 	}
 
 	# make dates along the bottom
@@ -353,7 +408,7 @@ sub make_svg
 		my $time = $x_min + $domain * $step;
 		$svg->text(id => "date_$_", x => $x, y => $height - 5,
 			class => "chart_date", "text-anchor" => $text_anchor
-		)->cdata(strftime("%B %e, %Y", localtime($time)));
+		)->cdata(strftime("%b %e, %Y", localtime($time)));
 
 		# print the little tick marks down from the x axis
 		my $x_axis = $top + $middle;
@@ -383,7 +438,7 @@ sub make_svg
 			$defs->tag("path", "d" => $d, id => "path_$retailer_id");
 		}
 
-		my $info = $retailer_info->{$retailer};
+		my $info = $metadata->{$retailer};
 		my ($url, $color) = ($info->{url}, $info->{color});
 
 		# xlink:href's don't like raw ampersands
@@ -399,11 +454,12 @@ sub make_svg
 		);
 
 		# now draw individual data points
-		$defs->circle(id => "data_point_$retailer", cx => 0, cy => 0,
+		my $rand_token = sprintf("%x", arc4random());
+		$defs->circle(id => $rand_token, cx => 0, cy => 0,
 			class => "chart_data", r => 2, style => "stroke: #$color;"
 		);
 		while (my $i = each @xs) {
-			$anchor->use(-href => "#data_point_$retailer",
+			$anchor->use(-href => "#$rand_token",
 				x => $xs[$i], y => $ys[$i]
 			);
 		}
@@ -459,7 +515,10 @@ sub catmullrom_to_bezier
 		$y_row = $y_row * $m_t;
 
 		my ($x, $y) = ($x_row->[0][0], $y_row->[0][0]);
-		$d .= "C $x->[1], $y->[1] $x->[2], $y->[2] $x->[3], $y->[3] ";
+
+		# knock some digits of precision off
+		$d .= sprintf("C %0.2f, %0.2f %0.2f, %0.2f %0.2f, %0.2f ",
+			$x->[1], $y->[1], $x->[2], $y->[2], $x->[3], $y->[3]);
 	}
 
 	return $d;

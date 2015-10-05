@@ -6,7 +6,7 @@
 	$stash->set("logo", $logo);
 [% END %]
 	<h1><img alt="[% name %]" class="logo_small" src="/[% logo %]"/>
-		[% products.size %] [% type %]</h1>
+		[% name %] [% type %] ([% products.size %] total)</h1>
 
 	[% FOREACH product IN products %]
 	<div class="product">

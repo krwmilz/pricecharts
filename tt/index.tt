@@ -1,49 +1,83 @@
 [% WRAPPER wrapper.tt %]
-	<div class="column index_column">
-		<h1>Welcome</h1>
 
-		<p>Welcome to <b>PriceSloth</b>, a price comparison
-		tool for consumer electronics.
-		Currently <b>[% nprod %]</b> products from
-		<b>[% nmanuf %]</b>
-		<a href="/manufacturers.html">manufacturers</a>
-		are tracked across <b>[% nret %]</b>
-		<a href="/retailers.html">retailers</a>.</p>
+	<div class="column">
+	<h2>Manufacturers ([% manufacturer_list.keys.size %] total)</h2>
 
-		<p>To start, try searching for a product or manufacturer in the
-		search box at the top.</p>
+	[% FOREACH item IN manufacturer_list.keys.sort %]
+		[% item_link = item.lower.replace('[ #\/]', '_') %]
+		[% PERL %]
+			my $link = $stash->get("item_link");
+			# glob onto file with any extension
+			my ($logo) = glob("logo/$link.*");
+			$stash->set("logo", $logo);
+		[% END %]
+		<div class="list_item">
+		<a href="/manufacturers/[% item_link %].html">
+			<img class="logo" alt="[% item %]" src="/[% logo %]" />
+		</a><br>
 
-		<p><b>PriceSloth</b> periodically looks up and saves the prices
-		of different products and converts this information into
-		charts.</p>
+		Types: 
+		[% FOREACH pair IN manufacturer_list.$item.pairs %]
+			[% n = pair.value.count %]
+			[% type_link = pair.key.lower.replace('[ #\/]', '_') %]
+			[% n %] <a href="/manufacturers/[% item_link %]/[% type_link %].html">
+			[% pair.key %]</a>,
+		[% END %]
+		<br />
+		Retailers: XXX, YYY
+		</div>
+		<hr />
+	[% END %]
 	</div>
 
-	<div class="column index_column">
-		<h1>New Products ([% news.size %])</h1>
-		<ul>
-		[% FOREACH new IN news %]
-			[% manuf_link = new.0.lower.replace('[ #\/]', '_') %]
-			[% part_link  = new.1.lower.replace('[ #\/]', '_') %]
-
-			<li><img class="logo_small" alt="[% new.0 %]"
-				src="/logo/[% manuf_link %].svg"></img>
-
-			<a href="/products/[% manuf_link %]/[% part_link %].html">
-				[% new.1 %]</a>
+	<div class="column">
+	<h2>Retailers ([% retailer_list.keys.size %] total)</h2>
+	[% FOREACH item IN retailer_list.keys.sort %]
+		[% item_link = item.lower.replace('[ #\/]', '_') %]
+		[% PERL %]
+			my $link = $stash->get("item_link");
+			# glob onto file with any extension
+			my ($logo) = glob("logo/$link.*");
+			$stash->set("logo", $logo);
 		[% END %]
-		</ul>
+		<a href="/retailers/[% item_link %].html">
+			<img class="retailer_logo" alt="[% item %]" src="/[% logo %]" />
+		</a>
+		<br />
 
-		<h1>Recently Updated ([% upds.size %])</h1>
-		<ul>
-		[% FOREACH upd IN upds %]
-			[% manuf_link = upd.0.lower.replace('[ #\/]', '_') %]
-			[% part_link  = upd.1.lower.replace('[ #\/]', '_') %]
-
-			<li><img class="logo_small" alt="[% upd.0 %]"
-				src="/logo/[% manuf_link %].svg"></img>
-			<a href="/products/[% manuf_link %]/[% part_link %].html">
-				[% upd.1 %]</a>
+		Manufacturers sold here:
+		[% FOREACH pair IN retailer_list.$item.pairs %]
+			[% type_link = pair.key.lower.replace('[ #\/]', '_') %]
+			<a href="/retailers/[% item_link %]/[% type_link %].html">
+			[% pair.key %]</a>,
 		[% END %]
-		</ul>
+		<hr />
+	[% END %]
+
+	<h2>Product Types ([% types_list.keys.size %] total)</h2>
+	[% FOREACH item IN types_list.keys.sort %]
+		[% item_link = item.lower.replace('[ #\/]', '_') %]
+		[% PERL %]
+			my $link = $stash->get("item_link");
+			# glob onto file with any extension
+			my ($logo) = glob("logo/$link.*");
+			$stash->set("logo", $logo);
+		[% END %]
+		<div class="list_item">
+		<a href="/types/[% item_link %].html">
+			<img class="product_type" alt="[% item %]" src="/[% logo %]" />
+		</a><br />
+
+		[% item %] manufacturers:
+		[% FOREACH pair IN types_list.$item.pairs %]
+			[% type_link = pair.key.lower.replace('[ #\/]', '_') %]
+			<a href="/types/[% item_link %]/[% type_link %].html">
+			[% pair.key %]</a>,
+		[% END %]
+		</div>
+
+		<hr />
+	[% END %]
 	</div>
+
 [% END %]

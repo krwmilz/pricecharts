@@ -6,50 +6,86 @@ p {
 	line-height: 1.5em;
 }
 
+li {
+	line-height: 1.5em;
+}
+
+body {
+	/* margin-top: 1em; */
+	font-family: sans-serif;
+
+	/* i don't want to read anything wider than that */
+	max-width: 80em;
+	margin: auto;
+
+	border-left: 1px dashed gray;
+	border-right: 1px dashed gray;
+}
+
+.menu_bar {
+	/* space at the top for round sloth face to poke out */
+	margin-top: 1.25em;
+	background-color: green;
+}
+
+.menu_bar_title {
+	font-size: 2em;
+	/* width of the sloth face... ish */
+	margin-left: 3em;
+
+	display: inline-block;
+	color: white;
+	font-weight: bold;
+}
+
+.search_box {
+	display: inline-block;
+	height: 2em;
+}
+
 .column {
 	display: inline-block;
 	vertical-align: top;
-}
 
-.index_column {
-	width: 40%;
-	padding: 0 4% 0 4%;
+	/* by default there will be two of these side by side */
+	width: 45.5%;
+	padding: 0 2% 0 2%;
 }
 
 .product {
 	padding: 0.5em;
-	margin: 0.3em 0 0.3em 0;
+	margin: 0.3em 0.3em 0.3em 0.3em;
 	border: 1px solid gray;
 	border-radius: 3px;
-	min-width: 800px;
 }
 
 .sloth {
-	height: 3em;
-}
+	width: 5em;
+	height: 5em;
+	border-radius: 2.5em;
+	-webkit-border-radius: 2.5em;
+	-moz-border-radius: 2.5em;
+	background: url(http://pricesloth.com/pricesloth.jpg) no-repeat;
 
-.manufacturers {
-	padding: 0 2% 0 2%;
-	width: 29%;
+	margin-top: -1.25em;
+
+	margin-left: 0.5em;
+	position: fixed;
 }
 
 @media (max-width: 640px) {
-	.manufacturers {
-		width: 100%;
-		padding: 0 0 0 0;
+	/* anything smaller than this go into single user mode */
+	.column {
+		width: 90%;
+		padding: 0 5% 0 5%;
 	}
 
-	.index_column {
-		width: 100%;
-		padding: 0 0 0 0;
+	.logo {
+		max-width: 100%;
 	}
 }
 
 @media (max-width: 1280) {
-	.manufacturers {
-		width: 40%;
-		padding: 0 5% 0 5%;
-	}
 }
 
 @media print {
@@ -59,21 +95,15 @@ p {
 }
 
 .logo {
-	vertical-align: middle;
-	padding: 5px;
-}
-
-.manufacturers img {
 	height: 3em;
 }
 
-.retailers {
-	padding: 0 2% 0 2%;
-	width: 95%%;
+.retailer_logo {
+	width: 15em;
 }
 
-.retailers img {
-	height: 4em;
+.product_type {
+	width: 15em;
 }
 
 .product_index {
@@ -84,54 +114,8 @@ p {
 }
 
 .list_item {
-	padding: 5px;
 }
 
 .logo_small {
-	height: 2em;
-	vertical-align: middle;
-}
-
-/* horizontal rulers, plus date ticks */
-.chart_rulers {
-	stroke: #BBB;
-	stroke-width: 0.5;
-}
-
-/* x axis labels */
-.chart_date {
-	font-size: 0.6em;
-	fill: black;
-}
-
-/* y axis labels */
-.chart_price {
-	font-size: 0.7em;
-	fill: black;
-}
-
-/* retailer date series */
-.chart_series {
-	fill-opacity: 0;
-	stroke-width: 2;
-	stroke-opacity: 0.8;
-}
-
-.chart_series:hover {
-	stroke-width: 3;
-}
-
-.chart_retailer_text {
-	font-size: 0.6em;
-	font-family: sans-serif;
-}
-
-.chart_data {
-	fill: white;
-	stroke-width: 2;
-	stroke-opacity: 0.8;
-}
-
-.breakdown {
-	font-size: 0.8em;
+	height: 0.7em;
 }

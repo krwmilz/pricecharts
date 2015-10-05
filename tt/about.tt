@@ -1,0 +1,39 @@
+[% WRAPPER wrapper.tt %]
+	<div class="column">
+		<h2>About</h2>
+
+		<p>Hi, and welcome to <b>PriceSloth</b>, a purchasing aid for
+		consumer electronics.
+		This site contains price charts that let you pick the best
+		retailer to purchase a particular product from, and help you
+		predict what the future price of a product might be. 
+		</p>
+
+		<p>The price charts provide two main things:
+		<ul>
+			<li>Inter-retailer price comparisons
+			<li>Historical pricing information
+		</ul>
+		</p>
+		<p>Inter-retailer price comparison saves you money by showing you
+		the retailer that is offering a certain product for the lowest
+		cost. It shows you which retailers offer that product, too.
+		</p>
+		<p>Historical pricing information can show periods when the
+		product was on sale, and the overall trend of the price since
+		the product came onto the market. This makes picking the
+		absolute best time to buy a product easier.</p>
+	</div>
+
+	<div class="column index_column">
+		<h2>Status</h2>
+		<p>Online. Currently tracking <b>[% nprod %]</b> products,
+		<b>[% nmanuf %]</b> manufacturers, and
+		<b>[% nret %]</b> retailers. There are <b>[% nprod_stale %]</b>
+		stale products and <b>[% no_prices %]</b> products don't have a
+		single price.</p>
+
+		<object data="/svg/history_summary.svg" type="image/svg+xml">
+		</object>
+	</div>
+[% END %]

@@ -1,3 +1,4 @@
+p5-BSD-arc4random
 p5-Config-Grammar
 p5-DBD-SQLite
 p5-Email-Send

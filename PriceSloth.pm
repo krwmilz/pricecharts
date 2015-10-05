@@ -47,6 +47,9 @@ sub get_config
 	});
 
 	my $cfg_file = "/etc/pricesloth.cfg";
+	if (-e "pricesloth.cfg") {
+		$cfg_file = "pricesloth.cfg";
+	}
 	my $cfg = $parser->parse($cfg_file) or die "error: $parser->{err}\n";
 
 	return $cfg;
@@ -58,7 +61,6 @@ sub get_dbh
 	my $verbose = shift || undef;
 
 	make_path($db_dir, { verbose => $verbose });
-	print "info: get_dbh: opening $db_dir/db\n" if ($verbose);
 	my $dbh = DBI->connect(
 		"dbi:SQLite:dbname=$db_dir/db",
 		"",
@@ -66,6 +68,7 @@ sub get_dbh
 		{ RaiseError => 1 }
 	) or die $DBI::errstr;
 
+	print "info: opened $db_dir/db\n" if ($verbose);
 	return $dbh;
 }
 

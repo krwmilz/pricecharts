@@ -1,0 +1,41 @@
+/* horizontal rulers, plus date ticks */
+.chart_rulers {
+	stroke: #BBB;
+	stroke-width: 0.5;
+}
+
+/* x axis labels */
+.chart_date {
+	font-size: 0.6em;
+	font-family: sans-serif;
+	fill: black;
+}
+
+/* y axis labels */
+.chart_price {
+	font-size: 0.7em;
+	font-family: sans-serif;
+	fill: black;
+}
+
+/* retailer date series */
+.chart_series {
+	fill-opacity: 0;
+	stroke-width: 2;
+	stroke-opacity: 0.8;
+}
+
+.chart_series:hover {
+	stroke-width: 3;
+}
+
+.chart_retailer_text {
+	font-size: 0.6em;
+	font-family: sans-serif;
+}
+
+.chart_data {
+	fill: white;
+	stroke-width: 2;
+	stroke-opacity: 0.8;
+}
