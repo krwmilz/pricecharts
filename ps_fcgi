@@ -1,4 +1,4 @@
-#!/usr/bin/env perl
+#!/usr/bin/env perl -T
 
 use strict;
 use warnings;
@@ -58,9 +58,6 @@ my $uid = getpwnam($user)  or die "error: user $user does not exist\n";
 my $gid = getgrnam($group) or die "error: group $group does not exist\n";
 chown $uid, $gid, $http_cfg{socket} or die "error: chown $uid:$gid: $!";
 
-my $config = { INCLUDE_PATH => "$http_cfg{htdocs}/tt" };
-my $template = Template->new($config) || die $Template::ERROR . "\n";
-
 if (fork()) {
 	# parent
 	$0 = "ps_fcgi [priv]";
@@ -96,6 +93,14 @@ print "info: child: uid:gid appears to be $<:$(\n" if ($args{v});
 
 $SIG{INT} =  \&child_sig_handler;
 $SIG{TERM} = \&child_sig_handler;
+
+# remove chroot dir from beginning of htdocs dir
+my $chroot_tt_dir = "$http_cfg{htdocs}/tt";
+$chroot_tt_dir =~ s/$http_cfg{chroot}//;
+print "chroot tt dir is $chroot_tt_dir\n";
+
+my $config = { INCLUDE_PATH => $chroot_tt_dir };
+my $template = Template->new($config) || die $Template::ERROR . "\n";
 
 syslog(LOG_INFO, "child: ready");
 print "info: child: ready\n" if ($args{v});
