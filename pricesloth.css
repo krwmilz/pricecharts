@@ -31,7 +31,6 @@ body {
 .menu_bar_title {
 	font-size: 2em;
 	/* width of the sloth face... ish */
-	margin-left: 3em;
 
 	display: inline-block;
 	color: white;
@@ -68,9 +67,10 @@ body {
 	background: url(http://pricesloth.com/pricesloth.jpg) no-repeat;
 
 	margin-top: -1.25em;
+	margin-bottom: -2em;
 
 	margin-left: 0.5em;
-	position: fixed;
+	display: inline-block;
 }
 
 @media (max-width: 640px) {
