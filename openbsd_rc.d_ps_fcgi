@@ -1,6 +1,6 @@
 #!/bin/sh
 
-daemon="perl /home/kyle/src/pricesloth/ps_fcgi"
+daemon="perl -T /home/kyle/src/pricesloth/ps_fcgi"
 
 . /etc/rc.d/rc.subr
 
