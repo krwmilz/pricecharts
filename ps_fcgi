@@ -62,11 +62,12 @@ if (fork()) {
 	# parent
 	$0 = "ps_fcgi [priv]";
 
-	# child should catch sigint and exit nicely, then we exit nicely here too
+	# child should catch sigint and exit nicely, then we exit nicely here
 	$SIG{INT} = "IGNORE";
 
 	print "info: parent: alive\n" if ($args{v});
 	syslog(LOG_INFO, "parent: alive");
+
 	wait();
 
 	print "info: parent: cleaning up\n" if ($args{v});
@@ -91,6 +92,7 @@ $( = $) = "$gid $gid";
 $< = $> = $uid;
 print "info: child: uid:gid appears to be $<:$(\n" if ($args{v});
 
+# catch ctrl-c and default kill(1) signal
 $SIG{INT} =  \&child_sig_handler;
 $SIG{TERM} = \&child_sig_handler;
 
@@ -106,10 +108,11 @@ syslog(LOG_INFO, "child: ready");
 print "info: child: ready\n" if ($args{v});
 
 while ($request->Accept() >= 0) {
+	# header, XXX: cache control timestamps?
 	print "Content-Type: text/html\r\n\r\n";
-	my (undef, $input) = split("=", $ENV{QUERY_STRING});
 
 	# incoming query string is http mangled
+	my (undef, $input) = split("=", $ENV{QUERY_STRING});
 	$input = uri_unescape($input);
 
 	# fuzzy search on manufacturer and part number
