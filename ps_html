@@ -172,7 +172,9 @@ $series_metadata{"Total"} = { url => "", color => "000" };
 $series_metadata{"Stale"} = { url => "", color => "F00" };
 my $svg = make_svg(\%totals_series, "no_part_num", \%series_metadata, 1, "");
 
+make_path($svg_dir, { verbose => $args{v} });
 my $svg_path = "$svg_dir/history_summary.svg";
+
 open my $svg_fh, ">", "$svg_path" or die "couldn't open $svg_path: $!";
 print $svg_fh $svg->xmlify;
 close $svg_fh;
