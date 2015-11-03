@@ -67,6 +67,7 @@ sub get_dbh
 		"",
 		{ RaiseError => 1 }
 	) or die $DBI::errstr;
+	$dbh->do("PRAGMA foreign_keys = ON");
 
 	print "info: opened $db_dir/db\n" if ($verbose);
 	return $dbh;
