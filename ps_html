@@ -332,9 +332,9 @@ sub make_svg
 	my $short = shift || 0;
 	my $right_axis_prefix = "\$";
 
-	my ($left, $center, $right, $top, $middle, $bottom) = (3, 957, 40, 15, 150, 20);
+	my ($left, $center, $right, $top, $middle, $bottom) = (20, 930, 50, 15, 150, 20);
 	if ($short) {
-		$center = 457;
+		$center = 430;
 		$right_axis_prefix = "";
 	}
 
@@ -367,10 +367,10 @@ sub make_svg
 	my $defs = $svg->defs();
 	my ($x_scale, $y_scale) = ($center / $domain, $middle / $range);
 
-	$defs->tag("link", href => "/charts.css", type => "text/css",
-		rel => "stylesheet", xmlns => "http://www.w3.org/1999/xhtml");
+	# $defs->tag("link", href => "/charts.css", type => "text/css",
+	# 	rel => "stylesheet", xmlns => "http://www.w3.org/1999/xhtml");
 
-	# make price labels along right side and lines across chart
+	# y axis labels (prices)
 	my $num_labels = 5;
 	for (1..$num_labels) {
 		my $step = ($_ - 1) / ($num_labels - 1);
@@ -378,22 +378,24 @@ sub make_svg
 		my $y = $top + $middle * $step;
 
 		$svg->text(
-			id => "price_$_", x => $left + $center + 5, y => $y + 3,
-			class => "chart_price", "text-anchor" => "start"
+			id => "price_$_", x => $left + $center + 5, y => $y - 2,
+			fill => "black", "font-family" => "sans-serif",
+			"font-size" => "0.8em"
 		)->cdata("$right_axis_prefix$price");
 
 		$svg->line(
 			id => "horizontal_line_$_", x1 => $left, y1 => $y,
-			x2 => $width - $right, y2 => $y, class => "chart_rulers"
+			x2 => $width , y2 => $y,
+			style => "stroke: #BBB; stroke-width: 0.5px;"
 		);
 	}
 
-	$num_labels = 8;
+	$num_labels = 6;
 	if ($short) {
-		$num_labels = 5;
+		$num_labels = 3;
 	}
 
-	# make dates along the bottom
+	# x axis labels (dates)
 	if ($domain == 24 * 60 * 60) {
 		$num_labels = 2;
 	}
@@ -403,24 +405,28 @@ sub make_svg
 		# make the dates not hang off the ends of the chart
 		my $text_anchor = "middle";
 		$text_anchor = "start" if ($_ == 1);
-		$text_anchor = "end" if ($_ == $num_labels);
+		# $text_anchor = "end" if ($_ == $num_labels);
 
 		# print the dates along the x axis
 		my $x = $left + $center * $step;
 		my $time = $x_min + $domain * $step;
-		$svg->text(id => "date_$_", x => $x, y => $height - 5,
-			class => "chart_date", "text-anchor" => $text_anchor
-		)->cdata(strftime("%b %e, %Y", localtime($time)));
+		$svg->text(
+			id => "date_$_", x => $x, y => $height,
+			"text-anchor" => $text_anchor, "fill" => "black",
+			"font-family" => "sans-serif", "font-size" => "0.8em"
+		)->cdata(strftime("%b %e %Y", localtime($time)));
 
 		# print the little tick marks down from the x axis
 		my $x_axis = $top + $middle;
-		$svg->line(id => "date_marker_$_", x1 => $x, y1 => $x_axis,
-			x2 => $x, y2 => $x_axis + 5, class => "chart_rulers",
+		$svg->line(
+			id => "date_marker_$_", x1 => $x, y1 => $x_axis,
+			x2 => $x, y2 => $x_axis + 5,
+			style => "stroke: #BBB; stroke-width: 0.5px;"
 		);
 	}
 
-	while (my ($retailer, $values) = each %$series) {
-		my $retailer_id = lc($retailer);
+	while (my ($series_name, $values) = each %$series) {
+		my $retailer_id = lc($series_name);
 		$retailer_id =~ s/ /_/;
 
 		my (@xs, @ys);
@@ -440,7 +446,7 @@ sub make_svg
 			$defs->tag("path", "d" => $d, id => "path_$retailer_id");
 		}
 
-		my $info = $metadata->{$retailer};
+		my $info = $metadata->{$series_name};
 		my ($url, $color) = ($info->{url}, $info->{color});
 
 		# xlink:href's don't like raw ampersands
@@ -451,14 +457,16 @@ sub make_svg
 			target => "new_window");
 
 		# draw path first
-		$anchor->use(-href => "#path_$retailer_id",
-			class => "chart_series", style => "stroke: #$color"
+		$anchor->use(
+			-href => "#path_$retailer_id",
+			style => qq{stroke: #$color; fill-opacity: 0;
+				stroke-width: 2; stroke-opacity: 0.8;}
 		);
 
 		# now draw individual data points
 		my $rand_token = sprintf("%x", arc4random());
-		$defs->circle(id => $rand_token, cx => 0, cy => 0,
-			class => "chart_data", r => 2, style => "stroke: #$color;"
+		$defs->circle(id => $rand_token, cx => 0, cy => 0, r => 2,
+			style => "stroke: #$color; fill: white; stoke-width: 2;"
 		);
 		while (my $i = each @xs) {
 			$anchor->use(-href => "#$rand_token",
@@ -466,10 +474,11 @@ sub make_svg
 			);
 		}
 
-		# show retailer name along the start of the path
-		$anchor->text(class => "chart_retailer_text", fill => "#$color"
+		# show series name along the start of the path
+		$anchor->text(
+			fill => "#$color", style => "font-family: sans-serif;"
 		)->tag("textPath", -href => "#path_$retailer_id"
-		)->tag("tspan", "dy" => "-5")->cdata($retailer);
+		)->tag("tspan", "dy" => "-5")->cdata($series_name);
 	}
 
 	# when graph is loaded make a sliding motion show the graph lines
