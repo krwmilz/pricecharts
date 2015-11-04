@@ -9,6 +9,7 @@ use Data::Dumper;
 use Getopt::Std;
 use Lingua::EN::Inflect qw(PL);
 use Math::MatrixReal;
+use Number::Format qw(:subs :vars);
 use POSIX;
 use PriceSloth;
 use SVG;
@@ -146,6 +147,7 @@ $www->process("index.tt", $vars, "index.html")
 #
 my ($p, $m) = $dbh->selectrow_array(qq{select count(*),
 	count(distinct manufacturer) from products});
+my ($nprice) = $dbh->selectrow_array("select count(*) from prices");
 
 # anything we haven't seen for over 30 days is stale
 my ($prod_stale) = $dbh->selectrow_array(qq{select count(*) from products
@@ -184,7 +186,10 @@ open my $svg_fh, ">", "$svg_path" or die "couldn't open $svg_path: $!";
 print $svg_fh $svg->xmlify;
 close $svg_fh;
 
-$vars = { nret => $r, nmanuf => $m, nprod => $p - $prod_stale,
+$vars = { nprice => format_number($nprice),
+	nret => $r,
+	nmanuf => $m,
+	nprod => format_number($p - $prod_stale),
 	nprod_stale => $prod_stale, no_prices => $p - $have_prices
 };
 $www->process("about.tt", $vars, "about.html") or die $www->error(), "\n";

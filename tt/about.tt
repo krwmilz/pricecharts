@@ -27,7 +27,8 @@
 
 	<div class="column index_column">
 		<h2>Status</h2>
-		<p>Online. Currently tracking <b>[% nprod %]</b> products,
+		<p>Online. Currently tracking <b>[% nprice %]</b> prices,
+		<b>[% nprod %]</b> products,
 		<b>[% nmanuf %]</b> manufacturers, and
 		<b>[% nret %]</b> retailers. There are <b>[% nprod_stale %]</b>
 		stale products and <b>[% no_prices %]</b> products don't have a
