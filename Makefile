@@ -1,8 +1,8 @@
 USR ?=		/usr/local
 VAR ?=		/var
 
-USER =		kyle
-GROUP =		wheel
+USER =		www
+GROUP =		daemon
 
 USR_BIN =	$(USR)/bin
 PERL_LIBDATA =	$(USR)/libdata/perl5/site_perl
