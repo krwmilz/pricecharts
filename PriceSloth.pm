@@ -47,8 +47,8 @@ sub get_config
 	});
 
 	my $cfg_file = "/etc/pricesloth.cfg";
-	if (-e "pricesloth.cfg") {
-		$cfg_file = "pricesloth.cfg";
+	if (-e "etc/pricesloth.cfg") {
+		$cfg_file = "etc/pricesloth.cfg";
 	}
 	my $cfg = $parser->parse($cfg_file) or die "error: $parser->{err}\n";
 
