@@ -34,7 +34,7 @@ my $config = {
 my $www = Template->new($config) || die Template->error(), "\n";
 
 my $and_stale = $args{a} ? "" : "and products.svg_stale = 1";
-my $where_stale = $args{a} ? "" : "where svg_stale = 1";
+my $where_stale = $args{a} ? "" : "where products.svg_stale = 1";
 
 my $desc_sth = $dbh->prepare(qq{select description from descriptions where
 	manufacturer = ? and part_num = ? order by date});
@@ -79,9 +79,14 @@ my $manufacturer_list = $dbh->selectall_hashref($coarse_sql, \@key_fields);
 #
 # retailers
 #
-$stale_list = qq{select distinct retailer from prices $where_stale};
+$stale_list = qq{select distinct prices.retailer from prices, products where
+	products.manufacturer = prices.manufacturer and
+	products.part_num = prices.part_num $and_stale};
 
-$types = qq{select distinct manufacturer from prices where retailer = ? $and_stale};
+$types = qq{select distinct prices.manufacturer from prices, products where
+	prices.retailer = ? $and_stale and
+	products.manufacturer = prices.manufacturer and
+	products.part_num = prices.part_num};
 
 $products_fine = qq{select distinct manufacturer, part_num
 	from prices where manufacturer = ? and retailer = ?};
@@ -220,7 +225,7 @@ my $retailer_info = $dbh->selectall_hashref(qq{select name, url, color from
 	retailers}, "name");
 
 my $parts_sth = $dbh->prepare(qq{select distinct manufacturer,
-	part_num from prices $where_stale});
+	part_num from products $where_stale});
 $parts_sth->execute();
 
 my $rendered = 0;
@@ -341,7 +346,7 @@ sub make_svg
 	my $width = $right + $center + $left;
 	my $height = $top + $middle + $bottom;
 
-	my ($x_min, $x_max, $y_min, $y_max) = (100000000000, 0, 1000000, 0);
+	my ($x_min, $x_max, $y_min, $y_max) = (100000000000, 0, 1000000, 0.00001);
 	while (my ($retailer, $values) = each %$series) {
 		for (keys %{$values}) {
 			my ($x, $y) = ($_, $values->{$_}{price});
