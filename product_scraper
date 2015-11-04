@@ -128,34 +128,37 @@ sub mem_exp_scrape_class
 			next;
 		}
 
-		$descriptions_sth->execute($brand, $part_num, "Memory Express", $desc, time);
+		# sanitize $brand against known good manufacturer names
+		$sql = qq{select manufacturer from products where
+			lower(manufacturer) = ?};
+		my $manufs = $dbh->selectcol_arrayref($sql, undef, lc($brand));
+		if (@$manufs) {
+			# take a risk that the first one is spelled right
+			if ($manufs->[0] ne $brand) {
+				print "warn: forcing misspelled $brand to ";
+				print $manufs->[0] . "\n";
+				$brand = $manufs->[0];
+			}
+		}
 
 		# extraction looks good, insert or update the database
-		$sql = "select * from products where part_num = ?";
-		if ($dbh->selectrow_arrayref($sql, undef, $part_num)) {
+		$sql = "select * from products where manufacturer = ? and
+			part_num = ?";
+		if ($dbh->selectrow_arrayref($sql, undef, $brand, $part_num)) {
 			# also check description and manufacturer are consistent?
 			$update_sth->execute(time, $part_num) or die $dbh->errstr();
-			print "$thumb_hdr: updated db\n" if ($args{v});
 			$old++;
 		}
 		else {
-			$sql = qq{select manufacturer from products where
-				lower(manufacturer) = ?};
-			my $manufs = $dbh->selectcol_arrayref($sql, undef, lc($brand));
-			if (@$manufs) {
-				# take a risk that the first one is spelled right
-				if ($manufs->[0] ne $brand) {
-					print "warn: forcing misspelled $brand to ";
-					print $manufs->[0] . "\n";
-					$brand = $manufs->[0];
-				}
-			}
-
 			$insert_sth->execute($part_num, $brand, "Memory Express", $type,
 				time, time, 0) or die $dbh->errstr();
 			print "$thumb_hdr: inserted into db\n" if ($args{v});
 			$new++;
 		}
+
+		# this has a foreign key constraint on the product table
+		$descriptions_sth->execute($brand, $part_num, "Memory Express",
+			$desc, time);
 	}
 
 	my $ok = $new + $old;
