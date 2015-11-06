@@ -128,6 +128,10 @@ sub mem_exp_scrape_class
 			next;
 		}
 
+		# memory express has bundles, we're not really interested in
+		# those
+		next if ($part_num =~ /^BDL_/);
+
 		# sanitize $brand against known good manufacturer names
 		$sql = qq{select manufacturer from products where
 			lower(manufacturer) = ?};
