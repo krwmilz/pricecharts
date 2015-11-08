@@ -159,10 +159,8 @@ sub scrape_prices
 
 sub get_valid_price
 {
-	my $dom_tag = shift || return undef;
-	my $search_results = shift;
-	my $retailer = shift;
-	my $log = shift;
+	my ($dom_tag, $search_results, $retailer, $log) = @_;
+	return undef unless defined $dom_tag;
 
 	# break the search_results page down into individual results
 	my @search_prices = $search_results->find($dom_tag)->text_array();
@@ -327,8 +325,7 @@ sub mem_exp_scrape_class
 #
 sub mem_exp_get_thumbnails
 {
-	my $name = shift;
-	my $info_hdr = shift;
+	my ($name, $info_hdr) = @_;
 
 	# this returns a search results page, link found through trial and error
 	my $class_url = "http://www.memoryexpress.com/Category/" .
@@ -385,8 +382,7 @@ sub mem_exp_get_thumbnails
 #
 sub mem_exp_scrape_thumbnail
 {
-	my $thumb_hdr = shift;
-	my $html = shift;
+	my ($thumb_hdr, $html) = @_;
 
 	my $error_hdr = "error: $thumb_hdr";
 	my $info_hdr = "info: $thumb_hdr";
@@ -443,9 +439,7 @@ sub mem_exp_scrape_thumbnail
 #
 sub get_tag_text
 {
-	my $dom = shift;
-	my $tag = shift;
-	my $error_hdr = shift;
+	my ($dom, $tag, $error_hdr) = @_;
 
 	my $field = $dom->find($tag)->text();
 	if (!defined $field || $field eq "") {
