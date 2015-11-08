@@ -31,7 +31,7 @@
 		Currently, there are <ul>
 			<li><b>[% nprice %]</b> prices
 			<li><b>[% nprod %]</b> active products
-				(<b>[% nprod_stale %]</b> stale)
+				(<b>[% nprod_stale %]</b> out of date)
 			<li><b>[% nmanuf %]</b> manufacturers
 			<li><b>[% nret %]</b> retailers
 		</ul></p>

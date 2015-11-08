@@ -164,13 +164,13 @@ for my $i (0..$num_weeks) {
 	$totals_series{"Total"}{$x} = { "price" => $y };
 
 	($y) = $dbh->selectrow_array("select count(*) from products where last_seen < ?", undef, $x - (60 * 60 * 24 * 30));
-	$totals_series{"Stale"}{$x} = { "price" => $y };
+	$totals_series{"Out of date"}{$x} = { "price" => $y };
 }
 
 # print Dumper(%totals_series);
 my %series_metadata;
 $series_metadata{"Total"} = { url => "", color => "000" };
-$series_metadata{"Stale"} = { url => "", color => "F00" };
+$series_metadata{"Out of date"} = { url => "", color => "F00" };
 my $svg = make_svg(\%totals_series, "no_part_num", \%series_metadata, 1, "");
 
 make_path($svg_dir, { verbose => $args{v} });
