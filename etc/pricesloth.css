@@ -119,3 +119,9 @@ body {
 .logo_small {
 	height: 0.7em;
 }
+
+/* used in about page to indicate online status */
+.online_text {
+	color: limegreen;
+	font-weight: bold;
+}

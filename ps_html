@@ -154,11 +154,6 @@ my ($prod_stale) = $dbh->selectrow_array(qq{select count(*) from products
 
 my ($r) = $dbh->selectrow_array("select count(*) from retailers");
 
-# XXX: this isn't right, it wont count parts with equal part numbers but
-# different manufacturers
-my ($have_prices) = $dbh->selectrow_array(qq{select count(distinct part_num)
-	from prices});
-
 # draw a graph of total number of products vs time
 my ($first_seen) = $dbh->selectrow_array("select first_seen from products order by first_seen limit 1");
 my $num_weeks = (time - $first_seen) / (60 * 60 * 24 * 7);
@@ -185,11 +180,16 @@ open my $svg_fh, ">", "$svg_path" or die "couldn't open $svg_path: $!";
 print $svg_fh $svg->xmlify;
 close $svg_fh;
 
-$vars = { nprice => format_number($nprice),
+# this is supposed to work??? alternative sucks
+# $THOUSANDS_SEP = '/';
+my $de = new Number::Format(-thousands_sep => ' ',
+	                    -decimal_point => '.');
+
+$vars = { nprice => $de->format_number($nprice),
 	nret => $r,
 	nmanuf => $m,
-	nprod => format_number($p - $prod_stale),
-	nprod_stale => $prod_stale, no_prices => $p - $have_prices
+	nprod => $de->format_number($p - $prod_stale),
+	nprod_stale => $prod_stale
 };
 $www->process("about.tt", $vars, "about.html") or die $www->error(), "\n";
 

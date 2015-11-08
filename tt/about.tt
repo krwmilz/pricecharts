@@ -25,14 +25,16 @@
 		absolute best time to buy a product easier.</p>
 	</div>
 
-	<div class="column index_column">
+	<div class="column">
 		<h2>Status</h2>
-		<p>Online. Currently tracking <b>[% nprice %]</b> prices,
-		<b>[% nprod %]</b> products,
-		<b>[% nmanuf %]</b> manufacturers, and
-		<b>[% nret %]</b> retailers. There are <b>[% nprod_stale %]</b>
-		stale products and <b>[% no_prices %]</b> products don't have a
-		single price.</p>
+		<p><span class="online_text">Online</span>.
+		Currently, there are <ul>
+			<li><b>[% nprice %]</b> prices
+			<li><b>[% nprod %]</b> active products
+				(<b>[% nprod_stale %]</b> stale)
+			<li><b>[% nmanuf %]</b> manufacturers
+			<li><b>[% nret %]</b> retailers
+		</ul></p>
 
 		<object data="/svg/history_summary.svg" type="image/svg+xml">
 		</object>
