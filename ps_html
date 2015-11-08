@@ -171,7 +171,7 @@ for my $i (0..$num_weeks) {
 my %series_metadata;
 $series_metadata{"Total"} = { url => "", color => "000" };
 $series_metadata{"Out of date"} = { url => "", color => "F00" };
-my $svg = make_svg(\%totals_series, "no_part_num", \%series_metadata, 1, "");
+my $svg = make_svg(\%totals_series, "no_part_num", \%series_metadata, "");
 
 make_path($svg_dir, { verbose => $args{v} });
 my $svg_path = "$svg_dir/history_summary.svg";
@@ -235,7 +235,7 @@ while (my ($manufacturer, $part_num) = $parts_sth->fetchrow_array()) {
 
 	my $series = $dbh->selectall_hashref($series_sth, \@series_keys, undef,
 		$manufacturer, $part_num);
-	my $svg = make_svg($series, $part_num, $retailer_info);
+	my $svg = make_svg($series, $part_num, $retailer_info, "\$");
 
 	my $manufacturer_dir = linkify($manufacturer);
 	my $part_link = linkify($part_num);
@@ -329,17 +329,10 @@ sub get_description
 #
 sub make_svg
 {
-	my $series = shift;
-	my $part_num = shift;
-	my $metadata = shift;
-	my $short = shift || 0;
-	my $right_axis_prefix = "\$";
+	my ($series, $part_num, $metadata, $right_axis_prefix) = @_;
 
-	my ($left, $center, $right, $top, $middle, $bottom) = (20, 930, 50, 15, 150, 20);
-	if ($short) {
-		$center = 430;
-		$right_axis_prefix = "";
-	}
+	my ($left, $center, $right, $top, $middle, $bottom) =
+		(20, 430, 50, 15, 150, 20);
 
 	my $width = $right + $center + $left;
 	my $height = $top + $middle + $bottom;
@@ -393,10 +386,7 @@ sub make_svg
 		);
 	}
 
-	$num_labels = 6;
-	if ($short) {
-		$num_labels = 3;
-	}
+	$num_labels = 4;
 
 	# x axis labels (dates)
 	if ($domain == 24 * 60 * 60) {
