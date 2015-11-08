@@ -67,7 +67,9 @@ sub get_dbh
 		"",
 		{ RaiseError => 1 }
 	) or die $DBI::errstr;
+
 	$dbh->do("PRAGMA foreign_keys = ON");
+	create_tables($dbh);
 
 	print "info: opened $db_dir/db\n" if ($verbose);
 	return $dbh;
@@ -172,6 +174,58 @@ sub spin
 
 	print "\b";
 	print $spin_states[++$state % 4];
+}
+
+sub create_tables
+{
+	my $dbh = shift;
+
+	$dbh->do(qq{
+		create table if not exists products(
+			manufacturer text not null,
+			part_num text not null,
+			retailer text not null,
+			type text,
+			first_seen int,
+			last_seen int,
+			last_scraped int,
+			svg_stale int default 1,
+			primary key(manufacturer, part_num))
+	}) or die $DBI::errstr;
+
+	$dbh->do(qq{
+		create table if not exists descriptions(
+			manufacturer text not null,
+			part_num text not null,
+			retailer text not null,
+			description text not null,
+			date int not null,
+			primary key(manufacturer, part_num, retailer, description),
+			foreign key(manufacturer, part_num) references
+				products(manufacturer, part_num))
+	}) or die $DBI::errstr;
+
+	$dbh->do(qq{
+		create table if not exists retailers(
+			name text not null primary key,
+			color text not null,
+			url text not null)
+	}) or die $DBI::errstr;
+
+	$dbh->do(qq{
+		create table if not exists prices(
+		date int not null,
+		manufacturer text not null,
+		part_num text not null,
+		retailer text not null,
+		price int not null,
+		duration int,
+		primary key(date, part_num, retailer, price),
+		foreign key(manufacturer, part_num) references products(manufacturer, part_num),
+		foreign key(retailer) references retailers(name))
+	}) or die $DBI::errstr;
+
+	# $dbh->do("create table if not exists scrapes");
 }
 
 1;

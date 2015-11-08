@@ -42,26 +42,6 @@ unless (defined $part_num && defined $manufacturer) {
 $dbh->do("update products set last_scraped = ? where part_num = ? and manufacturer = ?",
 	undef, time, $part_num, $manufacturer);
 
-$dbh->do(qq{
-	create table if not exists retailers(
-		name text not null primary key,
-		color text not null,
-		url text not null)
-}) or die $DBI::errstr;
-
-$dbh->do(qq{
-	create table if not exists prices(
-	date int not null,
-	manufacturer text not null,
-	part_num text not null,
-	retailer text not null,
-	price int not null,
-	duration int,
-	primary key(date, part_num, retailer, price),
-	foreign key(manufacturer, part_num) references products(manufacturer, part_num),
-	foreign key(retailer) references retailers(name))
-}) or die $DBI::errstr;
-
 print "info: scraping $manufacturer $part_num\n" if ($args{v});
 
 $sql = "insert into prices(date, manufacturer, part_num, retailer, price, duration) " .
