@@ -8,14 +8,16 @@ use Email::Send;
 use Getopt::Std;
 use HTML::Grabber;
 use IO::Tee;
+use List::Util qw(min);
 use LWP::Simple;
 use PriceSloth;
-use Term::ReadKey;
 use POSIX;
+use Term::ReadKey;
+use URI::Escape;
 
 
 my %args;
-getopts("tv", \%args);
+getopts("nptv", \%args);
 
 $| = 1 if ($args{v});
 
@@ -23,45 +25,58 @@ my $cfg = get_config();
 my $ua  = new_ua($cfg->{general}, $args{v});
 my $dbh = get_dbh($cfg->{general}{db_dir}, $args{v});
 my $tmp_file = "/tmp/product_scraper.txt";
-my $log = get_log($tmp_file, $args{v});
+my $tmp_log = get_log($tmp_file, $args{v});
 srand;
 
-my $sql = "insert into products(part_num, manufacturer, retailer, type, " .
-	"first_seen, last_seen, last_scraped) values (?, ?, ?, ?, ?, ?, ?)";
-my $insert_sth = $dbh->prepare($sql);
-
-$sql = "insert or replace into descriptions(manufacturer, part_num, retailer, ".
-	"description, date) values (?, ?, ?, ?, ?)";
-my $descriptions_sth = $dbh->prepare($sql);
-
-# also update description, manufacturer?
-$sql = "update products set last_seen = ? where part_num = ?";
-my $update_sth = $dbh->prepare($sql);
-
-#
-# Memory Express
-#
-print $log "Memory Express\n==============\n\n";
-print $log "type                 ok percent errors new duration\n";
-print $log "--------------- ------- ------- ------ --- --------\n";
-
-my %product_map = (
-	"Television" => "Televisions",
-	"Laptop" => "LaptopsNotebooks",
-	"Hard Drive" => "HardDrives",
-	"Memory" => "Memory",
-	"Video Card" => "VideoCards",
-	"Processor" => "Processors"
-);
-while (my ($type, $name) = each %product_map) {
-	mem_exp_scrape_class($type, $name);
+if ($args{p}) {
+	mem_exp_scrape_products();
+}
+else {
+	scrape_prices();
 }
 
-$update_sth = undef;
-$insert_sth = undef;
-$dbh->disconnect();
-$log->close();
-send_email($args{v});
+sub mem_exp_scrape_products
+{
+	my $sql = qq{insert into products(part_num, manufacturer, retailer, type,
+	first_seen, last_seen, last_scraped) values (?, ?, ?, ?, ?, ?, ?)};
+	my $insert_sth = $dbh->prepare($sql);
+
+	$sql = "insert or replace into descriptions(manufacturer, part_num, retailer, ".
+	"description, date) values (?, ?, ?, ?, ?)";
+	my $descriptions_sth = $dbh->prepare($sql);
+
+	# also update description, manufacturer?
+	$sql = "update products set last_seen = ? where part_num = ?";
+	my $update_sth = $dbh->prepare($sql);
+
+	#
+	# Memory Express
+	#
+	print $tmp_log "Memory Express\n==============\n\n";
+	print $tmp_log "type                 ok percent errors new duration\n";
+	print $tmp_log "--------------- ------- ------- ------ --- --------\n";
+
+	my %product_map = (
+		"Television" => "Televisions",
+		"Laptop" => "LaptopsNotebooks",
+		"Hard Drive" => "HardDrives",
+		"Memory" => "Memory",
+		"Video Card" => "VideoCards",
+		"Processor" => "Processors"
+	);
+	while (my ($type, $name) = each %product_map) {
+		mem_exp_scrape_class($type, $name, $insert_sth, $descriptions_sth,
+			$update_sth);
+	}
+
+	$update_sth = undef;
+	$insert_sth = undef;
+	$dbh->disconnect();
+	$tmp_log->close();
+	send_email($args{v});
+
+	exit 0;
+}
 
 #
 # scrape an entire class of products, inserting or updating the db as needed.
@@ -70,8 +85,8 @@ send_email($args{v});
 #
 sub mem_exp_scrape_class
 {
-	my $type = shift;
-	my $name = shift;
+	my ($type, $name, $insert_sth, $descriptions_sth, $update_sth) = @_;
+
 	my $info_hdr = "info: " . lc($type);
 
 	my $thumbnails = mem_exp_get_thumbnails($name, $info_hdr);
@@ -104,8 +119,10 @@ sub mem_exp_scrape_class
 		# those
 		next if ($part_num =~ /^BDL_/);
 
+		$dbh->begin_work;
+
 		# sanitize $brand against known good manufacturer names
-		$sql = qq{select manufacturer from products where
+		my $sql = qq{select manufacturer from products where
 			lower(manufacturer) = ?};
 		my $manufs = $dbh->selectcol_arrayref($sql, undef, lc($brand));
 		if (@$manufs) {
@@ -135,11 +152,13 @@ sub mem_exp_scrape_class
 		# this has a foreign key constraint on the product table
 		$descriptions_sth->execute($brand, $part_num, "Memory Express",
 			$desc, time);
+
+		$dbh->commit;
 	}
 
 	my $ok = $new + $old;
 	my $time_str = sprintf("%dh %dm %ds", (gmtime(time - $start))[2, 1, 0]);
-	print $log sprintf("%-15s %7s %6.1f%% %6i %3i %s\n", lc($type),
+	print $tmp_log sprintf("%-15s %7s %6.1f%% %6i %3i %s\n", lc($type),
 		"$ok/$total", $ok * 100.0 / $total, $err, $new, $time_str);
 }
 
@@ -156,7 +175,7 @@ sub mem_exp_get_thumbnails
 		"$name?PageSize=40&Page=";
 
 	# get first page of results
-	my $dom = get_dom($class_url . "1", $ua, $args{v}, $log);
+	my $dom = get_dom($class_url . "1", $ua, $args{v}, $tmp_log);
 	return undef if (!defined $dom);
 
 	my $pager_hdr = "$info_hdr: .AJAX_List_Pager";
@@ -182,7 +201,7 @@ sub mem_exp_get_thumbnails
 		sleep_rand($page_hdr, 5);
 
 		# get a search pages dom
-		$dom = get_dom($class_url . "$_", $ua, $args{v}, $log);
+		$dom = get_dom($class_url . "$_", $ua, $args{v}, $tmp_log);
 		next if (!defined $dom);
 
 		# each product thumbnail has class=PIV_Regular
@@ -221,7 +240,7 @@ sub mem_exp_scrape_thumbnail
 
 	# visit the extended description page
 	my $product_url = "http://www.memoryexpress.com/Products/";
-	my $product_dom = get_dom("$product_url$product_id", $ua, $args{v}, $log);
+	my $product_dom = get_dom("$product_url$product_id", $ua, $args{v}, $tmp_log);
 
 	# the part number is inside of id=ProductAdd always
 	my $part_num = get_tag_text($product_dom, "#ProductAdd", $error_hdr);
@@ -230,7 +249,7 @@ sub mem_exp_scrape_thumbnail
 	# extract the part number, always is text inside of the tag
 	($part_num) = ($part_num =~ m/Part #:\s*(.*)\r/);
 	if (!defined $part_num) {
-		print $log "$error_hdr: part num regex failed\n";
+		print $tmp_log "$error_hdr: part num regex failed\n";
 		return undef;
 	}
 
@@ -247,8 +266,8 @@ sub mem_exp_scrape_thumbnail
 		($brand) = ($brand =~ m/Brand: ([0-9A-Za-z\. ]+)/);
 	}
 	if (!defined $brand || $brand eq "") {
-		print $log "$error_hdr: .ProductBrand not found, html was:\n";
-		print $log "$html\n";
+		print $tmp_log "$error_hdr: .ProductBrand not found, html was:\n";
+		print $tmp_log "$html\n";
 		return undef;
 	}
 
@@ -270,8 +289,8 @@ sub get_tag_text
 
 	my $field = $dom->find($tag)->text();
 	if (!defined $field || $field eq "") {
-		print $log "$error_hdr: $tag not found or empty, html was:\n";
-		print $log $dom->html() . "\n";
+		print $tmp_log "$error_hdr: $tag not found or empty, html was:\n";
+		print $tmp_log $dom->html() . "\n";
 		return undef;
 	}
 
@@ -314,4 +333,162 @@ sub sleep_rand
 	my $sleep = int(rand($upper_limit));
 	printf "$header: (%ss wait)\n", $sleep if ($args{v});
 	sleep $sleep unless ($args{t});
+}
+
+sub scrape_prices
+{
+
+	my $log_path = $cfg->{general}{log_dir} . "/pricesloth";
+	my $log = get_log($log_path, $args{v});
+
+	# allow products to go out of stock. if we haven't seen them for > 30 days
+	# chances are retailers aren't carrying them anymore
+	my $cutoff = time - (30 * 24 * 60 * 60);
+	my $sql = "select part_num, manufacturer, type from products " .
+	"where last_seen > $cutoff order by last_scraped asc";
+	my ($part_num, $manufacturer, $type) = $dbh->selectrow_array($sql);
+
+	unless (defined $part_num && defined $manufacturer) {
+		print "error: no parts seen in the last 30 days\n";
+		print "       run a product scrape to freshen the part numbers\n";
+		exit 1;
+	}
+
+	# prevent races with other scrapers, claim ownership as soon as possible
+	$dbh->do("update products set last_scraped = ? where part_num = ? and manufacturer = ?",
+		undef, time, $part_num, $manufacturer);
+
+	print "info: scraping $manufacturer $part_num\n" if ($args{v});
+
+	$sql = qq{insert into prices(date, manufacturer, part_num, retailer,
+		price, duration) values (?, ?, ?, ?, ?, ?)};
+	my $prices_sth = $dbh->prepare($sql);
+
+	$sql = qq{update products set last_seen = ?, svg_stale = 1
+		where part_num = ? and manufacturer = ?};
+	my $products_sth = $dbh->prepare($sql);
+
+	$sql = "insert or replace into retailers(name, color, url) values (?, ?, ?)";
+	my $retailer_sth = $dbh->prepare($sql);
+
+	$sql = qq{insert or replace into descriptions(manufacturer, part_num,
+		retailer, description, date) values (?, ?, ?, ?, ?)};
+	my $descriptions_sth = $dbh->prepare($sql);
+
+	my $timestamp = strftime("%F %T> ", localtime);
+	my ($start, @status, $i) = (time, "", -1);
+	for my $retailer (sort keys %{$cfg->{retailers}}) {
+		my %props =	%{$cfg->{retailers}{$retailer}};
+		# this could probably be done smarter
+		my $url =	$props{url};
+		my $color =	$props{color};
+		my $price_tag =	$props{reg_tag};
+		my $sale_tag =	$props{sale_tag};
+		my $desc_tag =  $props{title};
+
+		my $retailer_start = time;
+		$status[++$i] = " ";
+
+		# for products with short part numbers, also search manufacturer
+		my $search;
+		if (length($part_num) < 6) {
+			$search = uri_escape("$manufacturer $part_num");
+		} else {
+			$search = uri_escape($part_num);
+		}
+
+		# get a page of search results from a retailer
+		my $search_results = get_dom($url . $search, $ua, $args{v}, $log);
+		next unless defined $search_results;
+
+		# search search_results for particular html tags that should be prices
+		my $price_r = get_valid_price($price_tag, $search_results, $retailer, $log);
+		my $price_s = get_valid_price($sale_tag,  $search_results, $retailer, $log);
+		next unless ($price_r || $price_s);
+
+		# choose the lowest that exists
+		my $price;
+		$price = $price_r if ($price_r);
+		$price = $price_s if ($price_s);
+		$price = min($price_r, $price_s) if ($price_r && $price_s);
+
+		# opportunistically scrape descriptions
+		my ($found_descr, $descr);
+		if ($desc_tag) {
+			# scrape description, use first one found on page
+			($descr) = $search_results->find($desc_tag)->text_array();
+			if (defined $descr && $descr ne "") {
+				$descr =~ s/^\s+//;
+				$descr =~ s/\s+$//;
+				$descr =~ s/$manufacturer//;
+				$descr =~ s/$part_num//;
+
+				my $descr_s = trunc_line($descr, length($retailer) + 8);
+				print "info: $retailer: $descr_s\n" if ($args{v});
+				$found_descr = 1;
+			}
+		}
+
+		# everything looks good
+		$status[$i] = substr($retailer, 0, 1);
+
+		next if ($args{n});
+		$dbh->begin_work;
+		$retailer_sth->execute($retailer, $color, $url);
+		$prices_sth->execute($start, $manufacturer, $part_num, $retailer, $price,
+			time - $retailer_start);
+		$products_sth->execute($start, $part_num, $manufacturer);
+		$descriptions_sth->execute($manufacturer, $part_num, $retailer,
+			$descr, time) if (defined $found_descr);
+		$dbh->commit;
+
+		print "info: $retailer: db: inserted \$$price\n" if ($args{v});
+	}
+
+	printf $log "%s %-12s %-10s %-20s [%s] (%i s)\n", $timestamp, $type,
+	$manufacturer, $part_num, join("", @status), time - $start;
+
+	$log->close();
+	$retailer_sth = undef;
+	$prices_sth = undef;
+	$products_sth = undef;
+	$descriptions_sth = undef;
+	$dbh->disconnect();
+
+	exit 0;
+}
+
+sub get_valid_price
+{
+	my $dom_tag = shift || return undef;
+	my $search_results = shift;
+	my $retailer = shift;
+	my $log = shift;
+
+	# break the search_results page down into individual results
+	my @search_prices = $search_results->find($dom_tag)->text_array();
+	my $num_prices = @search_prices;
+	return undef if ($num_prices == 0);
+
+	print "info: $retailer: $dom_tag: $num_prices elements\n" if ($args{v});
+	my $hdr = "$retailer: $dom_tag" . "[0]";
+
+	# do a fuzzy search for digit combinations that look like a price
+	# XXX: uses the first found price in the page
+	# XXX: this does not work on single digit prices, ie $7.00
+	my ($price, @others) = ($search_prices[0] =~ m/(\d[\d,]+)/);
+	if (!defined $price || @others) {
+		print $log "error: $hdr: wrong number of regexs\n";
+		return undef;
+	}
+
+	# sanity check the numerical price value
+	$price =~ s/,//;
+	if ($price <= 0 || $price > 10000) {
+		print $log "error: $hdr: price $price out of range\n";
+		return undef;
+	}
+
+	print "info: $hdr: \$$price\n" if ($args{v});
+	return $price;
 }

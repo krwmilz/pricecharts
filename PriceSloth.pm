@@ -71,6 +71,8 @@ sub get_dbh
 	$dbh->do("PRAGMA foreign_keys = ON");
 	create_tables($dbh);
 
+	$dbh->{AutoCommit} = 1;
+
 	print "info: opened $db_dir/db\n" if ($verbose);
 	return $dbh;
 }

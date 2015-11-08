@@ -9,7 +9,7 @@ PERL_LIBDATA =	$(USR)/libdata/perl5/site_perl
 HTDOCS =	$(VAR)/www/htdocs
 
 DEV_BIN =	/home/kyle/src/pricesloth
-BINS =		ps_html ps_fcgi price_scraper product_scraper
+BINS =		ps_{html,fcgi,scrape}
 # WARNING stupid idiom used below if adding > 1 item to LIBS!!
 LIBS =		PriceSloth.pm
 HTML =		tt logo etc/pricesloth.css etc/charts.css
