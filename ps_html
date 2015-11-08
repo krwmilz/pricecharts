@@ -192,15 +192,12 @@ $vars = { nprice => $de->format_number($nprice),
 	nprod_stale => $prod_stale
 };
 $www->process("about.tt", $vars, "about.html") or die $www->error(), "\n";
-
-print "info: about.html done\n" if ($args{v});
+print "info: about\n" if ($args{v});
 
 
 #
 # products
 #
-print "info: products: " if ($args{v});
-
 my $sql = "select * from products $where_stale";
 my $products = $dbh->selectall_hashref($sql, "part_num");
 while (my ($part_num, $row) = each %$products) {
@@ -213,13 +210,13 @@ while (my ($part_num, $row) = each %$products) {
 	my $url = "products/$manuf_link/$part_link.html";
 	$www->process("product.tt", $row, $url) or die $www->error(), "\n";
 }
-print scalar(keys %$products) . " processed\n" if ($args{v});
+print "info: products (" . scalar(keys %$products) . ")\n" if ($args{v});
 
 
 #
 # product svg;s
 #
-print "info: svg:  " if ($args{v});
+print "info: svg  " if ($args{v});
 
 my @series_keys = ("retailer", "date");
 my $series_sth = $dbh->prepare(qq{select retailer, date, price from prices
@@ -252,9 +249,11 @@ while (my ($manufacturer, $part_num) = $parts_sth->fetchrow_array()) {
 
 	$rendered++;
 }
-print "\b$rendered rendered\n" if ($args{v});
+print "\b($rendered)\n" if ($args{v});
 
+$dbh->begin_work;
 $dbh->do("update products set svg_stale = 0");
+$dbh->commit;
 $dbh->disconnect();
 
 #
@@ -262,14 +261,9 @@ $dbh->disconnect();
 #
 sub generate_folder
 {
-	my $sql_stale_outer = shift;
-	my $sql_types = shift;
-	my $sql_products = shift;
-	my $name = shift;
-	my $sql_summary = shift;
+	my ($sql_stale_outer, $sql_types, $sql_products, $name, $sql_summary) = @_;
 
 	my $name_lc = lc ($name);
-	print "info: $name_lc/*:  " if ($args{v});
 
 	my $stale_list = $dbh->selectcol_arrayref($sql_stale_outer);
 	for my $it (@$stale_list) {
@@ -277,7 +271,6 @@ sub generate_folder
 		my $it_link = linkify($it);
 		my $types = $dbh->selectcol_arrayref($sql_types, undef, $it);
 		for my $type (sort @$types) {
-			spin() if ($args{v});
 
 			my $products = $dbh->selectall_arrayref($sql_products, undef, $type, $it);
 			$_->[2] = get_description($_->[0], $_->[1]) for (@$products);
@@ -296,8 +289,9 @@ sub generate_folder
 		my $vars = { type => $name_lc, name => $it, info => $summary };
 		$www->process("summary.tt", $vars, "$name_lc/$it_link.html")
 			or die $www->error(), "\n";
+
+		print "info: $name_lc/$it_link\n" if ($args{v});
 	}
-	print "\b" . scalar @$stale_list . " processed\n" if ($args{v});
 }
 
 sub linkify
