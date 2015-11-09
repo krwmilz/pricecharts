@@ -48,6 +48,17 @@ my $catrom_to_bezier = Math::MatrixReal->new_from_rows(
 );
 my $m_t = ~$catrom_to_bezier;
 
+# make a logo file map using massaged names as keys
+opendir(DH, "$cfg->{http}{htdocs}/logo");
+my @files = readdir(DH);
+closedir(DH);
+
+my %logo_hash;
+for my $filename (@files) {
+	my $last_dot = rindex($filename, ".");
+	my $logo_name = substr($filename, 0, $last_dot);
+	$logo_hash{$logo_name} = "/logo/$filename";
+}
 
 #
 # manufacturers
@@ -136,10 +147,10 @@ my $types_list = $dbh->selectall_hashref($coarse_sql, \@key_fields);
 my $vars = {
 	manufacturer_list => $manufacturer_list,
 	retailer_list => $retailer_list,
-	types_list => $types_list
+	types_list => $types_list,
+	logo_hash => \%logo_hash,
 };
-$www->process("index.tt", $vars, "index.html")
-	or die $www->error(), "\n";
+$www->process("index.tt", $vars, "index.html") or die $www->error(), "\n";
 
 #
 # about
@@ -277,7 +288,7 @@ sub generate_folder
 
 			my $vars = {
 				name => $it, type => PL($type, scalar @$products),
-				products => $products
+				products => $products, logo_hash => \%logo_hash
 			};
 			my $type_link = linkify($type);
 			my $out_path = "$name_lc/$it_link/$type_link.html";

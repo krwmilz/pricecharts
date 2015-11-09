@@ -3,21 +3,16 @@
 	<div class="column">
 	<h2>Manufacturers ([% manufacturer_list.keys.size %] total)</h2>
 
-	[% FOREACH item IN manufacturer_list.keys.sort %]
-		[% item_link = item.lower.replace('[ #\/]', '_') %]
-		[% PERL %]
-			my $link = $stash->get("item_link");
-			# glob onto file with any extension
-			my ($logo) = glob("logo/$link.*");
-			$stash->set("logo", $logo);
-		[% END %]
+	[% FOREACH manuf IN manufacturer_list.keys.sort %]
+		[% item_link = manuf.lower.replace('[ #\/]', '_') %]
 		<div class="list_item">
 		<a href="/manufacturers/[% item_link %].html">
-			<img class="logo" alt="[% item %]" src="/[% logo %]" />
+			<img class="logo" alt="[% manuf %]"
+				src="[% logo_hash.item(item_link) %]" />
 		</a><br>
 
 		Types: 
-		[% FOREACH pair IN manufacturer_list.$item.pairs %]
+		[% FOREACH pair IN manufacturer_list.$manuf.pairs %]
 			[% n = pair.value.count %]
 			[% type_link = pair.key.lower.replace('[ #\/]', '_') %]
 			[% n %] <a href="/manufacturers/[% item_link %]/[% type_link %].html">
@@ -34,14 +29,9 @@
 	<h2>Retailers ([% retailer_list.keys.size %] total)</h2>
 	[% FOREACH item IN retailer_list.keys.sort %]
 		[% item_link = item.lower.replace('[ #\/]', '_') %]
-		[% PERL %]
-			my $link = $stash->get("item_link");
-			# glob onto file with any extension
-			my ($logo) = glob("logo/$link.*");
-			$stash->set("logo", $logo);
-		[% END %]
 		<a href="/retailers/[% item_link %].html">
-			<img class="retailer_logo" alt="[% item %]" src="/[% logo %]" />
+			<img class="retailer_logo" alt="[% item %]"
+				src="[% logo_hash.item(item_link) %]" />
 		</a>
 		<br />
 
@@ -57,15 +47,10 @@
 	<h2>Product Types ([% types_list.keys.size %] total)</h2>
 	[% FOREACH item IN types_list.keys.sort %]
 		[% item_link = item.lower.replace('[ #\/]', '_') %]
-		[% PERL %]
-			my $link = $stash->get("item_link");
-			# glob onto file with any extension
-			my ($logo) = glob("logo/$link.*");
-			$stash->set("logo", $logo);
-		[% END %]
 		<div class="list_item">
 		<a href="/types/[% item_link %].html">
-			<img class="product_type" alt="[% item %]" src="/[% logo %]" />
+			<img class="product_type" alt="[% item %]"
+				src="[% logo_hash.item(item_link) %]" />
 		</a><br />
 
 		[% item %] manufacturers:
