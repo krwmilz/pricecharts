@@ -27,8 +27,8 @@
 
 	<div class="column">
 		<h2>Status</h2>
-		<p><span class="online_text">Online</span>.
-		Currently, there are <ul>
+		<p>Currently <span class="online_text">Online</span>.
+		There are: <ul>
 			<li><b>[% nprice %]</b> prices
 			<li><b>[% nprod %]</b> active products
 				(<b>[% nprod_stale %]</b> out of date)
