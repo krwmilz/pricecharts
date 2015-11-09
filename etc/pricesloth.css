@@ -74,7 +74,7 @@ body {
 }
 
 @media (max-width: 640px) {
-	/* anything smaller than this go into single user mode */
+	/* anything smaller than this go into single column mode */
 	.column {
 		width: 90%;
 		padding: 0 5% 0 5%;
@@ -82,15 +82,6 @@ body {
 
 	.logo {
 		max-width: 100%;
-	}
-}
-
-@media (max-width: 1280) {
-}
-
-@media print {
-	body {
-		width: 100%;
 	}
 }
 
