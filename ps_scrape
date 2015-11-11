@@ -2,6 +2,7 @@
 use strict;
 use warnings;
 
+use BSD::arc4random qw(arc4random_uniform);
 use Config::Grammar;
 use Email::Simple;
 use Email::Send;
@@ -21,6 +22,7 @@ getopts("nptv", \%args);
 
 $| = 1 if ($args{v});
 
+sleep_if_cron();
 my $cfg = get_config();
 my $ua  = new_ua($cfg->{general}, $args{v});
 my $dbh = get_dbh($cfg->{general}{db_dir}, $args{v});
@@ -487,4 +489,27 @@ sub sleep_rand
 	my $sleep = int(rand($upper_limit));
 	printf "$header: (%ss wait)\n", $sleep if ($args{v});
 	sleep $sleep unless ($args{t});
+}
+
+sub can_open_tty
+{
+	no autodie;
+	return open(my $tty, '+<', '/dev/tty');
+}
+
+sub sleep_if_cron
+{
+	if (can_open_tty()) {
+		return;
+	}
+
+	# 577s is appx 9.5 min
+	my $sleep = arc4random_uniform(577);
+	print "info: script run from cron, sleeping $sleep s\n" if ($args{v});
+
+	# modify ps output to show what state the program is in
+	my $old_argv0 = $0;
+	$0 .= " (sleeping)";
+	sleep $sleep;
+	$0 = $old_argv0;
 }
