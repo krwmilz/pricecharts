@@ -1,4 +1,5 @@
 [% WRAPPER wrapper.tt %]
+	<div class="column_container">
 	<div class="column">
 		<h2>About</h2>
 
@@ -39,4 +40,5 @@
 		<object data="/svg/history_summary.svg" type="image/svg+xml">
 		</object>
 	</div>
+	</div>[%# end .column_container %]
 [% END %]

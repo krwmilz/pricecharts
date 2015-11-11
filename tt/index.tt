@@ -1,4 +1,5 @@
 [% WRAPPER wrapper.tt %]
+	<div class="column_container">
 
 	<div class="column">
 	<h2>Manufacturers ([% manufacturer_list.keys.size %] total)</h2>
@@ -8,8 +9,7 @@
 		<div class="list_item">
 		<a href="/manufacturers/[% item_link %].html">
 			<img class="logo" alt="[% manuf %]"
-				src="[% logo_hash.item(item_link) %]" />
-		</a><br>
+				src="[% logo_hash.item(item_link) %]" /></a><br>
 
 		Types: 
 		[% FOREACH pair IN manufacturer_list.$manuf.pairs %]
@@ -31,9 +31,7 @@
 		[% item_link = item.lower.replace('[ #\/]', '_') %]
 		<a href="/retailers/[% item_link %].html">
 			<img class="retailer_logo" alt="[% item %]"
-				src="[% logo_hash.item(item_link) %]" />
-		</a>
-		<br />
+				src="[% logo_hash.item(item_link) %]" /></a><br />
 
 		Manufacturers sold here:
 		[% FOREACH pair IN retailer_list.$item.pairs %]
@@ -50,8 +48,7 @@
 		<div class="list_item">
 		<a href="/types/[% item_link %].html">
 			<img class="product_type" alt="[% item %]"
-				src="[% logo_hash.item(item_link) %]" />
-		</a><br />
+				src="[% logo_hash.item(item_link) %]" /></a><br />
 
 		[% item %] manufacturers:
 		[% FOREACH pair IN types_list.$item.pairs %]
@@ -65,4 +62,5 @@
 	[% END %]
 	</div>
 
+	</div>[%# end .column_conatiner %]
 [% END %]

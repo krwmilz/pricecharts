@@ -9,9 +9,9 @@
 </head>
 <body>
 	<div class="menu_bar">
+		<div class="column_container">
 		<a href="/about.html">
-			<img class="sloth" src="/logo/pricesloth.jpg">
-		</a>
+			<img class="sloth" src="/logo/pricesloth.jpg"></a>
 		<div class="menu_bar_title">PriceSloth</div>
 
 		<form class="search_box" method="get" action="/search.html">
@@ -20,6 +20,7 @@
 				<input type="submit" value="Search">
 			</fieldset>
 		</form>
+		</div>
 	</div>
 
 	[% content %]

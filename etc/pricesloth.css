@@ -11,35 +11,32 @@ li {
 }
 
 body {
-	/* margin-top: 1em; */
 	font-family: sans-serif;
-
-	/* i don't want to read anything wider than that */
-	max-width: 80em;
-	margin: auto;
-
-	border-left: 1px dashed gray;
-	border-right: 1px dashed gray;
+	margin: 0;
 }
 
 .menu_bar {
 	/* space at the top for round sloth face to poke out */
-	margin-top: 1.25em;
-	background-color: green;
+	margin-top: 1.0em;
+	background-color: forestgreen;
 }
 
 .menu_bar_title {
 	font-size: 2em;
-	/* width of the sloth face... ish */
+	font-weight: bold;
+	color: white;
 
 	display: inline-block;
-	color: white;
-	font-weight: bold;
 }
 
 .search_box {
 	display: inline-block;
 	height: 2em;
+}
+
+.column_container {
+	max-width: 80em;
+	margin: auto;
 }
 
 .column {
@@ -51,11 +48,23 @@ body {
 	padding: 0 2% 0 2%;
 }
 
+.product_column {
+	display: inline-block;
+	vertical-align: top;
+
+	width: 49.8%;
+}
+
 .product {
-	padding: 0.5em;
-	margin: 0.3em 0.3em 0.3em 0.3em;
+	padding: 6px;
 	border: 1px solid gray;
 	border-radius: 3px;
+}
+
+.product_title {
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 .sloth {
@@ -69,15 +78,19 @@ body {
 	margin-top: -1.25em;
 	margin-bottom: -2em;
 
-	margin-left: 0.5em;
 	display: inline-block;
 }
 
 @media (max-width: 640px) {
 	/* anything smaller than this go into single column mode */
 	.column {
-		width: 90%;
-		padding: 0 5% 0 5%;
+		width: 95%;
+		padding: 0 2% 0 2%;
+	}
+
+	.product_column {
+		width: 100%;
+		padding: 0 0 0 0;
 	}
 
 	.logo {
@@ -95,13 +108,6 @@ body {
 
 .product_type {
 	width: 15em;
-}
-
-.product_index {
-	width: 14%;
-	padding: 0 1% 0 1%;
-	display: inline-block;
-	vertical-align: top;
 }
 
 .list_item {
