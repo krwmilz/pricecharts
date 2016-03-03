@@ -21,7 +21,7 @@ sub new {
 	if ($cfg->{addrs}) {
 		my @addresses = split(" ", $cfg->{addrs});
 		my $addr = $addresses[rand @addresses];
-		$logger->info("new_ua: using ip $addr\n");
+		$logger->debug("new_ua: using ip $addr\n");
 		$ua = LWP::UserAgent->new(local_address => $addr);
 	}
 	else {
