@@ -32,9 +32,6 @@ sub new {
 	my $self = {
 		color => "#56B849",
 		url => "http://www.memoryexpress.com/Search/Products?Search=",
-		title => ".ProductTitle",
-		reg_tag => ".PIV_Price",
-		sale_tag => ".PIV_PriceSale",
 		ua => PS::UserAgent->new(),
 		db => PS::Database->new()
 	};
@@ -49,13 +46,12 @@ sub new {
 
 # Creates the URL search string.
 sub create_search {
-	my ($self, $part_num) = @_;
+	my ($self, $manufacturer, $part_num) = @_;
 
 	# As learned in the Seagate ST8000AS0002 case searching for manufacturer
 	# concatenated to part num will hide valid search results.
 	# Instead search only for part number. We'll have to deal with thumbnail
 	# view return vs a full page product.
-
 	return $self->{url} . uri_escape($part_num);
 }
 
@@ -106,7 +102,7 @@ sub find_product_page {
 	my $uri = $resp->base;
 	if ($uri =~ /.*\/Products\/.*/) {
 		# We landed on the product page directly, great.
-		return $resp;
+		return ($resp);
 	}
 	elsif ($uri =~ /.*\/Search\/.*/) {
 		# We landed on the search page.
@@ -133,22 +129,23 @@ sub find_product_page {
 	}
 }
 
-sub scrape_all {
+sub scrape {
 	my ($self, $manufacturer, $part_num) = @_;
 	my $ua = $self->{ua};
 
-	my $search = $self->create_search($part_num);
+	my $search = $self->create_search($manufacturer, $part_num);
 	return unless ($search);
 
 	my $resp = $ua->get_dom($search);
 	return unless ($resp->is_success);
 
 	# Searching can sometimes take you to different places
-	my $resp = $self->find_product_page($resp);
+	($resp) = $self->find_product_page($resp);
 	return unless ($resp);
 
-	my $part_num = $self->scrape_part_num($resp);
-	my $price = $self->scrape_price($resp);
+	# my $part_num = $self->scrape_part_num($resp);
+	my ($price) = $self->scrape_price($resp);
+	my $desc = $self->scrape_description($resp);
 
 	my $sql = qq{insert into prices(date, manufacturer, part_num, retailer,
 	price, duration) values (?, ?, ?, ?, ?, ?)};
