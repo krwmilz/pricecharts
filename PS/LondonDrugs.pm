@@ -120,6 +120,8 @@ sub find_product_page {
 sub scrape {
 	my ($self, $manufacturer, $part_num) = @_;
 	my $ua = $self->{ua};
+	my $db = $self->{db};
+	my $start = time;
 
 	my $search = $self->create_search($manufacturer, $part_num);
 	my $resp = $ua->get_dom($search);
@@ -133,14 +135,7 @@ sub scrape {
 	my ($price) = $self->scrape_price($resp);
 	my $desc = $self->scrape_description($resp);
 
-	my $sql = qq{insert into prices(date, manufacturer, part_num, retailer,
-	price, duration) values (?, ?, ?, ?, ?, ?)};
-	my $dbh = $self->{db}->{dbh};
-	my $prices_sth = $dbh->prepare($sql);
-
-	$dbh->begin_work;
-	$prices_sth->execute(time, $manufacturer, $part_num, "London Drugs", $price, 100);
-	$dbh->commit;
+	$db->insert_price($manufacturer, $part_num, "London Drugs", $price, time - $start);
 
 	$logger->debug("scrape_price(): added price \$$price\n");
 	return $price;

@@ -30,10 +30,23 @@ sub new {
 	$dbh->do("PRAGMA foreign_keys = ON");
 	create_tables($dbh);
 
+
+	my $sql = qq{insert into prices(date, manufacturer, part_num, retailer,
+		price, duration) values (?, ?, ?, ?, ?, ?)};
+	$self->{insert_price} = $dbh->prepare($sql);
+
 	$dbh->{AutoCommit} = 1;
 
 	$logger->debug("opened $db_dir/db\n");
 	return $self;
+}
+
+sub insert_price {
+	my ($self, @args) = @_;
+
+	$self->{dbh}->begin_work;
+	$self->{insert_price}->execute(time, @args);
+	$self->{dbh}->commit;
 }
 
 sub create_tables {
