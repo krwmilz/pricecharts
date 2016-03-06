@@ -35,6 +35,10 @@ sub new {
 		price, duration) values (?, ?, ?, ?, ?, ?)};
 	$self->{insert_price} = $dbh->prepare($sql);
 
+	$sql = qq{insert or replace into descriptions(manufacturer, part_num,
+		retailer, description, date) values (?, ?, ?, ?, ?)};
+	$self->{insert_descr} = $dbh->prepare($sql);
+
 	$dbh->{AutoCommit} = 1;
 
 	$logger->debug("opened $db_dir/db\n");
@@ -46,6 +50,14 @@ sub insert_price {
 
 	$self->{dbh}->begin_work;
 	$self->{insert_price}->execute(time, @args);
+	$self->{dbh}->commit;
+}
+
+sub insert_descr {
+	my ($self, @args) = @_;
+
+	$self->{dbh}->begin_work;
+	$self->{insert_descr}->execute(@args, time);
 	$self->{dbh}->commit;
 }
 

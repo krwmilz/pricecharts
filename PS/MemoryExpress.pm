@@ -150,6 +150,7 @@ sub scrape {
 	my $desc = $self->scrape_description($resp);
 
 	$db->insert_price($manufacturer, $part_num, "Memory Express", $price, time - $start);
+	$db->insert_descr($manufacturer, $part_num, "Memory Express", $desc) if ($desc);
 
 	$logger->debug("scrape_price(): added price \$$price\n");
 	return $price;
