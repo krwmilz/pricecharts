@@ -91,6 +91,12 @@ sub scrape_price {
 }
 
 sub scrape_description {
+	my ($self, $resp) = @_;
+	my $dom = HTML::Grabber->new( html => $resp->decoded_content );
+
+	# Product page description is inside <h1> tags
+	my $description = $dom->find(".PDH_HeaderBlock h1")->text();
+	return $description;
 }
 
 sub find_product_page {

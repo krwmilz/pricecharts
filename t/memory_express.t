@@ -4,7 +4,7 @@ use PS::MemoryExpress;
 use Log::Log4perl qw(:easy);
 use Test;
 
-BEGIN { plan tests => 17 }
+BEGIN { plan tests => 18 }
 
 Log::Log4perl->easy_init($INFO);
 
@@ -35,6 +35,9 @@ ok($price);
 ok(@others == 0);
 ok($price > 200.0);
 ok($price < 400.0);
+
+my $descr = $me->scrape_description($resp);
+ok($descr, "8TB Archive HDD, SATA III w/ 128MB Cache");
 
 
 # Search for something I know has multiple results
