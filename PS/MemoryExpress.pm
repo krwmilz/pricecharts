@@ -11,21 +11,6 @@ use PS::UserAgent;
 my $logger = Log::Log4perl::get_logger('pricesloth.memory_express');
 
 
-# On sale:
-# <div class="PIV_BotPrices">
-# 	<div class="PIV_PriceRegular">Reg: <span>$359.99</span></div>
-# 	<div class="PIV_PriceSale">
-# 		$279.99
-# 	</div>
-# </div>
-#
-# Regular price:
-# <div class="PIV_BotPrices">
-# 	<div class="PIV_Price">
-#		<span>$359.99</span>
-#	</div>
-# </div>
-
 sub new {
 	my ($class) = @_;
 
@@ -44,7 +29,6 @@ sub new {
 	return $self;
 }
 
-# Creates the URL search string.
 sub create_search {
 	my ($self, $manufacturer, $part_num) = @_;
 
