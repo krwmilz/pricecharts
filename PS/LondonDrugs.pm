@@ -16,8 +16,6 @@ sub new {
 	my $self = {
 		color => "#005DAB",
 		url => "http://www.londondrugs.com/on/demandware.store/Sites-LondonDrugs-Site/default/Search-Show?q=",
-		title => ".productname",
-		reg_tag	=> ".pricing",
 		ua => PS::UserAgent->new(),
 		db => PS::Database->new()
 	};
